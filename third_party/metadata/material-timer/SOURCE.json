@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/google/material-design-icons",
+  "revision": "737e3324305806514d7909874fa1818ae1808232",
+  "files": [
+    {
+      "file": "third_party/metadata/material-timer/timer.svg",
+      "source": "https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/src/image/timer/materialicons/24px.svg",
+      "sha256": "d82eea0327e93ce610122b101a550804eb63926fe1debac035db5b0aedb4f03f"
+    },
+    {
+      "file": "third_party/licenses/Asset-Material-timer-Apache-2.0.txt",
+      "source": "https://raw.githubusercontent.com/google/material-design-icons/737e3324305806514d7909874fa1818ae1808232/LICENSE",
+      "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+    }
+  ],
+  "modifications": "2026-10-02: SVG rectangle/path converted to a white Android vector; viewport and geometry retained."
+}

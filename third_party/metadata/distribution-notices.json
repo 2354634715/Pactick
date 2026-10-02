@@ -1,0 +1,399 @@
+{
+  "schema_version": 1,
+  "review_date": "2026-10-02",
+  "review_method": "source-and-license-obligation-review",
+  "scope": "public source preview and Android preview APK; excludes redistributed SDK/tool distributions, screenshots and server containers",
+  "status": "source-reviewed-final-apk-check-required",
+  "completed_legal_audit": false,
+  "supplemental_asset": "client/assets/licenses/supplemental.json",
+  "supplemental_asset_sha256": "0e23f43213796acd48e66a7edd765c012d6a72c2b2e054e21a1952da48f71b13",
+  "go_mod_sha256": "c458c7990b62f14b7fb5862077ed8182002a84232dcae34344c97a98f47f1ee5",
+  "pubspec_lock_sha256": "c143689cb9effc486a338575d1b327f85c61d2bea85c827bda1d80a958ad76f5",
+  "runtime_coordinates": [
+    "androidx.activity:activity:1.9.0",
+    "androidx.annotation:annotation-experimental:1.4.1",
+    "androidx.annotation:annotation-jvm:1.10.0",
+    "androidx.annotation:annotation:1.10.0",
+    "androidx.appcompat:appcompat-resources:1.5.0",
+    "androidx.appcompat:appcompat:1.5.0",
+    "androidx.arch.core:core-common:2.2.0",
+    "androidx.arch.core:core-runtime:2.2.0",
+    "androidx.browser:browser:1.9.0",
+    "androidx.cardview:cardview:1.0.0",
+    "androidx.collection:collection-jvm:1.4.2",
+    "androidx.collection:collection:1.4.2",
+    "androidx.concurrent:concurrent-futures:1.1.0",
+    "androidx.constraintlayout:constraintlayout-solver:2.0.1",
+    "androidx.constraintlayout:constraintlayout:2.0.1",
+    "androidx.coordinatorlayout:coordinatorlayout:1.1.0",
+    "androidx.core:core-ktx:1.17.0",
+    "androidx.core:core-viewtree:1.0.0",
+    "androidx.core:core:1.17.0",
+    "androidx.cursoradapter:cursoradapter:1.0.0",
+    "androidx.customview:customview:1.1.0",
+    "androidx.documentfile:documentfile:1.0.0",
+    "androidx.drawerlayout:drawerlayout:1.1.1",
+    "androidx.dynamicanimation:dynamicanimation:1.0.0",
+    "androidx.emoji2:emoji2-views-helper:1.2.0",
+    "androidx.emoji2:emoji2:1.2.0",
+    "androidx.exifinterface:exifinterface:1.4.1",
+    "androidx.fragment:fragment:1.7.1",
+    "androidx.interpolator:interpolator:1.0.0",
+    "androidx.legacy:legacy-support-core-utils:1.0.0",
+    "androidx.lifecycle:lifecycle-common-java8:2.7.0",
+    "androidx.lifecycle:lifecycle-common:2.7.0",
+    "androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0",
+    "androidx.lifecycle:lifecycle-livedata-core:2.7.0",
+    "androidx.lifecycle:lifecycle-livedata:2.7.0",
+    "androidx.lifecycle:lifecycle-process:2.7.0",
+    "androidx.lifecycle:lifecycle-runtime:2.7.0",
+    "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0",
+    "androidx.lifecycle:lifecycle-viewmodel:2.7.0",
+    "androidx.loader:loader:1.0.0",
+    "androidx.localbroadcastmanager:localbroadcastmanager:1.0.0",
+    "androidx.print:print:1.0.0",
+    "androidx.profileinstaller:profileinstaller:1.3.1",
+    "androidx.recyclerview:recyclerview:1.1.0",
+    "androidx.resourceinspection:resourceinspection-annotation:1.0.1",
+    "androidx.savedstate:savedstate:1.2.1",
+    "androidx.startup:startup-runtime:1.1.1",
+    "androidx.tracing:tracing:1.2.0",
+    "androidx.transition:transition:1.2.0",
+    "androidx.vectordrawable:vectordrawable-animated:1.1.0",
+    "androidx.vectordrawable:vectordrawable:1.1.0",
+    "androidx.versionedparcelable:versionedparcelable:1.1.1",
+    "androidx.viewpager2:viewpager2:1.0.0",
+    "androidx.viewpager:viewpager:1.0.0",
+    "androidx.window.extensions.core:core:1.0.0",
+    "androidx.window:window-java:1.2.0",
+    "androidx.window:window:1.2.0",
+    "com.getkeepsafe.relinker:relinker:1.4.5",
+    "com.google.android.material:material:1.7.0",
+    "com.google.code.findbugs:jsr305:3.0.2",
+    "com.google.code.gson:gson:2.13.2",
+    "com.google.crypto.tink:tink-android:1.21.0",
+    "com.google.errorprone:error_prone_annotations:2.41.0",
+    "com.google.guava:listenablefuture:1.0",
+    "io.flutter:arm64_v8a_release:1.0.0-06a2e2a110089dff50fe635cffd2a61e1b24fbcd",
+    "io.flutter:armeabi_v7a_release:1.0.0-06a2e2a110089dff50fe635cffd2a61e1b24fbcd",
+    "io.flutter:flutter_embedding_release:1.0.0-06a2e2a110089dff50fe635cffd2a61e1b24fbcd",
+    "io.flutter:x86_64_release:1.0.0-06a2e2a110089dff50fe635cffd2a61e1b24fbcd",
+    "org.jetbrains.kotlin:kotlin-stdlib:2.4.0",
+    "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1",
+    "org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.8.1",
+    "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.1",
+    "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1",
+    "org.jetbrains:annotations:23.0.0",
+    "org.jspecify:jspecify:1.0.0"
+  ],
+  "entries": [
+    {
+      "packages": [
+        "Third-party licensing and attribution"
+      ],
+      "text_sha256": "0e66d2e8ab7dcec9a6b1168b44f8ea3d33dbe451192997289ac8ee7778edde03"
+    },
+    {
+      "packages": [
+        "androidx.activity:activity:1.9.0",
+        "androidx.annotation:annotation-experimental:1.4.1",
+        "androidx.annotation:annotation-jvm:1.10.0",
+        "androidx.annotation:annotation:1.10.0",
+        "androidx.appcompat:appcompat-resources:1.5.0",
+        "androidx.appcompat:appcompat:1.5.0",
+        "androidx.arch.core:core-common:2.2.0",
+        "androidx.arch.core:core-runtime:2.2.0",
+        "androidx.browser:browser:1.9.0",
+        "androidx.cardview:cardview:1.0.0",
+        "androidx.collection:collection-jvm:1.4.2",
+        "androidx.collection:collection:1.4.2",
+        "androidx.concurrent:concurrent-futures:1.1.0",
+        "androidx.constraintlayout:constraintlayout-solver:2.0.1",
+        "androidx.constraintlayout:constraintlayout:2.0.1",
+        "androidx.coordinatorlayout:coordinatorlayout:1.1.0",
+        "androidx.core:core-ktx:1.17.0",
+        "androidx.core:core-viewtree:1.0.0",
+        "androidx.core:core:1.17.0",
+        "androidx.cursoradapter:cursoradapter:1.0.0",
+        "androidx.customview:customview:1.1.0",
+        "androidx.documentfile:documentfile:1.0.0",
+        "androidx.drawerlayout:drawerlayout:1.1.1",
+        "androidx.dynamicanimation:dynamicanimation:1.0.0",
+        "androidx.emoji2:emoji2-views-helper:1.2.0",
+        "androidx.emoji2:emoji2:1.2.0",
+        "androidx.exifinterface:exifinterface:1.4.1",
+        "androidx.fragment:fragment:1.7.1",
+        "androidx.interpolator:interpolator:1.0.0",
+        "androidx.legacy:legacy-support-core-utils:1.0.0",
+        "androidx.lifecycle:lifecycle-common-java8:2.7.0",
+        "androidx.lifecycle:lifecycle-common:2.7.0",
+        "androidx.lifecycle:lifecycle-livedata-core-ktx:2.7.0",
+        "androidx.lifecycle:lifecycle-livedata-core:2.7.0",
+        "androidx.lifecycle:lifecycle-livedata:2.7.0",
+        "androidx.lifecycle:lifecycle-process:2.7.0",
+        "androidx.lifecycle:lifecycle-runtime:2.7.0",
+        "androidx.lifecycle:lifecycle-viewmodel-savedstate:2.7.0",
+        "androidx.lifecycle:lifecycle-viewmodel:2.7.0",
+        "androidx.loader:loader:1.0.0",
+        "androidx.localbroadcastmanager:localbroadcastmanager:1.0.0",
+        "androidx.print:print:1.0.0",
+        "androidx.profileinstaller:profileinstaller:1.3.1",
+        "androidx.recyclerview:recyclerview:1.1.0",
+        "androidx.resourceinspection:resourceinspection-annotation:1.0.1",
+        "androidx.savedstate:savedstate:1.2.1",
+        "androidx.startup:startup-runtime:1.1.1",
+        "androidx.tracing:tracing:1.2.0",
+        "androidx.transition:transition:1.2.0",
+        "androidx.vectordrawable:vectordrawable-animated:1.1.0",
+        "androidx.vectordrawable:vectordrawable:1.1.0",
+        "androidx.versionedparcelable:versionedparcelable:1.1.1",
+        "androidx.viewpager2:viewpager2:1.0.0",
+        "androidx.viewpager:viewpager:1.0.0",
+        "androidx.window.extensions.core:core:1.0.0",
+        "androidx.window:window-java:1.2.0",
+        "androidx.window:window:1.2.0"
+      ],
+      "text_sha256": "631fe1e154befda086a2e60c7d7a18d368e5bbece422fce9119e281460accb30"
+    },
+    {
+      "packages": [
+        "com.getkeepsafe.relinker:relinker:1.4.5"
+      ],
+      "text_sha256": "e99bd09dd8a6526493f80b336bc320ba77961abeb0dbf815fe7edcc4e2219ce9"
+    },
+    {
+      "packages": [
+        "com.google.android.material:material:1.7.0"
+      ],
+      "text_sha256": "bcb23e88e21db1864cd3d0fad7f24cebe4dc501c27d6ce20759a427ff3fd05b1"
+    },
+    {
+      "packages": [
+        "com.google.code.gson:gson:2.13.2"
+      ],
+      "text_sha256": "1360bd18d0b30d9d63f9b1ffa3e0adfe80c00d8bb82b1f65fbf279c41c5d4312"
+    },
+    {
+      "packages": [
+        "com.google.crypto.tink:tink-android:1.21.0"
+      ],
+      "text_sha256": "5bbe7ffd657be6ead3d7a22ef8367aa587c1acc450e376595d1890d49b54f998"
+    },
+    {
+      "packages": [
+        "com.google.errorprone:error_prone_annotations:2.41.0"
+      ],
+      "text_sha256": "1db47e6f87c933c96787a13d004c5981a67c6d0b1d2c6ca3a73e5bd6752b707d"
+    },
+    {
+      "packages": [
+        "org.jetbrains:annotations:23.0.0"
+      ],
+      "text_sha256": "01a86fc1ade1a90c460e0dbfb1cf72e60513359a718e3a5a75b7a98031236f32"
+    },
+    {
+      "packages": [
+        "org.jspecify:jspecify:1.0.0"
+      ],
+      "text_sha256": "9dd483f9d31ec66b41f2162a61b0b6f3ad9c9e1bdc183a44ea16d3b41376b556"
+    },
+    {
+      "packages": [
+        "com.google.guava:listenablefuture:1.0"
+      ],
+      "text_sha256": "ffcb643e68808ae76bef04bb86018827f8147f92590430ecf196a90ba3a49df4"
+    },
+    {
+      "packages": [
+        "com.google.code.findbugs:jsr305:3.0.2"
+      ],
+      "text_sha256": "0918ba349cca987b7b831c120233ba43cd98359472838af5670f4df4530aec8a"
+    },
+    {
+      "packages": [
+        "com.google.code.findbugs:jsr305:3.0.2",
+        "JCIP annotations / Brian Goetz"
+      ],
+      "text_sha256": "49d660e4def420e3775c5d7296ab8e2927660c3851fe18ca6c2a77569268ed8b"
+    },
+    {
+      "packages": [
+        "org.jetbrains.kotlin:kotlin-stdlib:2.4.0"
+      ],
+      "text_sha256": "19d3b56880aa2e02871c8fd91b09bc5edfeea31e284b12b82a707167cbddd2f4"
+    },
+    {
+      "packages": [
+        "org.jetbrains.kotlin:kotlin-stdlib:2.4.0",
+        "ThreeTenBP (used by Kotlin time)"
+      ],
+      "text_sha256": "d1bc53b493a3ab387b42717ed5c4b1976a5048996f81154278100bff86d39331"
+    },
+    {
+      "packages": [
+        "org.jetbrains.kotlin:kotlin-stdlib:2.4.0",
+        "Boost special math functions (used by Kotlin MathJVM)"
+      ],
+      "text_sha256": "98c4383c0a542c1571766f6c539792e3d54bf5d89a6648266dd83b288f5b6483"
+    },
+    {
+      "packages": [
+        "org.jetbrains.kotlin:kotlin-stdlib:2.4.0",
+        "Guava (used by Kotlin UnsignedJVM)"
+      ],
+      "text_sha256": "8b406691aa4d6bba07ce9dcfe702905eaf400cc3b4b630c17e1c9992df2cc2c5"
+    },
+    {
+      "packages": [
+        "org.jetbrains.kotlin:kotlin-stdlib:2.4.0",
+        "GWT (used by Kotlin collections)"
+      ],
+      "text_sha256": "69c98a7efd4e13d6cd1b25c590304b2d2c421b538021ff6838cfcd5b1378b05f"
+    },
+    {
+      "packages": [
+        "org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-bom:1.8.1",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.1",
+        "org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.1"
+      ],
+      "text_sha256": "e0928dd1838619fbd3d53aeb620356bcea530454cd2b32dd1fd0c98122f558f2"
+    },
+    {
+      "packages": [
+        "androidx.annotation:annotation-jvm:1.10.0",
+        "androidx.browser:browser:1.9.0",
+        "androidx.core:core-ktx:1.17.0",
+        "androidx.core:core-viewtree:1.0.0",
+        "androidx.core:core:1.17.0",
+        "androidx.exifinterface:exifinterface:1.4.1"
+      ],
+      "text_sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    },
+    {
+      "packages": [
+        "Material Icons (Flutter font)"
+      ],
+      "text_sha256": "d7268b68ccfa554f4447919b1d19c171fbf2ff034b3637ce10b864168a5be7b2"
+    },
+    {
+      "packages": [
+        "intl locale data",
+        "Unicode CLDR"
+      ],
+      "text_sha256": "c28f4d94dc2c04aee570338f8ca7ff897dab7fc03bed687d99adb8c27ac7d4ca"
+    },
+    {
+      "packages": [
+        "FreeType"
+      ],
+      "text_sha256": "1263ed91d7f4c6e1d91d8fd6d339cff6e404780293ea6939d6d02fa94a43157f"
+    },
+    {
+      "packages": [
+        "libjpeg-turbo",
+        "Independent JPEG Group"
+      ],
+      "text_sha256": "c235f64b12262e8d951426d2960d79210be96cf458a5ea7c813dbf66cdad00af"
+    },
+    {
+      "packages": [
+        "Google Material Design Icons / timer"
+      ],
+      "text_sha256": "bbba8098e8c03807c7f5999e2f094a7ee0315e5aa1163a506ea1b33e44f0b88e"
+    }
+  ],
+  "attribution_sources": [
+    {
+      "packages": [
+        "Material Icons (Flutter font)"
+      ],
+      "license_file": "third_party/licenses/Asset-Material-icons-fonts-Flutter-bundled-0-materialicons_license.txt",
+      "license_sha256": "be698262aecd042c0de6f886cc0af622f8def446462026992cc530275d8a9e74"
+    },
+    {
+      "packages": [
+        "intl locale data",
+        "Unicode CLDR"
+      ],
+      "license_file": "third_party/licenses/Asset-Unicode-CLDR-48-LICENSE",
+      "source": "https://github.com/unicode-org/cldr/blob/release-48/LICENSE",
+      "git_blob_sha": "861b74f3c812088755fd185d964e82a244503bbd",
+      "license_sha256": "b4c0ae8ef04f7059f96ce5bbe0467f9fe6f6d81bbe13517701dfeb961fb4d0b6"
+    },
+    {
+      "packages": [
+        "FreeType"
+      ]
+    },
+    {
+      "packages": [
+        "libjpeg-turbo",
+        "Independent JPEG Group"
+      ]
+    }
+  ],
+  "required_texts": [
+    {
+      "file": "third_party/licenses/Asset-Material-icons-fonts-Flutter-bundled-0-materialicons_license.txt",
+      "sha256": "be698262aecd042c0de6f886cc0af622f8def446462026992cc530275d8a9e74"
+    },
+    {
+      "file": "third_party/licenses/Asset-Unicode-CLDR-48-LICENSE",
+      "sha256": "b4c0ae8ef04f7059f96ce5bbe0467f9fe6f6d81bbe13517701dfeb961fb4d0b6"
+    },
+    {
+      "file": "third_party/licenses/Asset-Material-timer-Apache-2.0.txt",
+      "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd"
+    },
+    {
+      "file": "third_party/licenses/Android-runtime-002-androidx.annotation_annotation-jvm_1.10.0-000.txt",
+      "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    },
+    {
+      "file": "third_party/licenses/Android-runtime-007-androidx.browser_browser_1.9.0-000.txt",
+      "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    },
+    {
+      "file": "third_party/licenses/Android-runtime-014-androidx.core_core-ktx_1.17.0-000.txt",
+      "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    },
+    {
+      "file": "third_party/licenses/Android-runtime-015-androidx.core_core-viewtree_1.0.0-000.txt",
+      "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    },
+    {
+      "file": "third_party/licenses/Android-runtime-016-androidx.core_core_1.17.0-000.txt",
+      "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    },
+    {
+      "file": "third_party/licenses/Android-runtime-017-androidx.core_core_1.17.0-000.txt",
+      "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    },
+    {
+      "file": "third_party/licenses/Android-runtime-025-androidx.exifinterface_exifinterface_1.4.1-000.txt",
+      "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    }
+  ],
+  "required_acknowledgements": [
+    "This software is based in part on the work of the FreeType Team.",
+    "This software is based in part on the work of the Independent JPEG Group.",
+    "Copyright 2019 Google LLC. All Rights Reserved.",
+    "Brian Goetz",
+    "This third-party icon remains under Apache-2.0"
+  ],
+  "reviewed_source_files": [
+    {
+      "file": "client/android/app/src/main/res/drawable/ic_focus_notification.xml",
+      "sha256": "c00963d2e0bd8b9e453a4833f3aa19412683a1ad758b87afc25be07892c75c92"
+    },
+    {
+      "file": "third_party/metadata/material-timer/timer.svg",
+      "sha256": "d82eea0327e93ce610122b101a550804eb63926fe1debac035db5b0aedb4f03f"
+    },
+    {
+      "file": "client/android/gradle/wrapper/gradle-wrapper.jar",
+      "sha256": "16caeaf66d57a0d1d2087fef6a97efa62de8da69afa5b908f40db35afc4342da"
+    }
+  ]
+}

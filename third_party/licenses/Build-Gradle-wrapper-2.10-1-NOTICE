@@ -1,0 +1,11 @@
+Gradle wrapper bootstrap, version 2.10
+Copyright 2007 the original author or authors (org.gradle.wrapper).
+Copyright 2010 the original author or authors (org.gradle.cli).
+
+Source: https://github.com/gradle/gradle/tree/276bdcded730f53aa8c11b479986aafa58e124a6/subprojects/wrapper
+Command-line parser source: https://github.com/gradle/gradle/tree/276bdcded730f53aa8c11b479986aafa58e124a6/subprojects/cli
+These source headers license the wrapper and command-line parser under Apache-2.0.
+The bundled JAR contains the wrapper and command-line parser; it does not
+contain the other libraries in the full Gradle distribution.
+The configured bootstrap downloads Gradle 9.4.1 separately. That distribution
+is a build tool and is not included in Pactick's source archive or Android APK.

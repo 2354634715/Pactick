@@ -1,0 +1,55 @@
+import groovy.json.JsonOutput
+
+gradle.projectsEvaluated {
+    def app = gradle.rootProject.findProject(':app')
+    if (app == null) {
+        // Init scripts also run for Flutter's included Gradle plugin build.
+        return
+    }
+    app.tasks.register('writeRuntimeDependencyInventory') {
+        doLast {
+            def configuration = app.configurations.getByName('releaseRuntimeClasspath')
+            def unresolved = configuration.incoming.resolutionResult.allDependencies.findAll {
+                it instanceof org.gradle.api.artifacts.result.UnresolvedDependencyResult
+            }
+            if (!unresolved.empty) {
+                throw new GradleException('Runtime dependency resolution is incomplete: ' +
+                    unresolved.collect { it.attempted.displayName }.join(', '))
+            }
+            def modules = configuration.incoming.resolutionResult.allComponents
+                .findAll { it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+                .collect { [group: it.moduleVersion.group, name: it.moduleVersion.name, version: it.moduleVersion.version] }
+                .unique { "${it.group}:${it.name}:${it.version}" }
+                .sort { "${it.group}:${it.name}:${it.version}" }
+            def componentIds = configuration.incoming.resolutionResult.allComponents
+                .findAll { it.id instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier }
+                .collect { it.id }
+            // Resolve only external artifacts. Android project components expose
+            // multiple resource/JAR variants and are covered by the Dart inventory.
+            def artifactFiles = configuration.incoming.artifactView {
+                componentFilter { identifier ->
+                    identifier instanceof org.gradle.api.artifacts.component.ModuleComponentIdentifier
+                }
+            }.artifacts.artifacts.collect { artifact ->
+                def id = artifact.id.componentIdentifier
+                [coordinate: "${id.group}:${id.module}:${id.version}", file: artifact.file.absolutePath]
+            }
+                .sort { "${it.coordinate}:${it.file}" }
+            // Gradle may use .module metadata and omit POM files until explicitly queried.
+            // Ask for original Maven license metadata; successful files enter its module cache.
+            def poms = app.dependencies.createArtifactResolutionQuery()
+                .forComponents(componentIds)
+                .withArtifacts(org.gradle.maven.MavenModule, org.gradle.maven.MavenPomArtifact)
+                .execute()
+            def unavailable = poms.components.size() - poms.resolvedComponents.size()
+            println "POM metadata queries: ${componentIds.size()}, unresolved components: ${unavailable}"
+            def output = new File(gradle.rootProject.projectDir, '../../artifacts/android-runtime-dependencies.json')
+            output.parentFile.mkdirs()
+            output.text = JsonOutput.prettyPrint(JsonOutput.toJson([
+                schemaVersion: 2, complete: true, configuration: 'releaseRuntimeClasspath',
+                modules: modules, artifactFiles: artifactFiles
+            ])) + '\n'
+            println "Wrote ${modules.size()} resolved runtime coordinates"
+        }
+    }
+}

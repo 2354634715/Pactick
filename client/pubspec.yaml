@@ -1,0 +1,34 @@
+name: pactick
+description: A local-first planning and focus client.
+publish_to: none
+version: 0.2.0-preview.1+5
+
+environment:
+  sdk: ^3.13.2
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+  dynamic_color: ^1.8.1
+  flutter_secure_storage: ^10.3.1
+  http: ^1.6.0
+  intl: ^0.20.3
+  package_info_plus: ^10.2.1
+  path: ^1.9.1
+  sqflite: ^2.4.3
+  url_launcher: ^6.3.2
+  uuid: ^4.6.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  sqflite_common_ffi: ^2.3.6
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/branding/pactick_icon.png
+    - assets/licenses/supplemental.json

@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Pactick — 60 秒代码短片</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23DA291C' d='M0 0h64v64H0z'/%3E%3Cpath fill='none' stroke='%23F4F1E9' stroke-width='6' d='m15 33 12 12 23-28'/%3E%3C/svg%3E">
+<style>
+  @font-face{font-family:NotoSC;src:url('/font/NotoSansSC-VF.ttf');font-weight:100 900;font-display:block}
+  :root{color-scheme:dark;font-family:Arial,'Microsoft YaHei',sans-serif;background:#171714;color:#F4F1E9}
+  *{box-sizing:border-box}body{margin:0;padding:32px 4vw}header{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid #77776f;margin-bottom:24px;padding-bottom:18px}
+  h1{font-size:24px;letter-spacing:-1px;margin:0}header span{font-size:13px;color:#aaa99f}
+  .stage{max-width:1600px;margin:auto}canvas{display:block;width:100%;aspect-ratio:16/9;background:#F4F1E9}
+  .controls{display:flex;gap:20px;align-items:center;padding:22px 0}button{background:#DA291C;color:#F4F1E9;border:0;font:inherit;padding:10px 20px;cursor:pointer;min-width:92px}
+  button:focus-visible,a:focus-visible,input:focus-visible{outline:2px solid #F4F1E9;outline-offset:4px}input[type=range]{flex:1;min-width:0;accent-color:#DA291C;cursor:pointer}
+  output{font-variant-numeric:tabular-nums;font-size:14px;min-width:92px}nav{display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid #77776f;padding-top:16px}nav button{padding:8px 0;background:none;color:#aaa99f;font-size:13px;min-width:0}nav button.active{color:#F4F1E9;border-bottom:2px solid #DA291C}
+  footer{margin-top:24px;font-size:13px;color:#aaa99f;line-height:1.9}footer a{color:#F4F1E9}html.export body{padding:0}html.export header,html.export .controls,html.export nav,html.export footer{display:none}html.export .stage{max-width:none}html.export canvas{width:100vw;height:100vh}
+  @media(max-width:640px){body{padding:18px 14px}header{display:block}header span{display:block;font-size:11px;margin-top:8px}h1{font-size:21px}.controls{gap:8px}button{padding:10px 12px;min-width:70px}output{font-size:12px;min-width:80px}nav{gap:12px}}
+</style>
+<body>
+<header><h1>Pactick / 计划，变成行动。</h1><span>60 SEC · 16:9 · CODE FILM</span></header>
+<main class="stage">
+  <canvas width="1920" height="1080" aria-label="Pactick 项目宣传短片：任务、日历、专注与本地数据"></canvas>
+  <div class="controls"><button id="play" type="button" disabled>载入字体</button><input id="seek" type="range" min="0" max="60" step="0.01" value="0" aria-label="播放进度"><output id="time">00:00 / 01:00</output><button id="sound" type="button" aria-pressed="true">声音开</button></div>
+  <nav aria-label="短片章节"></nav>
+  <footer>画面与配乐由代码生成。功能画面使用演示数据，属于功能示意。<br><a href="/output/pactick-promo-swiss/Pactick-Swiss-60s.mp4" download>下载 MP4</a> · <a href="https://www.bilibili.com/video/BV1hWar6SEVP/" target="_blank" rel="noreferrer">瑞士设计参考视频</a></footer>
+</main>
+<audio id="audio" src="/output/pactick-promo-swiss/soundtrack.wav" preload="auto"></audio>
+<script src="film.js"></script>
+<script>
+  const params = new URLSearchParams(location.search);
+  if(params.has('export')) document.documentElement.classList.add('export');
+  const canvas=document.querySelector('canvas'),play=document.querySelector('#play'),seek=document.querySelector('#seek'),clock=document.querySelector('#time'),audio=document.querySelector('#audio'),sound=document.querySelector('#sound');
+  let time=Number(params.get('t'))||0,running=false,last=0;
+  const stamp=t=>`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+  function paint(t){time=Math.min(60,Math.max(0,t));const info=PactickFilm.renderAt(time,canvas);seek.value=time;clock.value=`${stamp(time)} / 01:00`;document.querySelectorAll('nav button').forEach((b,i)=>b.classList.toggle('active',i===info.chapter));return info;}
+  function pause(){running=false;audio.pause();play.textContent='播放';}
+  async function start(){if(time>=60)paint(0);audio.currentTime=time;running=true;last=performance.now();play.textContent='暂停';try{await audio.play()}catch{}requestAnimationFrame(tick);}
+  function tick(now){if(!running)return;const dt=(now-last)/1000;last=now;paint(time+Math.min(dt,.15));if(time>=60){pause();return}if(!audio.paused&&Math.abs(audio.currentTime-time)>.15)audio.currentTime=time;requestAnimationFrame(tick);}
+  play.onclick=()=>running?pause():start();seek.oninput=()=>{pause();paint(Number(seek.value));audio.currentTime=time};sound.onclick=()=>{audio.muted=!audio.muted;sound.textContent=audio.muted?'声音关':'声音开';sound.setAttribute('aria-pressed',String(!audio.muted))};
+  PactickFilm.chapters.forEach((chapter,i)=>{const b=document.createElement('button');b.textContent=`${String(i).padStart(2,'0')} ${chapter.title}`;b.onclick=()=>{pause();paint(chapter.start+.5);audio.currentTime=time};document.querySelector('nav').append(b)});
+  document.addEventListener('keydown',e=>{if(e.code==='Space'&&e.target.tagName!=='INPUT'&&e.target.tagName!=='BUTTON'){e.preventDefault();play.click()}if(e.code==='ArrowRight'){pause();paint(time+5)}if(e.code==='ArrowLeft'){pause();paint(time-5)}});
+  window.filmReady=(async()=>{try{await document.fonts.load('700 96px NotoSC')}catch{canvas.dataset.fontFallback='true'}await document.fonts.ready;paint(time);play.disabled=false;play.textContent='播放';return true})();
+  window.seekFilm=t=>{pause();return paint(t)};
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+[Unit]
+Description=Pactick PostgreSQL logical backup
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+UMask=0077
+WorkingDirectory=/opt/pactick/app
+Environment=PACTICK_APP_DIR=/opt/pactick/app
+Environment=PACTICK_CONFIG_DIR=/opt/pactick/config
+EnvironmentFile=-/opt/pactick/config/backup.env
+ExecStart=/bin/bash /opt/pactick/app/deploy/scripts/backup.sh daily
+
+[Install]
+WantedBy=multi-user.target

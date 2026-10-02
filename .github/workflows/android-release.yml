@@ -1,0 +1,134 @@
+name: Build signed Android candidate
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing reviewed source tag (vMAJOR.MINOR.PATCH[-suffix])
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  signed-candidate:
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    runs-on: ubuntu-latest
+    environment: android-release
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Validate and check out the reviewed tag
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z0-9.-]+)?$ ]]
+          git rev-parse --verify "refs/tags/$RELEASE_TAG^{commit}"
+          git checkout --detach "refs/tags/$RELEASE_TAG"
+          python3 scripts/prepare_public_source.py "$RUNNER_TEMP/public-source"
+          mkdir -p artifacts
+          python3 "$RUNNER_TEMP/public-source/scripts/verify_third_party_notices.py" --root "$RUNNER_TEMP/public-source"
+          python3 "$RUNNER_TEMP/public-source/scripts/verify_release_source.py" \
+            "$RUNNER_TEMP/public-source" --tag "$RELEASE_TAG" --commit "$(git rev-parse HEAD)" \
+            --output artifacts/RELEASE_SOURCE.json
+          git rev-parse HEAD > artifacts/SOURCE_COMMIT.txt
+          # Archive manifest files before dependency tools or signing files enter the build tree.
+          tar -C "$RUNNER_TEMP" -czf artifacts/source.tar.gz public-source
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.4'
+          cache: true
+      - name: Validate the selected source
+        working-directory: ${{ runner.temp }}/public-source/client
+        run: |
+          flutter pub get --enforce-lockfile
+          flutter analyze
+          flutter test
+      - name: Recheck archived source before exposing signing material
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          python3 "$RUNNER_TEMP/public-source/scripts/verify_release_source.py" \
+            "$RUNNER_TEMP/public-source" --tag "$RELEASE_TAG" --commit "$(git rev-parse HEAD)" \
+            --allow-generated-files --expected-metadata artifacts/RELEASE_SOURCE.json
+      - name: Inject signing material
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PASSWORD: ${{ secrets.ANDROID_STORE_PASSWORD }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          umask 077
+          python3 - <<'PY'
+          import base64, os, pathlib
+          required = ['KEYSTORE_BASE64', 'STORE_PASSWORD', 'KEY_PASSWORD', 'KEY_ALIAS']
+          if any(not os.environ.get(name) for name in required):
+              raise SystemExit('Configure all four Android signing secrets in the protected android-release environment')
+          key = pathlib.Path(os.environ['RUNNER_TEMP']) / 'release.jks'
+          key.write_bytes(base64.b64decode(os.environ['KEYSTORE_BASE64'], validate=True))
+          def escape(value):
+              units = value.encode('utf-16-be')
+              return ''.join('\\u%04x' % int.from_bytes(units[i:i+2], 'big')
+                             for i in range(0, len(units), 2))
+          values = {'storeFile': str(key), 'storePassword': os.environ['STORE_PASSWORD'],
+                    'keyAlias': os.environ['KEY_ALIAS'], 'keyPassword': os.environ['KEY_PASSWORD']}
+          (pathlib.Path(os.environ['RUNNER_TEMP']) / 'public-source/client/android/key.properties').write_text(
+              ''.join(f'{k}={escape(v)}\n' for k, v in values.items()), encoding='ascii')
+          PY
+      - name: Build APK with the official release location
+        working-directory: ${{ runner.temp }}/public-source/client
+        env:
+          RELEASES_URL: https://github.com/${{ github.repository }}/releases
+        run: flutter build apk --release --dart-define=RELEASES_URL="$RELEASES_URL"
+      - name: Verify project, Flutter engine and supplemental license text
+        working-directory: ${{ runner.temp }}/public-source
+        run: python3 scripts/verify_apk_notices.py client/build/app/outputs/flutter-apk/app-release.apk
+      - name: Capture final Android runtime graph and native notices
+        working-directory: ${{ runner.temp }}/public-source/client/android
+        run: |
+          set -euo pipefail
+          ./gradlew -I ../../scripts/android-dependencies.init.gradle :app:writeRuntimeDependencyInventory
+          python3 ../../scripts/verify_third_party_notices.py --root ../.. \
+            --android-inventory ../../artifacts/android-runtime-dependencies.json
+          python3 ../../scripts/verify_supplemental_notices.py --root ../.. \
+            --android-inventory ../../artifacts/android-runtime-dependencies.json \
+            --apk ../build/app/outputs/flutter-apk/app-release.apk
+          python3 ../../scripts/capture_android_notices.py \
+            ../../artifacts/android-runtime-dependencies.json ../build/app/outputs/flutter-apk/app-release.apk \
+            "$GITHUB_WORKSPACE/artifacts/android-native-evidence"
+      - name: Capture source, checksums and signing identity
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          python3 "$RUNNER_TEMP/public-source/scripts/verify_release_source.py" \
+            "$RUNNER_TEMP/public-source" --tag "$RELEASE_TAG" --commit "$(git rev-parse HEAD)" \
+            --allow-generated-files --expected-metadata artifacts/RELEASE_SOURCE.json
+          cp "$RUNNER_TEMP/public-source/client/build/app/outputs/flutter-apk/app-release.apk" artifacts/pactick.apk
+          flutter --version --machine > artifacts/FLUTTER_TOOLCHAIN.json
+          dart --version > artifacts/DART_TOOLCHAIN.txt 2>&1
+          java -version > artifacts/JAVA_TOOLCHAIN.txt 2>&1
+          go version > artifacts/GO_TOOLCHAIN.txt
+          APKSIGNER=$(find "$ANDROID_HOME/build-tools" -name apksigner -type f | sort -V | tail -n1)
+          "$APKSIGNER" verify --verbose --print-certs artifacts/pactick.apk > artifacts/APK_SIGNING_CERTIFICATE.txt
+          "$APKSIGNER" version > artifacts/ANDROID_APKSIGNER_VERSION.txt
+          cp "$RUNNER_TEMP/public-source/CHANGELOG.md" "$RUNNER_TEMP/public-source/THIRD_PARTY_NOTICES.md" \
+            "$RUNNER_TEMP/public-source/THIRD_PARTY_NOTICES.json" artifacts/
+          cp -R "$RUNNER_TEMP/public-source/third_party" artifacts/
+          (cd artifacts && find . -type f ! -name SHA256SUMS.txt -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt)
+      - name: Upload candidate for manual device and release review
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release-candidate
+          path: artifacts/
+          if-no-files-found: error
+      - name: Remove runner signing files
+        if: always()
+        run: rm -f -- "$RUNNER_TEMP/release.jks" "$RUNNER_TEMP/public-source/client/android/key.properties"

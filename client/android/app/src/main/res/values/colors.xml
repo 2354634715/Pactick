@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="launcher_background">#F6F1E7</color>
+    <color name="focus_guard_surface">#F6F1E7</color>
+    <color name="focus_guard_on_surface">#1C1B18</color>
+    <color name="focus_guard_on_surface_variant">#59554E</color>
+    <color name="focus_guard_action">#C1272D</color>
+    <color name="focus_guard_on_action">#FFFCF7</color>
+</resources>
