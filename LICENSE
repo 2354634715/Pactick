@@ -1,0 +1,136 @@
+Pactick Community Source License 1.0
+Copyright (c) 2026 王辰昊 Wang Chenhao
+
+This is a project-specific source-available license, not an OSI-approved
+open-source license. Contributors retain copyright in their own contributions.
+
+1. Definitions
+
+"Software" means the original Pactick source code, documentation, and
+original assets made available under this license. Separately identified
+third-party materials remain under their own licenses.
+
+"You" means a person or organization exercising rights under this license.
+"Contributor" means each copyright holder who provides a contribution under
+this license, and only with respect to the rights they control.
+"Modified Version" means a modification of, or a derivative work of, the
+Software. Mere aggregation with an independent program does not by itself
+make that independent program a Modified Version.
+
+"Corresponding Source" means the preferred form for modifying the actual
+version distributed or operated, including its modifications, dependency
+manifests and lock files, and scripts and instructions necessary to build,
+install and run it. It excludes user-created tasks, notes and other user
+data, passwords, tokens, private keys, signing keys, production configuration,
+and independent tools normally available separately. Supply safe example
+configuration in place of secrets. Do not require the recipient to obtain
+private deployment credentials to build their own version.
+
+2. Copyright permission
+
+Subject to the conditions below, each Contributor grants You a worldwide,
+non-exclusive, royalty-free license to use, reproduce, study, modify, and
+distribute their contributions to the Software and Modified Versions.
+
+Personal use, learning, research, self-hosting, and internal office use are
+permitted, including use by a business and use to organize paid work. Private
+modifications and modifications used only within the same legal organization
+need not be disclosed. The Software's output and user data are not subject
+to the source-sharing conditions of this license.
+
+3. Restricted monetization
+
+You may not sell, rent, license for a fee, or charge for access to the
+Software or a Modified Version; provide paid hosting or a paid service whose
+substantial functionality is the Software; monetize the Software through
+advertising, paid placement, paid features, subscriptions, or required
+donations; or incorporate it into a product or service distributed to others
+for commercial gain. Indirect charging through a bundle, intermediary, or
+nominally separate mandatory service is also prohibited.
+
+Using the Software internally to conduct an otherwise unrelated business,
+including organizing paid work, is permitted. An independent program merely
+distributed alongside the Software is not restricted by this license, but
+the Software must remain separately available without charge and must not
+be used to circumvent the restrictions above. Truly voluntary gifts that
+give no access, feature, priority, service, or other consideration in return
+are permitted. These permissions do not grant a right to offer paid hosting
+or sell integration of the Software. Any exception requires separate written
+permission from every affected rights holder.
+
+4. Free redistribution and network use
+
+When You distribute the Software or a Modified Version, in source or binary
+form, You must do all of the following:
+
+(a) charge no fee for it;
+(b) retain this license and applicable copyright, attribution, patent and
+    third-party notices;
+(c) identify Your modifications and their dates, and clearly distinguish Your
+    version from an official release without suggesting endorsement;
+(d) make the complete Corresponding Source of that exact version available
+    under this same license, without additional restrictions on the rights
+    granted here;
+(e) accompany each copy with the source or a conspicuous, working link to a
+    free download of it, requiring no purchase or special access permission.
+
+If You provide a Modified Version to people outside Your legal organization
+as a network service, You must offer those users the same free access to its
+Corresponding Source through a conspicuous link in the service. Network
+services must also comply with section 3. You need not disclose private
+modifications when no copy or network service is offered to others.
+
+Source download links must remain available while the relevant version is
+distributed or operated and for at least three years after You last provided
+that version. Giving the Corresponding Source with every distributed copy
+satisfies the distribution source obligation without an ongoing download
+link. A link only to an unmodified upstream repository is insufficient when
+Your distributed or running version contains modifications.
+
+5. Patents and names
+
+Each Contributor grants a worldwide, non-exclusive, royalty-free patent
+license to make, use and distribute their contribution under this license,
+only for patent claims they can license that are necessarily infringed by
+their contribution alone or in its combination as submitted. No other patent
+rights are granted. If You bring a patent claim alleging that the Software
+or a contribution infringes a patent, the patent licenses granted to You
+under this license terminate on the date that claim is filed.
+
+This license grants no trademark rights, except reasonable descriptive use
+to identify origin and comply with attribution requirements. Do not imply
+that a Contributor operates, endorses, or supports Your version or service.
+
+6. Termination and restoration
+
+Rights granted by this license terminate automatically if You violate its
+conditions. If this is Your first violation, and You cease the violation
+and fully remedy it within 30 days after becoming aware of it or receiving
+notice, Your rights are reinstated unless the affected rights holder has
+explicitly and finally terminated them. Repeated or unremedied violations
+require that rights holder's written permission for reinstatement.
+Termination does not terminate the rights of downstream recipients who
+remain in compliance. It does not require destruction of user-created data.
+
+7. Disclaimer and limitation of liability
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, THE SOFTWARE IS PROVIDED
+"AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT.
+NO CONTRIBUTOR IS LIABLE FOR ANY CLAIM, DAMAGE OR OTHER LIABILITY, WHETHER
+IN CONTRACT, TORT OR OTHERWISE, ARISING FROM THE SOFTWARE OR ITS USE,
+INCLUDING DATA LOSS, LOST PROFITS, OR SERVICE INTERRUPTION. NOTHING IN THIS
+LICENSE EXCLUDES A LIABILITY OR STATUTORY RIGHT THAT CANNOT LAWFULLY BE
+EXCLUDED. NO MAINTENANCE, HOSTING, SECURITY RESPONSE, OR SUPPORT OBLIGATION
+IS CREATED BY THIS LICENSE.
+
+8. Third parties and interpretation
+
+This license does not relicense third-party software, fonts, icons or other
+materials. Their own licenses and notices continue to apply. Do not combine
+code subject to incompatible terms and represent the result as licensed
+under this license. Nothing here restricts rights available independently
+under applicable law. No additional rights are implied. If a provision is
+unenforceable, the remaining provisions continue to apply to the extent
+permitted by law. The English text above is the controlling license text;
+the Chinese FAQ explains intended scenarios without replacing these terms.

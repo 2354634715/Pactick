@@ -1,0 +1,1912 @@
+[
+  {
+    "path": ".dockerignore",
+    "sha256": "011396c01f4b088becd09ecff67c2ad3f18d63e210ffce7b2e52a0a03c8fc0c4",
+    "size": 322
+  },
+  {
+    "path": ".env.example",
+    "sha256": "cea44858a6dda210d8ab6ead2ea93f2ea78f351a9ae726b13d1068c597cb5238",
+    "size": 432
+  },
+  {
+    "path": ".gitattributes",
+    "sha256": "c7e2ebeba61d13f613edc94b1dd48c41f43d856cc1e699531753bbe23889dc34",
+    "size": 284
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/bug_report.yml",
+    "sha256": "c4db3ada06a332cb77fbb477f7b4c87a31b9f2c4ff721b323cf827ac2745f37c",
+    "size": 942
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/config.yml",
+    "sha256": "1f103c6a9dd07cd13a9a6f17ace6b813f47747eb9cb7e00488cb2073caaf91bb",
+    "size": 28
+  },
+  {
+    "path": ".github/ISSUE_TEMPLATE/feature_request.yml",
+    "sha256": "a2c8ce7c5036758c3f9556486a14fdf46ce8f5db2bb29f06d673a51acd056068",
+    "size": 351
+  },
+  {
+    "path": ".github/pull_request_template.md",
+    "sha256": "41f172fba1cc7215890750c2e8bc0b7a7e4b38bd1d36c957ff300311ca4e0e4b",
+    "size": 344
+  },
+  {
+    "path": ".github/workflows/android-release.yml",
+    "sha256": "cf57c84672c817fac9a18cf69a1d7c0d2acfa66dde28d7313cc69d574da845d4",
+    "size": 7242
+  },
+  {
+    "path": ".github/workflows/checks.yml",
+    "sha256": "6ac9c03a157fed4605211463b91cd5a0d69085e5fff39700e1ec7d77b4f318b3",
+    "size": 2876
+  },
+  {
+    "path": ".gitignore",
+    "sha256": "8ffedef23a749545a25633d18363bfdf1cd121e23b3de5884349f7a5a8d1bbfa",
+    "size": 671
+  },
+  {
+    "path": "api/openapi.yaml",
+    "sha256": "c363762039b0b95c80398770cd2ea33b8d364fb414cc52c902098eb865a000a4",
+    "size": 31602
+  },
+  {
+    "path": "api/openapi_test.go",
+    "sha256": "931775bacde31a51363ae1faaf1beb679ae8168fd64c122222518e9e675ca301",
+    "size": 2382
+  },
+  {
+    "path": "CHANGELOG.md",
+    "sha256": "57f54c9890643994127cf93b38f5960c9cc2f8f913be41b9488af40ff97f801f",
+    "size": 4222
+  },
+  {
+    "path": "client/.gitignore",
+    "sha256": "bf44f7a23c80313fb0fff7528651f35d174cc05b0d068cb399998da4ce4e1618",
+    "size": 811
+  },
+  {
+    "path": "client/.metadata",
+    "sha256": "dc1e5872b7bb4b77c13680a160d80793810808e76cbce7c466e6d9ad9c731987",
+    "size": 968
+  },
+  {
+    "path": "client/analysis_options.yaml",
+    "sha256": "ff4aea7546db945ee624be410896420559301764a658ec2f7e60fcc96d562115",
+    "size": 178
+  },
+  {
+    "path": "client/android/.gitignore",
+    "sha256": "4b5a480e56e119de4d695821df2db34bf9a2da19ce0aef34aed6fabc91718606",
+    "size": 212
+  },
+  {
+    "path": "client/android/app/build.gradle.kts",
+    "sha256": "b53313aab155949557b16c0ee96fe1f08e00c788c32c070f1a682562a402df39",
+    "size": 2599
+  },
+  {
+    "path": "client/android/app/src/debug/AndroidManifest.xml",
+    "sha256": "728e1c74113c2fcb7acf55ca5584ec3888aadaca6e2cd506d4a03f7699d97a32",
+    "size": 368
+  },
+  {
+    "path": "client/android/app/src/main/AndroidManifest.xml",
+    "sha256": "216fd3fc36818450f2c72d7b163419998e877e50e9394fbf74c131f1626d90f6",
+    "size": 2643
+  },
+  {
+    "path": "client/android/app/src/main/kotlin/com/example/pactick/FocusTimerService.kt",
+    "sha256": "fd77d0261a5c3d9b667c58992958296ab7bdbf75ca06dd0c07b08a9b2bcfe6a8",
+    "size": 27019
+  },
+  {
+    "path": "client/android/app/src/main/kotlin/com/example/pactick/MainActivity.kt",
+    "sha256": "c0b00a852c019cbf83f917c8b25947d3b984b12f23d1ca091f1312ada84b0c28",
+    "size": 12864
+  },
+  {
+    "path": "client/android/app/src/main/res/drawable/ic_focus_notification.xml",
+    "sha256": "c00963d2e0bd8b9e453a4833f3aa19412683a1ad758b87afc25be07892c75c92",
+    "size": 820
+  },
+  {
+    "path": "client/android/app/src/main/res/drawable/ic_launcher_foreground.png",
+    "sha256": "5dbc26ed5388db79ae2aca82cb4aac18ab717caf1fff8e67ea81dd3d3b65906e",
+    "size": 32043
+  },
+  {
+    "path": "client/android/app/src/main/res/drawable/ic_launcher_monochrome.png",
+    "sha256": "9842ea1a3a4d38e91415e5ce262331fadf27be4aaf48b7e261b251e1dbdcaf3d",
+    "size": 6058
+  },
+  {
+    "path": "client/android/app/src/main/res/drawable/launch_background.xml",
+    "sha256": "94433756fe10005ddd6fc55cc5c0b1e9f3c10b66a08ceac795ece6713d34e28a",
+    "size": 434
+  },
+  {
+    "path": "client/android/app/src/main/res/drawable-v21/launch_background.xml",
+    "sha256": "7ca6d5cec2169c5a98661a119db23a6f3399c8fef2256ff04f3a642831282478",
+    "size": 438
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml",
+    "sha256": "d0b7050d918713b6bd1598265d44b6553aecc667db9be269c11c75b61521ca75",
+    "size": 267
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+    "sha256": "d0b7050d918713b6bd1598265d44b6553aecc667db9be269c11c75b61521ca75",
+    "size": 267
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-anydpi-v33/ic_launcher.xml",
+    "sha256": "a9476ffa50e6412caac2a41c3dbc2df366c90e27dccdc9ce9b6346dd90be998c",
+    "size": 338
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-anydpi-v33/ic_launcher_round.xml",
+    "sha256": "a9476ffa50e6412caac2a41c3dbc2df366c90e27dccdc9ce9b6346dd90be998c",
+    "size": 338
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-hdpi/ic_launcher.png",
+    "sha256": "a9e6dad0ffbd2395328ce27e29c4b26f3076494b1c0b04d0535f5a733d3d3fc6",
+    "size": 3461
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-hdpi/ic_launcher_round.png",
+    "sha256": "a9e6dad0ffbd2395328ce27e29c4b26f3076494b1c0b04d0535f5a733d3d3fc6",
+    "size": 3461
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-mdpi/ic_launcher.png",
+    "sha256": "a919c4508be08204369d44c6448e97b73f7fd4c8e2d5d3043043a527d7b592c4",
+    "size": 2100
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-mdpi/ic_launcher_round.png",
+    "sha256": "a919c4508be08204369d44c6448e97b73f7fd4c8e2d5d3043043a527d7b592c4",
+    "size": 2100
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png",
+    "sha256": "16cad9501090e97ca7d3232c2d1814581ef679016e99f8785e8806ea6fd0a24a",
+    "size": 5271
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-xhdpi/ic_launcher_round.png",
+    "sha256": "16cad9501090e97ca7d3232c2d1814581ef679016e99f8785e8806ea6fd0a24a",
+    "size": 5271
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png",
+    "sha256": "a284c3c2c61e146dd2b83ab98f36bab4e572fe29572865e4b822273a113a598c",
+    "size": 9636
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-xxhdpi/ic_launcher_round.png",
+    "sha256": "a284c3c2c61e146dd2b83ab98f36bab4e572fe29572865e4b822273a113a598c",
+    "size": 9636
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png",
+    "sha256": "3b5b3c21c994288701d7e5dc991dc29940410935fb8d57f0d3a90219e8922e08",
+    "size": 15639
+  },
+  {
+    "path": "client/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher_round.png",
+    "sha256": "3b5b3c21c994288701d7e5dc991dc29940410935fb8d57f0d3a90219e8922e08",
+    "size": 15639
+  },
+  {
+    "path": "client/android/app/src/main/res/values/colors.xml",
+    "sha256": "95edac43dea682eae598feca9336d0c4460f16c37d395ec80bea2370c379da8f",
+    "size": 403
+  },
+  {
+    "path": "client/android/app/src/main/res/values/strings.xml",
+    "sha256": "f1456c9d0192e8d0781b294d037b031e3139ffe813ed152938fb1e1a3bf66cad",
+    "size": 70
+  },
+  {
+    "path": "client/android/app/src/main/res/values/styles.xml",
+    "sha256": "937d7c82f539c72eb94fd3a3773f29b3d3fef1997213c92cb632298cedf4bda9",
+    "size": 996
+  },
+  {
+    "path": "client/android/app/src/main/res/values-night/colors.xml",
+    "sha256": "1c5252b192cd176dad0229fcb263fa0a1050c96e9d51688b6eb92d00e35d7d21",
+    "size": 349
+  },
+  {
+    "path": "client/android/app/src/main/res/values-night/styles.xml",
+    "sha256": "8c5bad5152f217e837519f9c15211d19f39bd45f5f67faf6dd81cb4b299e518f",
+    "size": 995
+  },
+  {
+    "path": "client/android/app/src/profile/AndroidManifest.xml",
+    "sha256": "30b0832ed8b92dfbd6ae2abfa939ccf26333d37600056b1572bd4a397a18a74b",
+    "size": 378
+  },
+  {
+    "path": "client/android/build.gradle.kts",
+    "sha256": "6a26dba2cb8dfba1e74f540b0d17a89d96c1301d3c3bfda14348bed257fddcba",
+    "size": 537
+  },
+  {
+    "path": "client/android/gradle/wrapper/gradle-wrapper.jar",
+    "sha256": "16caeaf66d57a0d1d2087fef6a97efa62de8da69afa5b908f40db35afc4342da",
+    "size": 53636
+  },
+  {
+    "path": "client/android/gradle/wrapper/gradle-wrapper.properties",
+    "sha256": "92dd5fbe596feb9d2404b3fd0c1363ed2c54e0d97ec72c49e371e47218f55c3a",
+    "size": 202
+  },
+  {
+    "path": "client/android/gradle.properties",
+    "sha256": "a6851de829e630ca09f07c9f6fe1dc610f8f7f93bff05860177c0c47de1f6610",
+    "size": 350
+  },
+  {
+    "path": "client/android/gradlew",
+    "sha256": "ec56c02543666d92d9ac5ae7fcc48f88ce4de0deb8b7f9b39928ca46f68c1b2b",
+    "size": 4971
+  },
+  {
+    "path": "client/android/gradlew.bat",
+    "sha256": "c13c6e91b9a517783976de213d46398c661ea9e17651376d7301e839eaedcc62",
+    "size": 2404
+  },
+  {
+    "path": "client/android/key.properties.example",
+    "sha256": "aa433bd4bc1121d9941683faa1dc7569f42fb0e52ae2e833267382c2f798e6f8",
+    "size": 200
+  },
+  {
+    "path": "client/android/settings.gradle.kts",
+    "sha256": "016759283e88ade6eba92910583feeef88b962839b957aa414296afd2952d122",
+    "size": 770
+  },
+  {
+    "path": "client/assets/branding/pactick_icon.png",
+    "sha256": "472aa862afc3651230394cd3e992dc1532f2fe1423e3bb9b3485c098d4861e0c",
+    "size": 70095
+  },
+  {
+    "path": "client/assets/licenses/supplemental.json",
+    "sha256": "0e23f43213796acd48e66a7edd765c012d6a72c2b2e054e21a1952da48f71b13",
+    "size": 236237
+  },
+  {
+    "path": "client/lib/app/layout/window_size_class.dart",
+    "sha256": "9967a9c54f6f77bc1fad0eb2af3d44dd6ebd80c95fdd5070159c8effd22d0707",
+    "size": 646
+  },
+  {
+    "path": "client/lib/app/navigation/adaptive_app_shell.dart",
+    "sha256": "e5fd01b84fe86dcb8fa33b0ecf73bb3aa254a5dad2cab80639e7b28b585a356f",
+    "size": 11056
+  },
+  {
+    "path": "client/lib/app/navigation/app_destination.dart",
+    "sha256": "ea5b3c7614fbdcc2e66652d5c203c1bc1b93f20e2a87fa679c9bbac48ee5963f",
+    "size": 547
+  },
+  {
+    "path": "client/lib/app/pactick_app.dart",
+    "sha256": "fe0590be5ed25d877d6161eb1bbfc1f4dbef5f96e88d1d2159d7ad35cc505763",
+    "size": 4008
+  },
+  {
+    "path": "client/lib/app/theme/app_theme.dart",
+    "sha256": "aa8678b97f7c7c30fdd230f45cc9fa4b252adade193d2898e3acd511b35b9668",
+    "size": 14116
+  },
+  {
+    "path": "client/lib/app/theme/app_tokens.dart",
+    "sha256": "56c91436eff91165863f65ac200484cc1df94d5981622e7c90c68fad786459df",
+    "size": 2415
+  },
+  {
+    "path": "client/lib/core/components/active_focus_dock.dart",
+    "sha256": "689a2640d19f81d88afdca9648c6626110a795b308830a0f97f433a2aa43914f",
+    "size": 4605
+  },
+  {
+    "path": "client/lib/core/components/app_keyboard_scope.dart",
+    "sha256": "e916af8c82e9f6e9696a11e462b1d47f65bcd514d3a9a6073eff62fb365d88b4",
+    "size": 576
+  },
+  {
+    "path": "client/lib/core/components/app_mark.dart",
+    "sha256": "c2e198b2f5dc72e4858d67e2888792abba8954000eadb2a785d9b012e27d31d6",
+    "size": 477
+  },
+  {
+    "path": "client/lib/core/components/feature_page_scaffold.dart",
+    "sha256": "d74268600647a7f8446e4723a715962a07a5ea97a4aa7d56f94a6fb0c9415985",
+    "size": 3738
+  },
+  {
+    "path": "client/lib/core/components/focus_clock.dart",
+    "sha256": "2400e0c8ec3960cf196e1e4c9603c6c10eddc01e641efb91da53f211716d25e0",
+    "size": 5478
+  },
+  {
+    "path": "client/lib/core/components/metric_card.dart",
+    "sha256": "5921c4bda2f98d3d877483900ffa660e782e3ad20ec5ea8bb10fb84755931f5c",
+    "size": 3257
+  },
+  {
+    "path": "client/lib/core/components/section_header.dart",
+    "sha256": "77a20a2b54c3e12a031853f999e52210576db1abe1e5d2aa3b062093b0266737",
+    "size": 1231
+  },
+  {
+    "path": "client/lib/core/components/sync_status_button.dart",
+    "sha256": "6eadb3d8881065e987766e97b537ec8c9f3602d6792295902807c3be376540a2",
+    "size": 12707
+  },
+  {
+    "path": "client/lib/core/components/task_card.dart",
+    "sha256": "406ac78e03ba3df6e49c0d57ae08b06d4619f88464c237520dfa49f0ce24cec4",
+    "size": 6702
+  },
+  {
+    "path": "client/lib/core/components/task_details_panel.dart",
+    "sha256": "07d41b9db8643442652aabf7cf14ea277d7efb13f159cd5062368320234a1cbf",
+    "size": 7323
+  },
+  {
+    "path": "client/lib/core/dialogs/editor_frame.dart",
+    "sha256": "c4118905aec5784a0e24887b78247baf49e8286e11393341de0ff5417a1af411",
+    "size": 5809
+  },
+  {
+    "path": "client/lib/core/dialogs/plan_block_editor.dart",
+    "sha256": "4784b4d4d63a283e2f45684c25ec1dd37d6f35f9e702d94159ec1e81321d2dd1",
+    "size": 11638
+  },
+  {
+    "path": "client/lib/core/dialogs/project_editor.dart",
+    "sha256": "86b1d4fa6dc3256c48160470594285a1dd16b1f449b3e3b8dfcaa34f9d9d6d30",
+    "size": 13335
+  },
+  {
+    "path": "client/lib/core/dialogs/task_editor.dart",
+    "sha256": "4db3db14d429ca1dcffdc07d82aea864c2283d60a25d5d930a2f0cd767c1335e",
+    "size": 18932
+  },
+  {
+    "path": "client/lib/core/licenses/supplemental_licenses.dart",
+    "sha256": "015e655f906497abb25ca6642054e0342ac23f3ff9a0fc82670a71a2f469823b",
+    "size": 1482
+  },
+  {
+    "path": "client/lib/core/models/auth_models.dart",
+    "sha256": "8133e891123d905d11e5f427e06cd02689c6c9b2bfcb9223a310da0d477abab6",
+    "size": 4671
+  },
+  {
+    "path": "client/lib/core/models/domain_models.dart",
+    "sha256": "3d48e0fa9b006ee0eaea6c4fbb3cbe182f9cfe1c272b745a6fd2b3918e68f918",
+    "size": 13503
+  },
+  {
+    "path": "client/lib/core/models/update_models.dart",
+    "sha256": "38585db4a0906dda4b42262b9f619577ddbf8fd39183bc413bcaaa9de684828d",
+    "size": 7177
+  },
+  {
+    "path": "client/lib/core/state/app_controller.dart",
+    "sha256": "6efc678706af00a3507a2daf9d9f7e949705c05d7a76a623b155610ec9b1e72c",
+    "size": 37831
+  },
+  {
+    "path": "client/lib/core/state/app_scope.dart",
+    "sha256": "a686c6bad890dd58db1a43d8aca18183b458cc1b830bf6928206c01c8a3f9d03",
+    "size": 3684
+  },
+  {
+    "path": "client/lib/core/state/session_controller.dart",
+    "sha256": "44f5bd5e7d7d784646896e3802b2c333069c25c5024212054e0a9fd48ab990b0",
+    "size": 14186
+  },
+  {
+    "path": "client/lib/core/state/session_scope.dart",
+    "sha256": "b48deea4c8c8e4bdeb826f30ba55b3165fdbe87f7861aea9802dba604716789e",
+    "size": 836
+  },
+  {
+    "path": "client/lib/core/state_views/state_pane.dart",
+    "sha256": "1139d94c3aa48a95599b1dc4cb68f6ebdb8f467e222aea979dff4d6ec9012864",
+    "size": 2540
+  },
+  {
+    "path": "client/lib/core/sync/sync_entity_contract.dart",
+    "sha256": "233951c21c36f716d8dc9a34b42eef3d9f2d47d5f09261de14a67ece076f28aa",
+    "size": 7921
+  },
+  {
+    "path": "client/lib/core/sync/sync_models.dart",
+    "sha256": "b37fb08c7de03ca52a3424ded488988f8319b740d1f244d4800f5d2472433bfe",
+    "size": 11226
+  },
+  {
+    "path": "client/lib/core/utilities/formatters.dart",
+    "sha256": "193e7bb564b7a49b90526e65d6b5b6ee18d809ddafd8f834e2a1341ff7c20e72",
+    "size": 1185
+  },
+  {
+    "path": "client/lib/core/utilities/persistence_errors.dart",
+    "sha256": "f444ea9d493f38a9999472d26e2222d9279ebf0f194d131e6e2037975e5e1f36",
+    "size": 725
+  },
+  {
+    "path": "client/lib/data/local/local_database.dart",
+    "sha256": "c076223841bf46c334d9c1b2b4b6faec190b6e3e49c6f4294013b13c4118fb68",
+    "size": 64230
+  },
+  {
+    "path": "client/lib/data/local/session_store.dart",
+    "sha256": "fae34d6892229786beaf99410114a4927cb9670d9f2df76e87256020907dfced",
+    "size": 3617
+  },
+  {
+    "path": "client/lib/data/local/workspace_archive.dart",
+    "sha256": "068a8a751f186e653a6d69ab3b85897dc04802cee63df7338d4088e99d53c136",
+    "size": 14975
+  },
+  {
+    "path": "client/lib/data/local/workspace_backup.dart",
+    "sha256": "78b0253ca435a2784be239c2e392efd1d21f692777e682e6fb929cf3d449bc1a",
+    "size": 940
+  },
+  {
+    "path": "client/lib/data/platform/backup_file_gateway.dart",
+    "sha256": "c377f45ca2c7093e87a8ab075d379869347aa3fde006e990add45becc0c52bfc",
+    "size": 1071
+  },
+  {
+    "path": "client/lib/data/platform/focus_platform_gateway.dart",
+    "sha256": "c2c0a5dc7741b5960c813e4fb749182c2db55c8ced23b12e6f1e7ce222ebbdfc",
+    "size": 4530
+  },
+  {
+    "path": "client/lib/data/remote/api_client.dart",
+    "sha256": "ef6b2d6aeee7017ae2b093536805d37b7c6465ef0362251da1a5c817e52112fd",
+    "size": 8112
+  },
+  {
+    "path": "client/lib/data/remote/server_address.dart",
+    "sha256": "29a19e47878fca5edd0b26992d1b6c39cbc1f9f4df7f4679135a6279642eab61",
+    "size": 1284
+  },
+  {
+    "path": "client/lib/data/repositories/auth_repository.dart",
+    "sha256": "e2fa80e778f197b0265cf95954f04aeb59273899254be20d54669a3db2444ca7",
+    "size": 3585
+  },
+  {
+    "path": "client/lib/data/repositories/workspace_repository.dart",
+    "sha256": "1dec25b28f6d2ad8e1ebb976ab77f6b404a0adb5f85254063edb40815041761e",
+    "size": 17287
+  },
+  {
+    "path": "client/lib/data/update/client_update_service.dart",
+    "sha256": "bf515605a50de566608270b86d340e87dfe1d4add6535a53ea48da802bc6aa4f",
+    "size": 3637
+  },
+  {
+    "path": "client/lib/features/auth/pages/login_page.dart",
+    "sha256": "5bab704b76cb4dd0945d3e824808ab64af2112acce08dbbfc9935563241291f1",
+    "size": 10898
+  },
+  {
+    "path": "client/lib/features/calendar/pages/calendar_page.dart",
+    "sha256": "ba596879710648ce55d0734ece84085ea218346050561e3d360adca04dd8a16e",
+    "size": 46586
+  },
+  {
+    "path": "client/lib/features/focus/dialogs/app_whitelist_editor.dart",
+    "sha256": "f6955c95902db76aa0d61a85a21a73ddba9c92168c2105f08c83e386114c53a3",
+    "size": 11213
+  },
+  {
+    "path": "client/lib/features/focus/pages/focus_page.dart",
+    "sha256": "a24f4353a8091ba66e9c4e1961bd54be41aa26f7022c9bdb5d2b49b729da9ff7",
+    "size": 40815
+  },
+  {
+    "path": "client/lib/features/settings/pages/local_data_settings.dart",
+    "sha256": "9ba9eb2ce0baf2e8d7b80f310f28bb98a2ec6f7171fb37c84727e88973fd992b",
+    "size": 21554
+  },
+  {
+    "path": "client/lib/features/settings/pages/settings_page.dart",
+    "sha256": "3e315f0fc840549353c41e373149cf9e575b67e2517f735d7effd7a79c1eeaa5",
+    "size": 17047
+  },
+  {
+    "path": "client/lib/features/statistics/pages/statistics_page.dart",
+    "sha256": "822eeac906485f0dd9b0655b97bd9f0db8312ad1850328f3b7ac83d80fa0421c",
+    "size": 13611
+  },
+  {
+    "path": "client/lib/features/tasks/pages/tasks_page.dart",
+    "sha256": "d67799a37245102fe566e1ff1ea0c580caa1c251e38980874b531af95bc8f9b0",
+    "size": 22183
+  },
+  {
+    "path": "client/lib/features/today/pages/today_page.dart",
+    "sha256": "88791d4a72b238780b70b64a762dd33fcefffe79d1ac1d93fd44da664a2426b5",
+    "size": 28380
+  },
+  {
+    "path": "client/lib/main.dart",
+    "sha256": "2de6dd205f25761e786fd8fd5a97b323e1dd6178d13d642f9a0b8c1a71e820c2",
+    "size": 3412
+  },
+  {
+    "path": "client/LICENSE",
+    "sha256": "6b1983a875ee796b31d7b9e09103170e3dd4f096ba76cb242045784e86bb0221",
+    "size": 7439
+  },
+  {
+    "path": "client/pubspec.lock",
+    "sha256": "c143689cb9effc486a338575d1b327f85c61d2bea85c827bda1d80a958ad76f5",
+    "size": 20474
+  },
+  {
+    "path": "client/pubspec.yaml",
+    "sha256": "929c40a4ae90fac4994c3cd05fd4054eb2c51ce758374b484c30de515b98c0bf",
+    "size": 648
+  },
+  {
+    "path": "client/README.md",
+    "sha256": "283abbc4837ba14efaa440429eb55d93011beb521b1b6576d08b168b6e0c21d5",
+    "size": 1702
+  },
+  {
+    "path": "client/test/app_controller_test.dart",
+    "sha256": "38a1d4adcf3225fe029baacb2b60d26052467f5679b3fb7df010db78a6077779",
+    "size": 9108
+  },
+  {
+    "path": "client/test/auth_widget_test.dart",
+    "sha256": "d8b037cf3fc0569b41e30b50bbe7b24f90c9ac1b31425a7fdfd1a683d59b3794",
+    "size": 6665
+  },
+  {
+    "path": "client/test/backup_file_gateway_test.dart",
+    "sha256": "89a39fc2e2445586ff94c8ce5ab3cd18048e5d5c84cf9c59c886fd8c7f895151",
+    "size": 2022
+  },
+  {
+    "path": "client/test/calendar_statistics_gui_test.dart",
+    "sha256": "83badd375cd6d5522eed5593f26312db431674c27e68b32112c170cd087976eb",
+    "size": 11845
+  },
+  {
+    "path": "client/test/client_update_service_test.dart",
+    "sha256": "3d3a64ab539804f865c2283f0a22942b0473539e15894b3f2212975e90b30505",
+    "size": 8546
+  },
+  {
+    "path": "client/test/editor_interaction_test.dart",
+    "sha256": "1b28bb333529fc7b84ac25414e767539680c3eec8b2dd574d4df8b46702984a1",
+    "size": 7074
+  },
+  {
+    "path": "client/test/focus_dialog_test.dart",
+    "sha256": "d7f72824b33b6e2bac97cc552f394c70eebfed517833bd1ddfb7bdd48d84e34c",
+    "size": 9638
+  },
+  {
+    "path": "client/test/focus_recovery_test.dart",
+    "sha256": "45c0f71e5cc58bbdd13ae7590016397721ef1ffa114a515b700f60888a0053a7",
+    "size": 12569
+  },
+  {
+    "path": "client/test/gui_regression_test.dart",
+    "sha256": "60f2eb10171ea6421c78e9cf51103ef54c479344929786ca3da57575443157d2",
+    "size": 17305
+  },
+  {
+    "path": "client/test/persistence_failure_test.dart",
+    "sha256": "13f9aa49a95bbcae498bbdd7b0a5c36e72d36f24dbc3eb3562a5c3fb43100ef9",
+    "size": 14688
+  },
+  {
+    "path": "client/test/releases_about_card_test.dart",
+    "sha256": "34112b7b7be23bd3b53d587f4600727c404c895354a01bac6d68e0b7908db5b6",
+    "size": 2050
+  },
+  {
+    "path": "client/test/self_hosting_test.dart",
+    "sha256": "c8859beb280ff734de7b6554b1aa815bba2c7efcf81088b4f9ea503b796770ec",
+    "size": 8673
+  },
+  {
+    "path": "client/test/session_controller_test.dart",
+    "sha256": "5cd05da9cd39d7bdf60f529c238a94e58610508f1de214cf7e1652edfba78fe7",
+    "size": 11463
+  },
+  {
+    "path": "client/test/supplemental_licenses_test.dart",
+    "sha256": "6dd9ed81c8dca0ef13b81b4bac932f20882735dc66276037b901f6edae795ecb",
+    "size": 2133
+  },
+  {
+    "path": "client/test/support/session_test_support.dart",
+    "sha256": "1e378b1a82597a4efd971ab2691f9752e136a1a470a55af1d332324b2ea07762",
+    "size": 2153
+  },
+  {
+    "path": "client/test/sync_repository_test.dart",
+    "sha256": "0b05de1601e63a104edf110bfb4ed3dda85c0f22024acbfe3bd95f86a600ae39",
+    "size": 18054
+  },
+  {
+    "path": "client/test/task_pages_gui_test.dart",
+    "sha256": "9c729f8cbf2bd7fbc19db7482298ee6236371c57ebbba6769403d90d8b7bef95",
+    "size": 9046
+  },
+  {
+    "path": "client/test/today_layout_test.dart",
+    "sha256": "93221919b4d5345e357db954774538fdef49b1f61e36b756a9a13b9bdc65b977",
+    "size": 3242
+  },
+  {
+    "path": "client/test/widget_test.dart",
+    "sha256": "f59e23a5391492f8a0257454372e2fdc1261d83f2b54b5443a1cabb6b3113fcc",
+    "size": 5414
+  },
+  {
+    "path": "client/test/workspace_backup_test.dart",
+    "sha256": "bb0ecb03852d74ac30adc86f93df32a4b6abbfab9b18456df77d8e0cf1d5e58a",
+    "size": 15185
+  },
+  {
+    "path": "cmd/healthcheck/main.go",
+    "sha256": "d21cba61b1961554577991fc54b2264de000c9ee986322bfb27beeb25f9961a7",
+    "size": 633
+  },
+  {
+    "path": "cmd/migrate/main.go",
+    "sha256": "81d887565f27d10a3c807c83f50e92bb6d2faa57c3effb78381f5bafe8c6817f",
+    "size": 763
+  },
+  {
+    "path": "cmd/server/main.go",
+    "sha256": "3b3f82aae7c0ee5ab18c68bf9dfa4dad409de4e5edc93d51963cc0567a665faf",
+    "size": 3048
+  },
+  {
+    "path": "compose.production.yaml",
+    "sha256": "688157c1154a7be078144e7fe55cf04e62778192da4f252c22e30517efae082b",
+    "size": 1732
+  },
+  {
+    "path": "compose.yaml",
+    "sha256": "cec5e2210d5d2f12e2a8cc7707d53480b938cda71e543fe347f6f34716523f90",
+    "size": 781
+  },
+  {
+    "path": "CONTRIBUTING.md",
+    "sha256": "28be7910a5c8ea1ac55052b64acaf4febef3fe2d484e891e8198425be6af17cf",
+    "size": 1809
+  },
+  {
+    "path": "deploy/config/api.env.example",
+    "sha256": "6d5882880e2b963def600ce3c086d27827bd748e5dffe26aea8de7a5e0205baa",
+    "size": 461
+  },
+  {
+    "path": "deploy/config/backup.env.example",
+    "sha256": "c66e7416286c7a54ee262a049bb68a8e70299b95424394ab06a04653964f6941",
+    "size": 250
+  },
+  {
+    "path": "deploy/config/compose.env.example",
+    "sha256": "9926babdddf5564452738942bfa1c89a65573f49ff218132ad4e20a33965b741",
+    "size": 229
+  },
+  {
+    "path": "deploy/config/postgres.env.example",
+    "sha256": "6dedec1a404525374e2a61c99e178cec60fb5a21342fdd0b391bfa61cc9223f3",
+    "size": 133
+  },
+  {
+    "path": "deploy/nginx/pactick-http.conf.template",
+    "sha256": "95a5e6487b1d3d88e2fd2586ed8af9524cfec006991f7dd685e71581d59c6851",
+    "size": 460
+  },
+  {
+    "path": "deploy/nginx/pactick-https.conf.template",
+    "sha256": "46da9f56fb8e64386081db1e67e242231c0883241f5c7a21cd9355c6ce5c3240",
+    "size": 2844
+  },
+  {
+    "path": "deploy/README.md",
+    "sha256": "5984b6a72bd92f319647ab9cedd4bd5a30b5021509794811b081cf0fa6bee1e5",
+    "size": 5031
+  },
+  {
+    "path": "deploy/scripts/backup.sh",
+    "sha256": "c5302e7c5c215c709c1d9f879a6b0d2c510f940c1fc95d62626ace0545920c5f",
+    "size": 4110
+  },
+  {
+    "path": "deploy/scripts/install.sh",
+    "sha256": "21578c3b5b568287b41dc4183f7f2413434f27cbf04221e4121b470c0f7c8509",
+    "size": 17105
+  },
+  {
+    "path": "deploy/scripts/release.sh",
+    "sha256": "d5e194652d99d9ad47915af2e4ed8c3242d3af174076248441ffe6a7b282dbd6",
+    "size": 3601
+  },
+  {
+    "path": "deploy/scripts/restore-check.sh",
+    "sha256": "267dccf2499a45dbd098c8d82397411d920ea57892b77e9b0f3a8faae96e2699",
+    "size": 3618
+  },
+  {
+    "path": "deploy/scripts/validate-config.sh",
+    "sha256": "fa9d9be20ac31c2736cae39d9565c3c9db923f6832d3b8cbaa9f640e295e6aef",
+    "size": 3928
+  },
+  {
+    "path": "deploy/scripts/verify-deployment.sh",
+    "sha256": "e6a6894adda729b2f8951483ebf4ea75f560d929b2064b83647623201863dfb2",
+    "size": 3483
+  },
+  {
+    "path": "deploy/systemd/pactick-backup.service",
+    "sha256": "d62cafa4ae9ecc10c42e7a505ab3b7a3bc0127978a3f09044191bbdfa1bd1773",
+    "size": 438
+  },
+  {
+    "path": "deploy/systemd/pactick-backup.timer",
+    "sha256": "c4ab9b62d33df1377441ff9d9bf319ca7593650b090f00e5fd1c20bfc8f1d4b3",
+    "size": 218
+  },
+  {
+    "path": "deploy/tests/https_test.sh",
+    "sha256": "b57fd71a02fff47abf19917f1e446368bab1855820cccf174e11421cc31f0dd7",
+    "size": 8543
+  },
+  {
+    "path": "deploy/tests/install_test.sh",
+    "sha256": "519379e70be418a333dc3084d30f66f96eaa85b7cb2e17da3ac249d37a716df2",
+    "size": 2866
+  },
+  {
+    "path": "deploy/tests/release_test.sh",
+    "sha256": "5cb7e30f5e639db057b3aefa8e0d78471f2a64deb2a90666fd929761dd5ac41b",
+    "size": 2442
+  },
+  {
+    "path": "deploy/tests/upgrade_test.sh",
+    "sha256": "e1d9c022698bb32f19f555008bd66a82510cf2b8f4da0a4496f3b2c3cb5356c9",
+    "size": 9791
+  },
+  {
+    "path": "deployment_test.go",
+    "sha256": "1bd200a6608cf7ffd8a6f1793225eb0ac025c93b334cb7345797cf7fa53d5ae6",
+    "size": 7609
+  },
+  {
+    "path": "Dockerfile",
+    "sha256": "1966b952524a3ef01b7fb852364be6f2b62ab86d8e04142db778c2cf3704ac91",
+    "size": 825
+  },
+  {
+    "path": "Dockerfile.prebuilt",
+    "sha256": "621ece52164adab4e287faf00161b4892fe41f246c62e70a4f5c01f0efe6a7b2",
+    "size": 448
+  },
+  {
+    "path": "docs/ANDROID_SIGNING.md",
+    "sha256": "781320e72fd4d6918967560d945430da2a7aed2d627422fda22b3ff0811faf5e",
+    "size": 7149
+  },
+  {
+    "path": "docs/ASSET_SOURCES.md",
+    "sha256": "18faa8127f3a5849632c3e8712c56aaaa9130a758879452fb5bbb6e94189fea5",
+    "size": 8954
+  },
+  {
+    "path": "docs/BUILDING.md",
+    "sha256": "004f58c1bfb7a09c2d0b22275872403e955071bbe3254f92c0775de50aa0ec3c",
+    "size": 7047
+  },
+  {
+    "path": "docs/ENTITY_SCHEMAS.md",
+    "sha256": "53d2ce05f6a3d0f3c935592a64783bad8c906182a37f01bf6034ca9de1c60d19",
+    "size": 9087
+  },
+  {
+    "path": "docs/GETTING_STARTED.md",
+    "sha256": "b33f358963c1aceada124fb2307ed1958baffa5baa8882e6f12794ba3670c50c",
+    "size": 19080
+  },
+  {
+    "path": "docs/LICENSE_FAQ.md",
+    "sha256": "00aba944aeaed72a7b4b851668247c098880753fb1e396c0c3f38c66d2c9e1ed",
+    "size": 4476
+  },
+  {
+    "path": "docs/LOCAL_BACKUPS.md",
+    "sha256": "7dbe07fc22cfc58f1cfdcc8fb87275cd82835dc84da6c24a3497615b4d6cc350",
+    "size": 3804
+  },
+  {
+    "path": "docs/PROJECT_ARCHITECTURE.md",
+    "sha256": "465e7d48928bf4d42b0ae599102980d184df7088814606a0fcf98c3a1bd5615b",
+    "size": 6251
+  },
+  {
+    "path": "docs/RELEASE_AND_PROMOTION_PLAN.md",
+    "sha256": "f6a9a248be0bb5b7820480c29123b0d98cde4ab17561a57befc2cb4ddc37ff46",
+    "size": 43863
+  },
+  {
+    "path": "docs/RELEASING.md",
+    "sha256": "478828406e718a0bf0afc212a23d0057d52e2370f9ce87f647da11ff6e885e53",
+    "size": 10281
+  },
+  {
+    "path": "docs/SELF_HOSTING.md",
+    "sha256": "fab7edd5dc7722d266c834906bdd513cd87a43a3cc383aa9b2e77ac4a9ce1a80",
+    "size": 9998
+  },
+  {
+    "path": "docs/SERVER_ARCHITECTURE.md",
+    "sha256": "c20305a3a312c38ee0fde6f218cd8fc76198353f033950d72f023747a94a5c1c",
+    "size": 17605
+  },
+  {
+    "path": "docs/THIRD_PARTY_AUDIT.md",
+    "sha256": "a48933cd3c160612f82e3ba0e3d6a81ab3d73c9de4d559d64d22a0943fbf2446",
+    "size": 13583
+  },
+  {
+    "path": "go.mod",
+    "sha256": "c458c7990b62f14b7fb5862077ed8182002a84232dcae34344c97a98f47f1ee5",
+    "size": 633
+  },
+  {
+    "path": "go.sum",
+    "sha256": "810c86d9de348f58d64485844ab852a22490d776fa2a1e5f403d2dfba6408d13",
+    "size": 3916
+  },
+  {
+    "path": "internal/account/export.go",
+    "sha256": "024e317283bf113d53c23dd87c860c8887c10276514220d98800201769b737de",
+    "size": 4509
+  },
+  {
+    "path": "internal/account/export_postgres_test.go",
+    "sha256": "12f648f93e2352fa47de10fd1fefcd3be3b10a068fa455d196d42ead2944418a",
+    "size": 4875
+  },
+  {
+    "path": "internal/auth/password.go",
+    "sha256": "e45e20eb6bc31d68da72541d15d386414f72b12796719985a824544aea5a822d",
+    "size": 2276
+  },
+  {
+    "path": "internal/auth/password_test.go",
+    "sha256": "1dd351eb95449e56fb067384be2829438ba92e261c291ca9a7b1a63e245e11df",
+    "size": 990
+  },
+  {
+    "path": "internal/auth/service.go",
+    "sha256": "0edf225c4ababced8917c92dcb1495a132db6f338dc7416bd825d833b0d3895d",
+    "size": 9292
+  },
+  {
+    "path": "internal/auth/service_test.go",
+    "sha256": "4009385c7dd1ce2edfc46aafc0a9a0fd2bf65006971edb005bd2dc875890b129",
+    "size": 1878
+  },
+  {
+    "path": "internal/auth/store.go",
+    "sha256": "ee812f166b7ff961979cdc5ef716bbea332a9a9b97856f84cda8241eb3550b06",
+    "size": 11482
+  },
+  {
+    "path": "internal/auth/token.go",
+    "sha256": "91a0970010da9ee7136a9806e9f05024d8ae0a29f0811a9df1b2e4f2644ff0e3",
+    "size": 2437
+  },
+  {
+    "path": "internal/auth/token_test.go",
+    "sha256": "ed76fd33c80c8504ac493f4bcffad0f0416815136c6b96eaf4fcf90e47da6a80",
+    "size": 1194
+  },
+  {
+    "path": "internal/auth/types.go",
+    "sha256": "72989990e4c1175fd77361d33c272e8b720e27814fde5bf5614499b7142b62e6",
+    "size": 1947
+  },
+  {
+    "path": "internal/clientupdate/catalog.go",
+    "sha256": "5aad52caf9e0364b55a331bd9dbc1870603a530dd08e429c8f3ed0c2486adcc5",
+    "size": 6430
+  },
+  {
+    "path": "internal/clientupdate/catalog_test.go",
+    "sha256": "cfd0b488ab07a9dd1036cba20f42faaf1b64879ed2bb2ca94e26ef0fcac29c68",
+    "size": 2876
+  },
+  {
+    "path": "internal/clientupdate/version.go",
+    "sha256": "0af3d4dce66940a8ad0182024b2fbdd794f10e8585997f2cafb81bcfcdd531b5",
+    "size": 4423
+  },
+  {
+    "path": "internal/config/config.go",
+    "sha256": "901875a13a87af9c1a3c72bba63ba58112387d354d561ce306ca51c40ea28bf9",
+    "size": 3979
+  },
+  {
+    "path": "internal/config/config_test.go",
+    "sha256": "d63c572cb6a4ef608574c479bc081bde47bf1e882a96e1c13d644084473d6d55",
+    "size": 3369
+  },
+  {
+    "path": "internal/database/database.go",
+    "sha256": "5a9cc668e18182240d4de0dd799003d6d3b83116722da6affc143d8c6b71c3da",
+    "size": 765
+  },
+  {
+    "path": "internal/database/migrate.go",
+    "sha256": "0da07ef78ae8214f201e8a0687a5f3d27809ff011d15f506c27a646fab414951",
+    "size": 5154
+  },
+  {
+    "path": "internal/database/migrate_postgres_test.go",
+    "sha256": "f8275d062c0edba8f76bc9452eb78cb5479d533da9bad33ca3c237fafb79ce4b",
+    "size": 6631
+  },
+  {
+    "path": "internal/database/migrate_test.go",
+    "sha256": "42773039b9e784db243cca07fa6810f8db568e1095d488ef5073b9313d282e0f",
+    "size": 762
+  },
+  {
+    "path": "internal/database/migrations/000001_initial.down.sql",
+    "sha256": "0f2ec600c4c8a136396d99beab23242db6808aa8f4625eefb76571130f639f29",
+    "size": 637
+  },
+  {
+    "path": "internal/database/migrations/000001_initial.up.sql",
+    "sha256": "697a9db1080d8145dc77d778670187f2ccf968aa28ced5610111e2065041f317",
+    "size": 8839
+  },
+  {
+    "path": "internal/database/migrations/000002_remove_synced_app_identifiers.down.sql",
+    "sha256": "40aa04a4bcc9ad6dc7f1529b8c1fd3b3a62109ba3289aad36073d2aa34ed779f",
+    "size": 144
+  },
+  {
+    "path": "internal/database/migrations/000002_remove_synced_app_identifiers.up.sql",
+    "sha256": "00424383e194163ed49f3defa83dadcdd0bb5c8f1b31c5a26fb135e0413bd1b4",
+    "size": 1830
+  },
+  {
+    "path": "internal/database/migrations/000003_purge_historical_app_identifiers.down.sql",
+    "sha256": "98f0eb3d0cdf3069971f5be5cbdd0593ca4ea6bcfae21a5bb7ccae82a4334d73",
+    "size": 145
+  },
+  {
+    "path": "internal/database/migrations/000003_purge_historical_app_identifiers.up.sql",
+    "sha256": "2bb402cb9045559af88afc50fcb4cd6b8c36810e10cd0e72cd566822788ae84e",
+    "size": 1253
+  },
+  {
+    "path": "internal/database/sync_lock.go",
+    "sha256": "6201d9d3127ece9c6610dfb52001aacc65c2e54b58482d94484e5bab8124d454",
+    "size": 789
+  },
+  {
+    "path": "internal/httpapi/account_handlers.go",
+    "sha256": "1dc64ba04002256c81c06f28abd0604ae482009c217ff9862b1c8a687e544eb1",
+    "size": 1453
+  },
+  {
+    "path": "internal/httpapi/auth_handlers.go",
+    "sha256": "d6d68645b034e0e651f56bc8bdaf7884c082176b5409785f5f25839eda9c7a06",
+    "size": 4439
+  },
+  {
+    "path": "internal/httpapi/auth_handlers_test.go",
+    "sha256": "f3b88517a96555504454f62c4d2d4d1744d089e4bd763972274d6d664ea555f2",
+    "size": 734
+  },
+  {
+    "path": "internal/httpapi/client_update_handlers.go",
+    "sha256": "442685a58bc68ad4861d749a9c23463495ea18d2a758cdf5f185a0ea280019d5",
+    "size": 6094
+  },
+  {
+    "path": "internal/httpapi/client_update_handlers_test.go",
+    "sha256": "ae4497e81f99f525d0e767a934b9dad59e8c2c396cb6c4ac2c8196ce7d5f4e99",
+    "size": 6307
+  },
+  {
+    "path": "internal/httpapi/context.go",
+    "sha256": "a0420a0e5192f8f513d668c1a2de1d28d8d1d2bf6dffb468b0bb52463624dfa0",
+    "size": 577
+  },
+  {
+    "path": "internal/httpapi/json.go",
+    "sha256": "641b218e008d0426c67de407d93409ac0f0b6f4e4729145df6b205550fcda14d",
+    "size": 1311
+  },
+  {
+    "path": "internal/httpapi/middleware.go",
+    "sha256": "36f2dd14e952b7aa1fb096c72da8d2edb65055a075bf9c5b21e31117d78ad70d",
+    "size": 3994
+  },
+  {
+    "path": "internal/httpapi/server.go",
+    "sha256": "b0c5de9c1bb110e644f376af8659542d0e6f4664fbf0fa266dcbdb1bef27eb70",
+    "size": 5988
+  },
+  {
+    "path": "internal/httpapi/sync_handlers.go",
+    "sha256": "21eff44038d41ee3bc42c19a285d0fa2aa8595ae731ba59cae64ae5d624341de",
+    "size": 2314
+  },
+  {
+    "path": "internal/httpapi/view_handlers.go",
+    "sha256": "52aba7bda143a64bfd593fb2ca4f453c24efb021e0b5f76591610955da757d83",
+    "size": 2903
+  },
+  {
+    "path": "internal/httpapi/websocket.go",
+    "sha256": "71086647349fb0b1985d7dd141323f0c722700e8fa853af9e4eaca46dcd259c5",
+    "size": 2166
+  },
+  {
+    "path": "internal/realtime/hub.go",
+    "sha256": "b5a9f3735ee6f2c9bebe0c4b27445eebdd2065991c587b9111902869eef4d429",
+    "size": 1113
+  },
+  {
+    "path": "internal/realtime/hub_test.go",
+    "sha256": "3f5378f1edc0b9b85e86df56ac7e6db44b0cddfd65ef9ffaaf380c801570d0fb",
+    "size": 861
+  },
+  {
+    "path": "internal/sync/entities.go",
+    "sha256": "95a33f87d0872457a4b7bd6a777eb2093199c6a312b6c7c7f2767de5e5c9fa74",
+    "size": 805
+  },
+  {
+    "path": "internal/sync/merge.go",
+    "sha256": "76ecf36c3eceff768858dbbef270aeb089a00a492056340e34989735b1ebc81d",
+    "size": 2965
+  },
+  {
+    "path": "internal/sync/merge_test.go",
+    "sha256": "2c08c8e59dc6cae4b9f8841cac1757d54229e0ea5899e9156a669d48a1f86a61",
+    "size": 1886
+  },
+  {
+    "path": "internal/sync/reader.go",
+    "sha256": "98c7d1fa91172f47a12225d23d36d10bdb137a5f3fb23d0b6f6ffc481cef811c",
+    "size": 108
+  },
+  {
+    "path": "internal/sync/service.go",
+    "sha256": "fbd45205119a8fc393b82c08a65b612598772f31af30839efd0c0685e491b24d",
+    "size": 2376
+  },
+  {
+    "path": "internal/sync/store.go",
+    "sha256": "8714a8600e8fdd085db45c32435cbf094bab8ea6d466577675f5d4042e53a9d8",
+    "size": 22307
+  },
+  {
+    "path": "internal/sync/store_postgres_test.go",
+    "sha256": "236969b2142762c0a8a8407c72a97622acd79ddc3f0d96f0d507dc48285ef013",
+    "size": 8893
+  },
+  {
+    "path": "internal/sync/types.go",
+    "sha256": "e6e1dfeda75b63ef4e9ca09b07f05cce128c4c6ba73fc8554935e07f2c25b8a3",
+    "size": 3354
+  },
+  {
+    "path": "internal/sync/validation.go",
+    "sha256": "c2340ff4160440e1d258dc3d15aa6ce5307e29bda2f20ee7371f1912dfcdd215",
+    "size": 26416
+  },
+  {
+    "path": "internal/sync/validation_test.go",
+    "sha256": "5a5aa631e6c46552041bfd2a7dec803e32e8ff83753f7337a72fe12586c21a40",
+    "size": 5238
+  },
+  {
+    "path": "internal/testpostgres/postgres.go",
+    "sha256": "225ee6a313254d7e67fa89a931547ebedfd5d18be9ffe07cd9e481f53b4a8699",
+    "size": 4055
+  },
+  {
+    "path": "internal/views/store.go",
+    "sha256": "84e8e5d63e09572309c6805e92f1ac77c2abad8eb9af09135876ebfc2231e75b",
+    "size": 12964
+  },
+  {
+    "path": "internal/views/store_test.go",
+    "sha256": "03b698880e0c330c10ea335da867a232d6be8c36fa64b6dff579b298af984b4b",
+    "size": 931
+  },
+  {
+    "path": "internal/views/types.go",
+    "sha256": "d89fe16cd3d0e9601e15016741a3edb81583ca690b69380d6d8a2d4e59319583",
+    "size": 1809
+  },
+  {
+    "path": "LICENSE",
+    "sha256": "6b1983a875ee796b31d7b9e09103170e3dd4f096ba76cb242045784e86bb0221",
+    "size": 7439
+  },
+  {
+    "path": "PROJECT_PLAN.md",
+    "sha256": "216d27a1d88c1c0dd2820bd37348dfc7007e292e7a296a9e22b480748a7b5d3c",
+    "size": 2426
+  },
+  {
+    "path": "README.md",
+    "sha256": "342b73af57dc48da627ac299fa95ea6b432481f7955940dabcd35bea70c84171",
+    "size": 4062
+  },
+  {
+    "path": "scripts/android-dependencies.init.gradle",
+    "sha256": "43e09fe3d22b17aedc58ce186209b01e5b2e0aa52730592799fbfaff2682ae77",
+    "size": 3301
+  },
+  {
+    "path": "scripts/capture_android_notices.py",
+    "sha256": "a3b13b72205e006796d52903d551103c0cf1aa3f1d8181412d201aa7a36bc8cb",
+    "size": 4220
+  },
+  {
+    "path": "scripts/configure_android_signing.py",
+    "sha256": "ff1529873400eb7b9946ef51331ee838a6322c1e81285604a2d66f7286a9d2d8",
+    "size": 5020
+  },
+  {
+    "path": "scripts/generate_third_party_notices.py",
+    "sha256": "1f1a90674b112bbe58a75ae0d6252256bcbabea7d31059de3fa2e292c61634ec",
+    "size": 16062
+  },
+  {
+    "path": "scripts/prepare_public_source.py",
+    "sha256": "f6fba4422e4b2c62c10fcd5e2043c248d8715398a09780b658dbee46ff686e2d",
+    "size": 10700
+  },
+  {
+    "path": "scripts/test_capture_android_notices.py",
+    "sha256": "36ea3630ec55ca820f4bea2f1233ff18398b2a727b622bb8075ab146e758480b",
+    "size": 2837
+  },
+  {
+    "path": "scripts/test_configure_android_signing.py",
+    "sha256": "703873cd2ad006fba5df9a8bf90a158d9e1b1a541b4f72807cdd552bd683d840",
+    "size": 2449
+  },
+  {
+    "path": "scripts/test_prepare_public_source.py",
+    "sha256": "9427dae95fa1e9088989cc4b960896c1072aad1aa2e7f18e540eb0c841b95ff1",
+    "size": 5815
+  },
+  {
+    "path": "scripts/test_verify_release_source.py",
+    "sha256": "c4886492e2e7ab6a4211999b365683f105f9aef671f14dc79868744eb11b9d95",
+    "size": 5757
+  },
+  {
+    "path": "scripts/test_verify_supplemental_notices.py",
+    "sha256": "5d60bbbe436095d18bbb894a1ae3cb2207df125b760eff26f6751a07fe540b18",
+    "size": 5986
+  },
+  {
+    "path": "scripts/test_verify_third_party_notices.py",
+    "sha256": "7bee5a8147ed77c24dfda9695aa94a827730cf899a62c50b563b3037c3d4fa82",
+    "size": 7162
+  },
+  {
+    "path": "scripts/verify_apk_notices.py",
+    "sha256": "3ce47baf1439769be4727f73b0bfffa26547b2e0d6706dd9bed980dfded8b2e8",
+    "size": 2336
+  },
+  {
+    "path": "scripts/verify_release_source.py",
+    "sha256": "a2313b02da50a7ead737eb4021d971df54e3e17fd7f22ec142843dd3edd5ab6c",
+    "size": 5674
+  },
+  {
+    "path": "scripts/verify_supplemental_notices.py",
+    "sha256": "e5601f8a96572d6d7e13ab2d9936c41faf7ad24e0fd87fef1505ebd57121effc",
+    "size": 5411
+  },
+  {
+    "path": "scripts/verify_third_party_notices.py",
+    "sha256": "12755222d088756acb475ae8d06501659211dbe0755fbab482ff370f0f59f802",
+    "size": 8195
+  },
+  {
+    "path": "SECURITY.md",
+    "sha256": "047bb0d054d48348d9c92f8af901572486758f5ef8e56ab8350edee24764a409",
+    "size": 1611
+  },
+  {
+    "path": "third_party/gradle-wrapper/LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "size": 11358
+  },
+  {
+    "path": "third_party/gradle-wrapper/NOTICE",
+    "sha256": "ce1f298283348432d4e8d1d6c0a0e87eb6a46ddcea371bc29d83a68dcf6adfd6",
+    "size": 778
+  },
+  {
+    "path": "third_party/licenses/Android-38cd08634c35a062b74b2752.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-997dd68d23f6c148bed57058.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-ad823ee0c777ef9df51f725d.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-c697099c1f1815c06d03eff6.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-ecdd622e51622230cd5237c1.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-f397a9caad979007aa16e91f.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-runtime-002-androidx.annotation_annotation-jvm_1.10.0-000.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-runtime-007-androidx.browser_browser_1.9.0-000.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-runtime-014-androidx.core_core-ktx_1.17.0-000.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-runtime-015-androidx.core_core-viewtree_1.0.0-000.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-runtime-016-androidx.core_core_1.17.0-000.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-runtime-017-androidx.core_core_1.17.0-000.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Android-runtime-025-androidx.exifinterface_exifinterface_1.4.1-000.txt",
+    "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0",
+    "size": 10175
+  },
+  {
+    "path": "third_party/licenses/Asset-Material-icons-fonts-Flutter-bundled-0-materialicons_license.txt",
+    "sha256": "be698262aecd042c0de6f886cc0af622f8def446462026992cc530275d8a9e74",
+    "size": 18531
+  },
+  {
+    "path": "third_party/licenses/Asset-Material-icons-fonts-Flutter-bundled-1-roboto_license.txt",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "size": 11358
+  },
+  {
+    "path": "third_party/licenses/Asset-Material-icons-fonts-Flutter-bundled-2-robotocondensed_license.txt",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "size": 11358
+  },
+  {
+    "path": "third_party/licenses/Asset-Material-timer-Apache-2.0.txt",
+    "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+    "size": 11357
+  },
+  {
+    "path": "third_party/licenses/Asset-Unicode-CLDR-48-LICENSE",
+    "sha256": "b4c0ae8ef04f7059f96ce5bbe0467f9fe6f6d81bbe13517701dfeb961fb4d0b6",
+    "size": 2033
+  },
+  {
+    "path": "third_party/licenses/Build-Gradle-wrapper-2.10-0-LICENSE",
+    "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
+    "size": 11358
+  },
+  {
+    "path": "third_party/licenses/Build-Gradle-wrapper-2.10-1-NOTICE",
+    "sha256": "ce1f298283348432d4e8d1d6c0a0e87eb6a46ddcea371bc29d83a68dcf6adfd6",
+    "size": 778
+  },
+  {
+    "path": "third_party/licenses/Dart-args-2.7.0-0-LICENSE",
+    "sha256": "dfb09c74e29386cd3e2719f32d4995d59526179753931d31840757c77fbf2791",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-async-2.13.1-0-LICENSE",
+    "sha256": "ff15faa32a2e638107b7789592b14426162a75ba620044ee2340a20ec6ce5e73",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-boolean_selector-2.1.2-0-LICENSE",
+    "sha256": "b71519245009a3b8f126196a5408ec031e216e8e0d985085958c6543f82a8a2a",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-characters-1.4.1-0-LICENSE",
+    "sha256": "0371d1da6a57fb791db29d29b95333429205f51f3cb2eb3a0c12d91838a38744",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-clock-1.1.3-0-LICENSE",
+    "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+    "size": 11357
+  },
+  {
+    "path": "third_party/licenses/Dart-code_assets-1.2.1-0-LICENSE",
+    "sha256": "21ae23b0b9ff67a2dc75ab085d1e8db8ac548c5faf370af17f28dd2ef3b52b7b",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-collection-1.19.1-0-LICENSE",
+    "sha256": "ff15faa32a2e638107b7789592b14426162a75ba620044ee2340a20ec6ce5e73",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-crypto-3.0.7-0-LICENSE",
+    "sha256": "ad6a71997da90924b2cfb1fb47ec46537f70faf469efe016168794ae45ed6888",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-dynamic_color-1.9.0-0-LICENSE",
+    "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4",
+    "size": 11357
+  },
+  {
+    "path": "third_party/licenses/Dart-fake_async-1.3.3-0-LICENSE",
+    "sha256": "58d1e17ffe5109a7ae296caafcadfdbe6a7d176f0bc4ab01e12a689b0499d8bd",
+    "size": 11357
+  },
+  {
+    "path": "third_party/licenses/Dart-ffi-2.2.0-0-LICENSE",
+    "sha256": "0371d1da6a57fb791db29d29b95333429205f51f3cb2eb3a0c12d91838a38744",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-ffi_leak_tracker-0.1.2-0-LICENSE",
+    "sha256": "332f290333e64ed007b4f59aeeebd8fd3ceaadfbfa226a6cf2a3ab1583281624",
+    "size": 1499
+  },
+  {
+    "path": "third_party/licenses/Dart-file-7.0.1-0-LICENSE",
+    "sha256": "f6df86b1412172537273e8e80ee2fb8a66aa7307ce0b39ea5ddab47ca41b8c49",
+    "size": 1523
+  },
+  {
+    "path": "third_party/licenses/Dart-fixnum-1.1.1-0-LICENSE",
+    "sha256": "ff0b91d4f3c32b25cb6ec84985e8da89b0ba2a2b2f7eef353cda5e5423a20390",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-flutter_lints-6.0.0-0-LICENSE",
+    "sha256": "89519eca6f7b9529b35bdddd623a58c3af06a88c458dbd6531ddb4675acf75a9",
+    "size": 1519
+  },
+  {
+    "path": "third_party/licenses/Dart-flutter_secure_storage-10.3.3-0-LICENSE",
+    "sha256": "55dafb084270616f95b9bea53654adda8bdcad95c022a83c4cf8769073f829fa",
+    "size": 1509
+  },
+  {
+    "path": "third_party/licenses/Dart-flutter_secure_storage_darwin-0.3.2-0-LICENSE",
+    "sha256": "3754c516086c62307896512b68024837bee5d2bea42a55cfd03f7448b92b06c8",
+    "size": 1512
+  },
+  {
+    "path": "third_party/licenses/Dart-flutter_secure_storage_linux-3.0.3-0-LICENSE",
+    "sha256": "55dafb084270616f95b9bea53654adda8bdcad95c022a83c4cf8769073f829fa",
+    "size": 1509
+  },
+  {
+    "path": "third_party/licenses/Dart-flutter_secure_storage_platform_interface-2.1.0-0-LICENSE",
+    "sha256": "55dafb084270616f95b9bea53654adda8bdcad95c022a83c4cf8769073f829fa",
+    "size": 1509
+  },
+  {
+    "path": "third_party/licenses/Dart-flutter_secure_storage_web-2.1.1-0-LICENSE",
+    "sha256": "55dafb084270616f95b9bea53654adda8bdcad95c022a83c4cf8769073f829fa",
+    "size": 1509
+  },
+  {
+    "path": "third_party/licenses/Dart-flutter_secure_storage_windows-4.2.2-0-LICENSE",
+    "sha256": "55dafb084270616f95b9bea53654adda8bdcad95c022a83c4cf8769073f829fa",
+    "size": 1509
+  },
+  {
+    "path": "third_party/licenses/Dart-glob-2.2.0-0-LICENSE",
+    "sha256": "3c32b53167c7dae9190c38dab5dd9fe1789c53623ebc7d1babcb29914c5b3f16",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-hooks-2.0.2-0-LICENSE",
+    "sha256": "21ae23b0b9ff67a2dc75ab085d1e8db8ac548c5faf370af17f28dd2ef3b52b7b",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-http-1.6.0-0-LICENSE",
+    "sha256": "3c32b53167c7dae9190c38dab5dd9fe1789c53623ebc7d1babcb29914c5b3f16",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-http_parser-4.1.2-0-LICENSE",
+    "sha256": "3c32b53167c7dae9190c38dab5dd9fe1789c53623ebc7d1babcb29914c5b3f16",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-intl-0.20.3-0-LICENSE",
+    "sha256": "7e124af6a556f045cb3a20cafbdaa31602ac2c82cbcb3c3b15faaaf514b06028",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-jni-1.0.3-0-LICENSE",
+    "sha256": "08a004aa8956c3cf3b24f7f69c966247233953e18e6afaa61191ea47b7eb70f6",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-jni_flutter-1.0.3-0-LICENSE",
+    "sha256": "b1fcb475d67817411f335ac92872507011e574c4cb29cfdaaf7707b75641932c",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-jni_util-1.0.0-0-LICENSE",
+    "sha256": "b1fcb475d67817411f335ac92872507011e574c4cb29cfdaaf7707b75641932c",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-leak_tracker-11.0.2-0-LICENSE",
+    "sha256": "08a004aa8956c3cf3b24f7f69c966247233953e18e6afaa61191ea47b7eb70f6",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-leak_tracker_flutter_testing-3.0.10-0-LICENSE",
+    "sha256": "08a004aa8956c3cf3b24f7f69c966247233953e18e6afaa61191ea47b7eb70f6",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-leak_tracker_testing-3.0.2-0-LICENSE",
+    "sha256": "08a004aa8956c3cf3b24f7f69c966247233953e18e6afaa61191ea47b7eb70f6",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-lints-6.1.0-0-LICENSE",
+    "sha256": "421fe78c3b5df297f8b4ab2c74f2450a274ee6d245a113091f6b9f90570af193",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-logging-1.3.0-0-LICENSE",
+    "sha256": "dfb09c74e29386cd3e2719f32d4995d59526179753931d31840757c77fbf2791",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-matcher-0.12.20-0-LICENSE",
+    "sha256": "3c32b53167c7dae9190c38dab5dd9fe1789c53623ebc7d1babcb29914c5b3f16",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-material_color_utilities-0.13.0-0-LICENSE",
+    "sha256": "d103f246ef4c18dab8af0c1dcf6a8af884e5cff554da7261a48ac43c17d98f2e",
+    "size": 11317
+  },
+  {
+    "path": "third_party/licenses/Dart-meta-1.18.3-0-LICENSE",
+    "sha256": "b71519245009a3b8f126196a5408ec031e216e8e0d985085958c6543f82a8a2a",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-native_toolchain_c-0.19.2-0-LICENSE",
+    "sha256": "aa81abb1ac43e40d2f5a606385edd37e974a5858d4109f7f439dd43d964487a7",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-objective_c-9.5.0-0-LICENSE",
+    "sha256": "1cda25a8de6880c5338de0b4a06ee89e8537c213eb1379c16a4c035bfd198b5c",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-package_config-3.0.0-0-LICENSE",
+    "sha256": "0371d1da6a57fb791db29d29b95333429205f51f3cb2eb3a0c12d91838a38744",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-package_info_plus-10.2.1-0-LICENSE",
+    "sha256": "3b38d48befd0af70b892e13d10c9e34679416c24a9277f962629951c64d71f4c",
+    "size": 1481
+  },
+  {
+    "path": "third_party/licenses/Dart-package_info_plus_platform_interface-4.1.0-0-LICENSE",
+    "sha256": "3b38d48befd0af70b892e13d10c9e34679416c24a9277f962629951c64d71f4c",
+    "size": 1481
+  },
+  {
+    "path": "third_party/licenses/Dart-path-1.9.1-0-LICENSE",
+    "sha256": "3c32b53167c7dae9190c38dab5dd9fe1789c53623ebc7d1babcb29914c5b3f16",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-path_provider-2.1.6-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-path_provider_android-2.3.1-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-path_provider_foundation-2.6.0-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-path_provider_linux-2.2.2-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-path_provider_platform_interface-2.1.3-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-path_provider_windows-2.3.0-0-LICENSE",
+    "sha256": "89519eca6f7b9529b35bdddd623a58c3af06a88c458dbd6531ddb4675acf75a9",
+    "size": 1519
+  },
+  {
+    "path": "third_party/licenses/Dart-platform-3.1.6-0-LICENSE",
+    "sha256": "143839f62c9b7f88143ea9f688361c27050888acde7696b34e04414bd254fafc",
+    "size": 1524
+  },
+  {
+    "path": "third_party/licenses/Dart-plugin_platform_interface-2.1.8-0-LICENSE",
+    "sha256": "89519eca6f7b9529b35bdddd623a58c3af06a88c458dbd6531ddb4675acf75a9",
+    "size": 1519
+  },
+  {
+    "path": "third_party/licenses/Dart-pub_semver-2.2.1-0-LICENSE",
+    "sha256": "3c32b53167c7dae9190c38dab5dd9fe1789c53623ebc7d1babcb29914c5b3f16",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-record_use-0.6.0-0-LICENSE",
+    "sha256": "1cda25a8de6880c5338de0b4a06ee89e8537c213eb1379c16a4c035bfd198b5c",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-source_span-1.10.2-0-LICENSE",
+    "sha256": "3c32b53167c7dae9190c38dab5dd9fe1789c53623ebc7d1babcb29914c5b3f16",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-sqflite-2.4.3-0-LICENSE",
+    "sha256": "c81f9454cf3107c116bc3c1fd22b7d751523a2b11e17cf90c0db3327d3c9e0da",
+    "size": 1328
+  },
+  {
+    "path": "third_party/licenses/Dart-sqflite_android-2.4.3-0-LICENSE",
+    "sha256": "c81f9454cf3107c116bc3c1fd22b7d751523a2b11e17cf90c0db3327d3c9e0da",
+    "size": 1328
+  },
+  {
+    "path": "third_party/licenses/Dart-sqflite_common-2.5.11-0-LICENSE",
+    "sha256": "c81f9454cf3107c116bc3c1fd22b7d751523a2b11e17cf90c0db3327d3c9e0da",
+    "size": 1328
+  },
+  {
+    "path": "third_party/licenses/Dart-sqflite_common_ffi-2.4.3-0-LICENSE",
+    "sha256": "c81f9454cf3107c116bc3c1fd22b7d751523a2b11e17cf90c0db3327d3c9e0da",
+    "size": 1328
+  },
+  {
+    "path": "third_party/licenses/Dart-sqflite_darwin-2.4.3_1-0-LICENSE",
+    "sha256": "c81f9454cf3107c116bc3c1fd22b7d751523a2b11e17cf90c0db3327d3c9e0da",
+    "size": 1328
+  },
+  {
+    "path": "third_party/licenses/Dart-sqflite_platform_interface-2.4.1-0-LICENSE",
+    "sha256": "c81f9454cf3107c116bc3c1fd22b7d751523a2b11e17cf90c0db3327d3c9e0da",
+    "size": 1328
+  },
+  {
+    "path": "third_party/licenses/Dart-sqlite3-3.5.2-0-LICENSE",
+    "sha256": "67e5d73a3a0c6e41f33d688a672b1161bf7f16e04da9ae48a7a14f1ba7436a4d",
+    "size": 1068
+  },
+  {
+    "path": "third_party/licenses/Dart-stack_trace-1.12.2-0-LICENSE",
+    "sha256": "ff0b91d4f3c32b25cb6ec84985e8da89b0ba2a2b2f7eef353cda5e5423a20390",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-stream_channel-2.1.4-0-LICENSE",
+    "sha256": "ff15faa32a2e638107b7789592b14426162a75ba620044ee2340a20ec6ce5e73",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-string_scanner-1.4.1-0-LICENSE",
+    "sha256": "3c32b53167c7dae9190c38dab5dd9fe1789c53623ebc7d1babcb29914c5b3f16",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-synchronized-3.4.1_2-0-LICENSE",
+    "sha256": "6d07c6bb60afb906049d507e19fcc4c6b59e35c0dd0f8a7302e87b3fb0576900",
+    "size": 1081
+  },
+  {
+    "path": "third_party/licenses/Dart-term_glyph-1.2.2-0-LICENSE",
+    "sha256": "ea97a7558a7bd7cee4e2355f7529e3cbebb0dcbb546ddb9a90f10c9eb6b08da5",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-test_api-0.7.12-0-LICENSE",
+    "sha256": "ff1b9f0df9036c04be424b1e3ce12789bea880ad5ffc3a48e069ae2d40a087a4",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-typed_data-1.4.0-0-LICENSE",
+    "sha256": "ff15faa32a2e638107b7789592b14426162a75ba620044ee2340a20ec6ce5e73",
+    "size": 1504
+  },
+  {
+    "path": "third_party/licenses/Dart-url_launcher-6.3.2-0-LICENSE",
+    "sha256": "89519eca6f7b9529b35bdddd623a58c3af06a88c458dbd6531ddb4675acf75a9",
+    "size": 1519
+  },
+  {
+    "path": "third_party/licenses/Dart-url_launcher_android-6.3.33-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-url_launcher_ios-6.4.2-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-url_launcher_linux-3.2.3-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-url_launcher_macos-3.2.6-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-url_launcher_platform_interface-2.3.2-0-LICENSE",
+    "sha256": "89519eca6f7b9529b35bdddd623a58c3af06a88c458dbd6531ddb4675acf75a9",
+    "size": 1519
+  },
+  {
+    "path": "third_party/licenses/Dart-url_launcher_web-2.4.3-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-url_launcher_windows-3.1.6-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-uuid-4.6.0-0-LICENSE",
+    "sha256": "ad3e5523e51004e94ba9ce728805b1b4242dbccdb65e62b523800e35a8a7cfdc",
+    "size": 1064
+  },
+  {
+    "path": "third_party/licenses/Dart-vector_math-2.4.0-0-LICENSE",
+    "sha256": "420f7739f169097f0aad1242045169cd643c8f1d94e62866fad265ae4c369b7d",
+    "size": 1497
+  },
+  {
+    "path": "third_party/licenses/Dart-vm_service-15.3.0-0-LICENSE",
+    "sha256": "ad6a71997da90924b2cfb1fb47ec46537f70faf469efe016168794ae45ed6888",
+    "size": 1503
+  },
+  {
+    "path": "third_party/licenses/Dart-web-1.1.1-0-LICENSE",
+    "sha256": "aa913ff50d7542eb8cc35b9f48a80928ac6819ba9057f85d424655e3e8dc271c",
+    "size": 1502
+  },
+  {
+    "path": "third_party/licenses/Dart-win32-6.4.0-0-LICENSE",
+    "sha256": "87ef8bccdd619f2345ba5b9026cf1d6cccb305e36ab83849a8a3af9293abde7e",
+    "size": 1499
+  },
+  {
+    "path": "third_party/licenses/Dart-xdg_directories-1.1.0-0-LICENSE",
+    "sha256": "89519eca6f7b9529b35bdddd623a58c3af06a88c458dbd6531ddb4675acf75a9",
+    "size": 1519
+  },
+  {
+    "path": "third_party/licenses/Dart-yaml-3.1.4-0-LICENSE",
+    "sha256": "d47b93335401b052d79a2f5a3710e4cf7b5aed782faedf84d40fbdd6eb934ec7",
+    "size": 1106
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_golang-jwt_jwt_v5-v5.3.1-0-LICENSE",
+    "sha256": "fe26ca41577b9b2b4448050a24b25e5753af66b5d5945d5d36094e7790bfcb2f",
+    "size": 1100
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_google_uuid-v1.6.0-0-LICENSE",
+    "sha256": "0a8d61ed3cbfd5312326e8126c31ce9c627a283adc99131b56896d29ada04b2d",
+    "size": 1480
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_gorilla_websocket-v1.5.3-0-LICENSE",
+    "sha256": "2be1b548b0387ca8948e1bb9434e709126904d15f622cc2d0d8e7f186e4d122d",
+    "size": 1312
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_jackc_pgpassfile-v1.0.0-0-LICENSE",
+    "sha256": "adb1663fda031df8f4344aa68f299fd87d80353e31339406742ded21dae65702",
+    "size": 1073
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_jackc_pgservicefile-v0.0.0-20240606120523-5a60cdf6a761-0-LICENSE",
+    "sha256": "fc505773403fe869ed64cc2235cdd13988a427bb7e3a7e7004a3f4b27420f8fc",
+    "size": 1073
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_jackc_pgx_v5-v5.10.0-0-LICENSE",
+    "sha256": "467f95e074fe23079a5623ed652619682692041b8551da27e3c2ddb9659a1507",
+    "size": 1078
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_jackc_puddle_v2-v2.2.2-0-LICENSE",
+    "sha256": "2d50e98a4900b4d6457a38d39c1432fdc156fc2f7b365f2e33ec9344acbb0057",
+    "size": 1073
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_kr_text-v0.2.0-0-License",
+    "sha256": "283c28b781bc7487bd7bcaf453cbd811f5ee8d7ce625cfcf8dcacae6ba1f4bb5",
+    "size": 1052
+  },
+  {
+    "path": "third_party/licenses/Go-github.com_rogpeppe_go-internal-v1.16.0-0-LICENSE",
+    "sha256": "4835612df0098ca95f8e7d9e3bffcb02358d435dbb38057c844c99d7f725eb20",
+    "size": 1479
+  },
+  {
+    "path": "third_party/licenses/Go-golang.org_x_crypto-v0.55.0-0-LICENSE",
+    "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "size": 1453
+  },
+  {
+    "path": "third_party/licenses/Go-golang.org_x_sync-v0.22.0-0-LICENSE",
+    "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "size": 1453
+  },
+  {
+    "path": "third_party/licenses/Go-golang.org_x_sys-v0.47.0-0-LICENSE",
+    "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "size": 1453
+  },
+  {
+    "path": "third_party/licenses/Go-golang.org_x_text-v0.41.0-0-LICENSE",
+    "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "size": 1453
+  },
+  {
+    "path": "third_party/licenses/Go-gopkg.in_yaml.v3-v3.0.1-0-LICENSE",
+    "sha256": "d18f6323b71b0b768bb5e9616e36da390fbd39369a81807cca352de4e4e6aa0b",
+    "size": 2151
+  },
+  {
+    "path": "third_party/licenses/Go-gopkg.in_yaml.v3-v3.0.1-1-NOTICE",
+    "sha256": "f6c2dd3a67b576eafb89b80200b8b1627230bf3821a0c14cb99a22ac19107d00",
+    "size": 560
+  },
+  {
+    "path": "third_party/licenses/SDK-Dart-3.13.3-0-LICENSE",
+    "sha256": "2cfa3ee8e7512e6d44c854b986510810fadc815f93f890373b3a81c1b6ccd256",
+    "size": 1502
+  },
+  {
+    "path": "third_party/licenses/SDK-Flutter-3.47.4-0-LICENSE",
+    "sha256": "a3a9fd82f800a47377f7d3f60c60a5c91cae0495be8f329031e1448ce0f5dab9",
+    "size": 1544
+  },
+  {
+    "path": "third_party/licenses/SDK-Flutter-engine-and-native-libraries-06a2e2a110089dff50fe635cffd2a61e1b24fbcd-0-license",
+    "sha256": "3c0040023a5789bf56d6bf41fd44f08b21758523d41f128fb7dd6beb398d1191",
+    "size": 1269349
+  },
+  {
+    "path": "third_party/licenses/SDK-Go-runtime-and-standard-library-go1.26.4-0-LICENSE",
+    "sha256": "911f8f5782931320f5b8d1160a76365b83aea6447ee6c04fa6d5591467db9dad",
+    "size": 1453
+  },
+  {
+    "path": "third_party/metadata/distribution-notices.json",
+    "sha256": "a35c46a0478d4bc1439c5371fee9fa34c7feb5999cf5f6c85e4ea1c4bd25a6e8",
+    "size": 16105
+  },
+  {
+    "path": "third_party/metadata/gradle-wrapper.json",
+    "sha256": "1e7246f68d036d4da9d8d51ffafd9c1a1b6daed40a8d0732e63d5fa2eb3928a0",
+    "size": 1923
+  },
+  {
+    "path": "third_party/metadata/guava-parent-26.0-android.pom",
+    "sha256": "f8698ab46ca996ce889c1afc8ca4f25eb8ac6b034dc898d4583742360016cc04",
+    "size": 10180
+  },
+  {
+    "path": "third_party/metadata/material-timer/SOURCE.json",
+    "sha256": "39e46c0493cb3faa4a10c64d8e3499cec57acdbecd872c1ad5b1151c8f0453d3",
+    "size": 889
+  },
+  {
+    "path": "third_party/metadata/material-timer/timer.svg",
+    "sha256": "d82eea0327e93ce610122b101a550804eb63926fe1debac035db5b0aedb4f03f",
+    "size": 423
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.json",
+    "sha256": "526262396218d9f543e7c02af505bc4c37eee5fcbdf8cdf144eb5b1b70894d2c",
+    "size": 115063
+  },
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "sha256": "10b60b12588bd2a6eb9c0e7ff3a942160c7760f80eb70074afa9a5ce1d9904af",
+    "size": 21167
+  }
+]

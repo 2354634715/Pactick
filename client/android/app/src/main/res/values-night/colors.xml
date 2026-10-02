@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="focus_guard_surface">#24211C</color>
+    <color name="focus_guard_on_surface">#F6F1E7</color>
+    <color name="focus_guard_on_surface_variant">#C8C0B4</color>
+    <color name="focus_guard_action">#F06266</color>
+    <color name="focus_guard_on_action">#35090D</color>
+</resources>

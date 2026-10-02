@@ -1,0 +1,1160 @@
+openapi: 3.1.0
+info:
+  title: Pactick API
+  version: 0.2.0
+  description: |
+    首版服务端采用离线优先的同步协议。客户端先修改本地数据库，再通过批量同步上传；
+    WebSocket 仅通知游标更新，权威数据通过增量拉取获取。
+    守护模式的应用包名、已安装应用、按项目白名单和权限状态只保存在设备本地；
+    服务端仅接收专注会话汇总和不含应用身份的中断分类。
+servers:
+  - url: http://localhost:8080
+    description: 本地开发
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Client Updates
+  - name: Auth
+  - name: Sync
+  - name: Views
+  - name: Realtime
+
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      operationId: health
+      security: []
+      responses:
+        "200":
+          description: 服务进程正在运行
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    const: ok
+
+  /readyz:
+    get:
+      tags: [Health]
+      operationId: readiness
+      security: []
+      responses:
+        "200":
+          description: 服务进程与数据库已就绪
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    const: ready
+        "503":
+          $ref: "#/components/responses/Error"
+
+  /v1/client-updates/check:
+    get:
+      tags: [Client Updates]
+      operationId: checkClientUpdate
+      security: []
+      description: |
+        查询指定平台和发布渠道中已配置的最新客户端版本。该接口无需认证，不访问账户数据。
+        指定平台和渠道未配置发布包时，返回状态码仍为 200，status 为 not_configured，发布元数据字段均为 null。
+        版本使用不含 build metadata 的 SemVer；同一版本重新打包时，通过独立的 build_number 比较构建版本。
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [android, windows, linux]
+        - name: channel
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [stable, beta]
+        - name: current_version
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+            pattern: '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?$'
+            example: 0.1.0
+        - name: build_number
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 2
+      responses:
+        "200":
+          description: 更新检查结果及已配置的最新发布元数据
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientUpdateCheck"
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      description: 仅在服务端开启注册时可用；个人部署通常在创建账号后关闭注册。
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: 注册成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: 登录成功
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshSession
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: 轮换成功；旧刷新令牌立即失效
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "204":
+          description: 刷新令牌已撤销
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /v1/me:
+    get:
+      tags: [Auth]
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: 当前用户
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Auth]
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                display_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 80
+                time_zone:
+                  type: string
+                locale:
+                  type: string
+                  minLength: 1
+                  maxLength: 35
+                week_starts_on:
+                  type: integer
+                  minimum: 0
+                  maximum: 6
+      responses:
+        "200":
+          description: 更新后的用户设置
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/devices:
+    get:
+      tags: [Auth]
+      operationId: listDevices
+      responses:
+        "200":
+          description: 当前账户曾登记的设备
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [devices]
+                properties:
+                  devices:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DeviceInfo"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/devices/{device_id}:
+    delete:
+      tags: [Auth]
+      operationId: revokeDevice
+      description: 撤销指定设备及其全部刷新令牌，允许撤销当前设备。
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "204":
+          description: 设备已撤销
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /v1/account/export:
+    get:
+      tags: [Auth]
+      operationId: exportAccount
+      description: 导出用户资料、设备和当前业务实体；不包含密码、访问令牌或刷新令牌摘要。
+      responses:
+        "200":
+          description: JSON 账户数据包
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountExport"
+        "401":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /v1/account:
+    delete:
+      tags: [Auth]
+      operationId: deleteAccount
+      description: 密码二次确认后立即级联删除账户及其业务数据；操作不可恢复。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [password, confirmation]
+              properties:
+                password:
+                  type: string
+                confirmation:
+                  const: DELETE
+      responses:
+        "204":
+          description: 账户已删除
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/sync/push:
+    post:
+      tags: [Sync]
+      operationId: pushChanges
+      description: |
+        按数组顺序处理 1 至 200 个操作，每个操作独立提交。单个操作的拒绝结果记录在 results 中，
+        不导致整个 HTTP 请求失败。重复提交相同 operation_id 时，返回首次保存的结果。
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [operations]
+              properties:
+                operations:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    $ref: "#/components/schemas/SyncOperation"
+      responses:
+        "200":
+          description: 批次已处理
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/sync/pull:
+    get:
+      tags: [Sync]
+      operationId: pullChanges
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 500
+      responses:
+        "200":
+          description: 增量变更页
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PullResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/views/today:
+    get:
+      tags: [Views]
+      operationId: getToday
+      parameters:
+        - name: date
+          in: query
+          description: 本地日期；省略时使用当前日期
+          schema:
+            type: string
+            format: date
+        - name: time_zone
+          in: query
+          description: IANA 时区；省略时使用用户设置
+          schema:
+            type: string
+            example: Asia/Shanghai
+      responses:
+        "200":
+          description: 今日正式条目与尚未物化的计划时段
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayView"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/views/calendar:
+    get:
+      tags: [Views]
+      operationId: getCalendar
+      parameters:
+        - name: starts_at
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: ends_at
+          in: query
+          required: true
+          description: 最多在 starts_at 之后 93 天
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: 计划、实际专注和关联任务
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarView"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/stats/summary:
+    get:
+      tags: [Views]
+      operationId: getStatisticsSummary
+      parameters:
+        - name: starts_on
+          in: query
+          description: 默认 ends_on 之前六天
+          schema:
+            type: string
+            format: date
+        - name: ends_on
+          in: query
+          description: 默认当前本地日期；范围包含此日
+          schema:
+            type: string
+            format: date
+        - name: time_zone
+          in: query
+          schema:
+            type: string
+            example: Asia/Shanghai
+      responses:
+        "200":
+          description: 计划、实际时间和完成任务数
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatisticsSummary"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/ws:
+    get:
+      tags: [Realtime]
+      operationId: subscribeToChanges
+      description: |
+        使用标准 WebSocket Upgrade 与 Authorization 请求头连接。
+        消息格式为 {"type":"sync_available","cursor":123}；收到后调用 sync/pull。
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "101":
+          description: WebSocket 已建立
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      description: 客户端最后成功应用的服务端游标
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+        default: 0
+
+  responses:
+    Error:
+      description: 请求失败
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  schemas:
+    ClientUpdateCheck:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - update_available
+        - required
+        - version
+        - build_number
+        - download_url
+        - sha256
+        - size_bytes
+        - release_notes
+        - published_at
+      oneOf:
+        - title: 有可用更新
+          properties:
+            status:
+              const: update_available
+            update_available:
+              const: true
+            required:
+              type: boolean
+            version:
+              type: string
+            build_number:
+              type: integer
+            download_url:
+              type: string
+            sha256:
+              type: string
+            size_bytes:
+              type: integer
+            release_notes:
+              type: string
+            published_at:
+              type: string
+        - title: 已是最新版本
+          properties:
+            status:
+              const: up_to_date
+            update_available:
+              const: false
+            required:
+              const: false
+            version:
+              type: string
+            build_number:
+              type: integer
+            download_url:
+              type: string
+            sha256:
+              type: string
+            size_bytes:
+              type: integer
+            release_notes:
+              type: string
+            published_at:
+              type: string
+        - title: 未配置发布包
+          properties:
+            status:
+              const: not_configured
+            update_available:
+              const: false
+            required:
+              const: false
+            version:
+              type: "null"
+            build_number:
+              type: "null"
+            download_url:
+              type: "null"
+            sha256:
+              type: "null"
+            size_bytes:
+              type: "null"
+            release_notes:
+              type: "null"
+            published_at:
+              type: "null"
+      properties:
+        status:
+          type: string
+          enum: [update_available, up_to_date, not_configured]
+        update_available:
+          type: boolean
+          description: 配置版本或同版本构建号是否高于调用方
+        required:
+          type: boolean
+          description: 仅在有更新且清单将该发布标为必须更新时为 true；保留用于兼容旧客户端，不得阻断本地查看、编辑、专注或数据导出
+        version:
+          type: [string, "null"]
+          maxLength: 64
+          description: 最新 SemVer；not_configured 时为 null
+        build_number:
+          type: [integer, "null"]
+          format: int64
+          minimum: 1
+          description: 最新构建号；not_configured 时为 null
+        download_url:
+          type: [string, "null"]
+          format: uri
+          pattern: '^https://'
+          maxLength: 2048
+          description: 服务端清单中经过校验的绝对 HTTPS 地址；not_configured 时为 null
+        sha256:
+          type: [string, "null"]
+          pattern: '^[0-9a-f]{64}$'
+          description: 安装包 SHA-256 小写十六进制摘要；not_configured 时为 null
+        size_bytes:
+          type: [integer, "null"]
+          format: int64
+          minimum: 1
+          description: 安装包字节数；not_configured 时为 null
+        release_notes:
+          type: [string, "null"]
+          maxLength: 20000
+          description: 发布说明；not_configured 时为 null
+        published_at:
+          type: [string, "null"]
+          format: date-time
+          description: 发布时间；not_configured 时为 null
+
+    UUID:
+      type: string
+      format: uuid
+
+    Device:
+      type: object
+      additionalProperties: false
+      required: [id, name, platform, app_version]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        platform:
+          type: string
+          enum: [android, windows, linux]
+        app_version:
+          type: string
+          maxLength: 40
+
+    DeviceInfo:
+      allOf:
+        - $ref: "#/components/schemas/Device"
+        - type: object
+          required: [created_at, last_seen_at]
+          properties:
+            created_at:
+              type: string
+              format: date-time
+            last_seen_at:
+              type: string
+              format: date-time
+            revoked_at:
+              type: string
+              format: date-time
+
+    User:
+      type: object
+      required: [id, email, display_name, time_zone, locale, week_starts_on, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        time_zone:
+          type: string
+        locale:
+          type: string
+        week_starts_on:
+          type: integer
+          minimum: 0
+          maximum: 6
+        created_at:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, display_name, time_zone, device]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 10
+          maxLength: 1024
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        time_zone:
+          type: string
+          example: Asia/Shanghai
+        locale:
+          type: string
+          default: zh-CN
+        week_starts_on:
+          type: integer
+          minimum: 0
+          maximum: 6
+          default: 1
+        device:
+          $ref: "#/components/schemas/Device"
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, device]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        device:
+          $ref: "#/components/schemas/Device"
+
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+
+    TokenPair:
+      type: object
+      required: [access_token, access_expires_at, refresh_token, refresh_expires_at, token_type]
+      properties:
+        access_token:
+          type: string
+        access_expires_at:
+          type: string
+          format: date-time
+        refresh_token:
+          type: string
+        refresh_expires_at:
+          type: string
+          format: date-time
+        token_type:
+          const: Bearer
+
+    Session:
+      type: object
+      required: [user, device, tokens]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        device:
+          $ref: "#/components/schemas/Device"
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
+
+    AccountExport:
+      type: object
+      required: [format_version, exported_at, user, devices, entities]
+      properties:
+        format_version:
+          type: integer
+          const: 1
+        exported_at:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/User"
+        devices:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        entities:
+          type: array
+          items:
+            type: object
+            required: [entity_type, id, version, body, deleted, created_at, updated_at]
+            properties:
+              entity_type:
+                $ref: "#/components/schemas/EntityType"
+              id:
+                $ref: "#/components/schemas/UUID"
+              version:
+                type: integer
+                format: int64
+              body:
+                type: object
+                additionalProperties: true
+              deleted:
+                type: boolean
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+
+    EntityType:
+      type: string
+      enum:
+        - project
+        - task
+        - task_recurrence_rule
+        - tag
+        - task_tag
+        - plan_block
+        - day_entry
+        - focus_policy
+        - focus_session
+        - focus_interruption
+        - reminder
+
+    SyncOperation:
+      type: object
+      additionalProperties: false
+      required: [operation_id, entity_type, entity_id, action, base_version, changed_fields]
+      properties:
+        operation_id:
+          $ref: "#/components/schemas/UUID"
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_id:
+          $ref: "#/components/schemas/UUID"
+        action:
+          type: string
+          enum: [upsert, delete]
+        base_version:
+          type: integer
+          format: int64
+          minimum: 0
+          description: 新建时为 0；修改或删除时为客户端最后已知的实体版本
+        changed_fields:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: upsert 时必须与 patch 的顶层键完全一致；delete 时为空数组
+        patch:
+          type: object
+          additionalProperties: true
+          description: 仅包含 changed_fields 指定的字段；值为 null 表示清除可选字段
+        client_changed_at:
+          type: string
+          format: date-time
+          description: 仅用于审计，不用于决定冲突合并结果
+      examples:
+        - operation_id: 0f33e630-d2ca-4c3c-aa67-d29e2aeb1b87
+          entity_type: task
+          entity_id: 31eafcf3-633e-4af0-a20e-1e575f1aa3b9
+          action: upsert
+          base_version: 0
+          changed_fields: [title, priority, status, estimated_duration_seconds]
+          patch:
+            title: 写项目报告
+            priority: high
+            status: open
+            estimated_duration_seconds: 5400
+          client_changed_at: 2026-08-30T02:00:00Z
+
+    EntitySnapshot:
+      type: object
+      required: [entity_type, entity_id, version, body, deleted, updated_at, cursor]
+      properties:
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_id:
+          $ref: "#/components/schemas/UUID"
+        version:
+          type: integer
+          format: int64
+        body:
+          type: object
+          additionalProperties: true
+        deleted:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+        cursor:
+          type: integer
+          format: int64
+
+    OperationResult:
+      type: object
+      required: [operation_id, status]
+      properties:
+        operation_id:
+          $ref: "#/components/schemas/UUID"
+        status:
+          type: string
+          enum: [applied, rejected]
+        snapshot:
+          $ref: "#/components/schemas/EntitySnapshot"
+        conflict_fields:
+          type: array
+          items:
+            type: string
+        resolution:
+          type: string
+        error:
+          $ref: "#/components/schemas/Error"
+
+    PushResponse:
+      type: object
+      required: [results, current_cursor]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/OperationResult"
+        current_cursor:
+          type: integer
+          format: int64
+
+    Change:
+      type: object
+      required:
+        [cursor, change_id, entity_type, entity_id, action, version, body, changed_fields, device_id, changed_at]
+      properties:
+        cursor:
+          type: integer
+          format: int64
+        change_id:
+          $ref: "#/components/schemas/UUID"
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_id:
+          $ref: "#/components/schemas/UUID"
+        action:
+          type: string
+          enum: [upsert, delete]
+        version:
+          type: integer
+          format: int64
+        body:
+          type: object
+          additionalProperties: true
+        changed_fields:
+          type: array
+          items:
+            type: string
+        device_id:
+          $ref: "#/components/schemas/UUID"
+        client_changed_at:
+          type: string
+          format: date-time
+        changed_at:
+          type: string
+          format: date-time
+
+    PullResponse:
+      type: object
+      required: [changes, next_cursor, current_cursor, has_more]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Change"
+        next_cursor:
+          type: integer
+          format: int64
+        current_cursor:
+          type: integer
+          format: int64
+        has_more:
+          type: boolean
+
+    Record:
+      type: object
+      required: [id, version, body, updated_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        version:
+          type: integer
+          format: int64
+        body:
+          type: object
+          additionalProperties: true
+        updated_at:
+          type: string
+          format: date-time
+
+    TodayItem:
+      type: object
+      required: [id, derived, origin, planned_duration_seconds, actual_duration_seconds]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        derived:
+          type: boolean
+        origin:
+          type: string
+          enum: [planned, manual]
+        day_entry:
+          $ref: "#/components/schemas/Record"
+        plan_block:
+          $ref: "#/components/schemas/Record"
+        task:
+          $ref: "#/components/schemas/Record"
+        planned_duration_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+        actual_duration_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+
+    TodayView:
+      type: object
+      required: [date, time_zone, items]
+      properties:
+        date:
+          type: string
+          format: date
+        time_zone:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TodayItem"
+
+    CalendarView:
+      type: object
+      required: [starts_at, ends_at, plan_blocks, focus_sessions, tasks]
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        plan_blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+        focus_sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+
+    DailySummary:
+      type: object
+      required: [date, planned_duration_seconds, actual_duration_seconds, completed_tasks]
+      properties:
+        date:
+          type: string
+          format: date
+        planned_duration_seconds:
+          type: integer
+          format: int64
+        actual_duration_seconds:
+          type: integer
+          format: int64
+        completed_tasks:
+          type: integer
+          format: int64
+
+    StatisticsSummary:
+      type: object
+      required:
+        [starts_on, ends_on, time_zone, planned_duration_seconds, actual_duration_seconds, completed_tasks, days]
+      properties:
+        starts_on:
+          type: string
+          format: date
+        ends_on:
+          type: string
+          format: date
+        time_zone:
+          type: string
+        planned_duration_seconds:
+          type: integer
+          format: int64
+        actual_duration_seconds:
+          type: integer
+          format: int64
+        completed_tasks:
+          type: integer
+          format: int64
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailySummary"
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        request_id:
+          type: string
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"

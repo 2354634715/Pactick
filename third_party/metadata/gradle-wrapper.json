@@ -1,0 +1,43 @@
+{
+  "retrieved_date": "2026-10-02",
+  "repository": "gradle/gradle",
+  "wrapper_version": "2.10",
+  "downloaded_distribution": "9.4.1",
+  "wrapper_sha256": "16caeaf66d57a0d1d2087fef6a97efa62de8da69afa5b908f40db35afc4342da",
+  "checksum_reference": "https://gradle.org/release-checksums/",
+  "sources": [
+    {
+      "url": "https://github.com/gradle/gradle/blob/REL_2.10/subprojects/distributions/src/toplevel/LICENSE",
+      "git_blob_sha": "410cd1cf80bc357244b3ea1d8ec0081418f617db",
+      "ref": "REL_2.10",
+      "commit": "276bdcded730f53aa8c11b479986aafa58e124a6"
+    },
+    {
+      "url": "https://github.com/gradle/gradle/blob/REL_2.10/subprojects/distributions/src/toplevel/NOTICE",
+      "git_blob_sha": "9f8c1c764784c08d553d39e385ca544fa4dab3de",
+      "ref": "REL_2.10",
+      "commit": "276bdcded730f53aa8c11b479986aafa58e124a6"
+    },
+    {
+      "url": "https://github.com/gradle/gradle/blob/REL_2.10/subprojects/wrapper/wrapper.gradle",
+      "git_blob_sha": "8e1c8964e403762866810ad86f3b7ae4db37a1b3",
+      "ref": "REL_2.10",
+      "commit": "276bdcded730f53aa8c11b479986aafa58e124a6"
+    },
+    {
+      "url": "https://github.com/gradle/gradle/blob/REL_2.10/subprojects/wrapper/src/main/java/org/gradle/wrapper/GradleWrapperMain.java",
+      "git_blob_sha": "c8e71102abbe17cad7e7ba0a07fc68165ae4a013",
+      "ref": "REL_2.10",
+      "commit": "276bdcded730f53aa8c11b479986aafa58e124a6"
+    },
+    {
+      "url": "https://github.com/gradle/gradle/blob/REL_2.10/subprojects/cli/src/main/java/org/gradle/cli/CommandLineParser.java",
+      "git_blob_sha": "b124fc3515a02638ec62b138e2c7156b0ebf49f1",
+      "ref": "REL_2.10",
+      "commit": "276bdcded730f53aa8c11b479986aafa58e124a6"
+    }
+  ],
+  "scope": "Bundled bootstrap JAR only; full distribution is downloaded as a separate build tool.",
+  "local_license": "third_party/gradle-wrapper/LICENSE",
+  "local_notice": "third_party/gradle-wrapper/NOTICE"
+}

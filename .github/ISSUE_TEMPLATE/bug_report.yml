@@ -1,0 +1,31 @@
+name: 缺陷报告
+description: 报告可复现的功能问题；安全漏洞请先阅读 SECURITY.md。
+body:
+  - type: markdown
+    attributes:
+      value: 请使用演示数据，不上传数据库、令牌、账号或私人服务器地址。安全问题请按 SECURITY.md 私下报告。
+  - type: input
+    id: version
+    attributes:
+      label: 应用版本和系统版本
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: 使用模式
+      options: [本地离线, 自部署同步, 服务端部署]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 最小复现步骤
+      description: 包括预期行为和实际行为。
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 脱敏日志或截图
+      description: 请先移除密钥、邮箱、任务内容和私人地址。

@@ -1,0 +1,18 @@
+# The server image receives only files required to compile the Go programs.
+**
+!go.mod
+!go.sum
+!cmd/
+!cmd/**
+!internal/
+!internal/**
+!prebuilt/
+!prebuilt/server
+!prebuilt/migrate
+!prebuilt/healthcheck
+!LICENSE
+!THIRD_PARTY_NOTICES.md
+!THIRD_PARTY_NOTICES.json
+!third_party/
+!third_party/licenses/
+!third_party/licenses/**

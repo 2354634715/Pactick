@@ -1,0 +1,5 @@
+# Path is resolved relative to client/android. Never commit the real keystore.
+storeFile=keystore/pactick-upload.jks
+storePassword=REPLACE_WITH_SECRET
+keyAlias=pactick
+keyPassword=REPLACE_WITH_SECRET

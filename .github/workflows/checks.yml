@@ -1,0 +1,81 @@
+name: Checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  source-and-go:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: pactick_test
+          POSTGRES_USER: pactick
+          POSTGRES_PASSWORD: pactick
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U pactick -d pactick_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PACTICK_TEST_DATABASE_URL: postgres://pactick:pactick@localhost:5432/pactick_test?sslmode=disable
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.26.4'
+          cache: true
+      - name: Verify public allowlist and script safety tests
+        run: |
+          cmp LICENSE client/LICENSE
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          python3 scripts/prepare_public_source.py "$RUNNER_TEMP/public-source"
+          python3 "$RUNNER_TEMP/public-source/scripts/verify_third_party_notices.py" --root "$RUNNER_TEMP/public-source"
+          python3 "$RUNNER_TEMP/public-source/scripts/verify_supplemental_notices.py" --root "$RUNNER_TEMP/public-source"
+      - name: Test independently copied source
+        working-directory: ${{ runner.temp }}/public-source
+        run: |
+          go mod verify
+          go test -count=1 ./...
+          go vet ./...
+          go build ./cmd/...
+      - name: Validate deployment shell syntax
+        run: |
+          find deploy/scripts -name '*.sh' -print0 | xargs -0 -r -n1 bash -n
+          bash deploy/tests/install_test.sh
+          bash deploy/tests/release_test.sh
+          bash deploy/tests/https_test.sh
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.47.4'
+          cache: true
+      - name: Copy independently buildable source
+        run: |
+          python3 scripts/prepare_public_source.py "$RUNNER_TEMP/public-source"
+          python3 "$RUNNER_TEMP/public-source/scripts/verify_third_party_notices.py" --root "$RUNNER_TEMP/public-source"
+      - name: Analyze, test and build without signing secrets
+        working-directory: ${{ runner.temp }}/public-source/client
+        run: |
+          flutter pub get --enforce-lockfile
+          flutter analyze
+          flutter test
+          flutter build apk --debug
+          python3 ../scripts/verify_apk_notices.py build/app/outputs/flutter-apk/app-debug.apk

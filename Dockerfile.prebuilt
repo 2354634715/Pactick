@@ -1,0 +1,11 @@
+FROM gcr.io/distroless/static-debian12:nonroot
+COPY LICENSE THIRD_PARTY_NOTICES.md /licenses/
+COPY third_party/licenses /licenses/third-party/
+COPY --chmod=0555 prebuilt/server /server
+COPY --chmod=0555 prebuilt/migrate /migrate
+COPY --chmod=0555 prebuilt/healthcheck /healthcheck
+EXPOSE 8080
+USER nonroot:nonroot
+STOPSIGNAL SIGTERM
+HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 CMD ["/healthcheck"]
+ENTRYPOINT ["/server"]

@@ -1,0 +1,2 @@
+-- Intentionally irreversible: removed application identifiers are private
+-- device data and must not be restored to historical server records.
