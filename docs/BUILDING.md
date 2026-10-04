@@ -83,6 +83,16 @@ python3 scripts/prepare_public_source.py ../pactick-public
 
 目标目录必须不存在。工具按允许列表复制源码、测试、迁移、锁文件、公开文档和模板，不删除或修改原目录。输出 `SOURCE_MANIFEST.json` 记录每个文件的 SHA-256。文本会规范化为 LF；脚本保留可执行权限。
 
+`.gitignore` 用于排除本地环境配置、签名材料、数据库、备份、导出、缓存及构建产物。根目录的 `*.sql` 不进入 Git；`internal/database/migrations/` 中的迁移 SQL 仍可提交。`.env.example`、`*.env.example` 等明确示例和 `key.properties.example` 保持可见。`test_gitignore.py` 在隔离 Git 仓库中验证根目录、客户端和 Android 的规则及这些例外，上述 Python 测试命令会执行它。
+
+本地备份和服务器导出的默认文件名 `pactick-backup*.json`、`pactick-export*.json`、`pactick-server-export*.json` 也被排除。自定义名称的导出应保存在根目录 `exports/` 或 `backups/` 中；任意 JSON 文件不能统一排除，因为项目本身包含必须分发的 JSON 配置和许可材料。
+
+快照工具独立排除源码目录内的实际 `*.env`、本地凭据、`.codex`／`.agents` 配置、数据库伴随文件，以及备份、归档和临时文件；不依赖文件是否已被 Git 忽略。允许提交的示例仍须通过内容扫描。提交前另运行 `git ls-files -ci --exclude-standard`，结果应为空；出现文件时，先检查其内容和历史，再处理已跟踪状态。忽略规则和快照过滤均不会删除 Git 历史中的内容。
+
+Checks 和签名候选工作流也执行上述已跟踪文件检查；命中忽略规则时，检查步骤只打印文件路径并失败。签名候选工作流不会继续生成或上传候选制品。
+
+服务端 Docker 构建上下文只包含 Go 源码、模块文件、预构建命令和许可材料。`.dockerignore` 在重新包含源码目录后再次排除目录内的实际环境配置、凭据、密钥、数据库、备份、归档和临时文件；这些文件不会因为位于 `cmd/` 或 `internal/` 中而进入构建上下文。
+
 `verify_third_party_notices.py` 只读取源码和证据，检查声明中的 Go／Dart 版本、所列本地许可文本的哈希、必需 SDK／字体／Gradle wrapper 记录，以及 Android POM 记录是否完整。检查失败时，按 [第三方核查说明](THIRD_PARTY_AUDIT.md) 重新采集并审阅证据，不修改哈希来跳过差异。该命令不会确认法律兼容性、素材使用权或最终 APK 的全部通知义务；Checks 和签名候选工作流均执行此检查。
 
 `verify_supplemental_notices.py` 核对已审阅的补充资产、组件版本、完整原始通知、必要鸣谢及图标／wrapper 的来源哈希。`verify_apk_notices.py` 同时检查最终 APK 内的项目许可、全部 Flutter 引擎正文和该补充资产的字节。缺失或差异会导致命令失败。依赖或素材发生变化时，重新核对对应版本的条款、更新资产和审阅记录后再构建；仅更新哈希不能替代条款审阅。运行时依赖图的复核参数见 [第三方核查说明](THIRD_PARTY_AUDIT.md)。

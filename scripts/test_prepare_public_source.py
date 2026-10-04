@@ -38,6 +38,45 @@ class SnapshotTests(unittest.TestCase):
         for value in (secret, ip, "-----BEGIN " + "PRIVATE KEY-----"):
             self.assertTrue(snapshot.findings(Path("README.md"), value.encode(), set()))
 
+    def test_snapshot_omits_private_files_inside_allowed_source_trees(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "source"
+            root.mkdir()
+            self.fixture(root)
+            private_names = (
+                "internal/private.env", "scripts/private.env.local", "scripts/.envrc",
+                "scripts/.codex/config.toml", "scripts/.agents/local.md",
+                "internal/secrets/jwt.txt", "internal/backups/production.sql",
+                "scripts/exports/workspace.json", "scripts/settings.py.bak",
+                "scripts/.netrc", "scripts/local.dump.gz", "internal/local.sqlite-wal",
+                "client/lib/settings.dart~", "client/test/fixture.db-shm",
+                "deploy/config/api.env.example.bak", "scripts/key.properties.local",
+                "internal/pactick-backup.json", "scripts/pactick-export.json",
+                "client/lib/pactick-server-export.json",
+            )
+            for name in private_names:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("local private data\n")
+            public_names = (
+                "deploy/config/api.env.example", "scripts/test.env.sample",
+                "internal/database/migrations/001_initial.sql",
+                "client/android/key.properties.example",
+            )
+            for name in public_names:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("reviewed example\n")
+            target = Path(directory) / "public"
+            result = subprocess.run([sys.executable, str(SCRIPT), "--source", str(root), str(target)],
+                                    capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            manifest = {entry["path"] for entry in json.loads((target / "SOURCE_MANIFEST.json").read_text())}
+            self.assertTrue(manifest.isdisjoint(private_names))
+            self.assertTrue(set(public_names).issubset(manifest))
+            for name in private_names:
+                self.assertEqual((root / name).read_text(), "local private data\n")
+
     def test_snapshot_refuses_overwrite_and_keeps_source(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "source"

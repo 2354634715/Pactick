@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import hashlib
 import ipaddress
 import json
@@ -27,6 +28,7 @@ DOCS = {
     "BUILDING.md", "RELEASING.md", "SELF_HOSTING.md", "LICENSE_FAQ.md", "GETTING_STARTED.md",
     "ENTITY_SCHEMAS.md", "THIRD_PARTY_AUDIT.md", "PROJECT_ARCHITECTURE.md", "SERVER_ARCHITECTURE.md", "LOCAL_BACKUPS.md",
     "RELEASE_AND_PROMOTION_PLAN.md",
+    "FINAL_CHECK_20261004.md",
     "ASSET_SOURCES.md", "ANDROID_SIGNING.md",
 }
 CLIENT_FILES = {
@@ -40,9 +42,24 @@ ANDROID_FILES = {
     "gradlew", "gradlew.bat", "gradle/wrapper/gradle-wrapper.jar",
     "gradle/wrapper/gradle-wrapper.properties", "app/build.gradle.kts", "key.properties.example",
 }
-BLOCKED_PARTS = {".git", ".cache", "build", ".dart_tool", ".gradle", "__pycache__"}
+BLOCKED_PARTS = {".git", ".cache", ".codex", ".agents", ".direnv", ".ssh", ".aws",
+                 "secrets", "backups", "exports", "build", ".dart_tool", ".gradle",
+                 ".kotlin", ".cxx", "node_modules", ".venv", "venv", "__pycache__"}
 BLOCKED_SUFFIXES = {".jks", ".keystore", ".p12", ".pfx", ".pem", ".key", ".secret",
-                    ".db", ".sqlite", ".sqlite3", ".dump", ".log", ".apk", ".aab"}
+                    ".db", ".sqlite", ".sqlite3", ".dump", ".log", ".apk", ".aab",
+                    ".bak", ".backup", ".old", ".orig", ".rej", ".tmp", ".temp",
+                    ".swp", ".swo", ".zip", ".tar", ".gz", ".tgz", ".7z", ".rar",
+                    ".pyc", ".pyo", ".pyd"}
+BLOCKED_NAMES = {"local.properties", "key.properties", "GeneratedPluginRegistrant.java",
+                 ".netrc", "_netrc", ".npmrc", ".pypirc", ".pgpass", ".pgpass.conf",
+                 ".pg_service.conf", ".envrc"}
+BLOCKED_NAME_PATTERNS = ("*.dump.*", "*.sqlite-*", "*.sqlite3-*", "*.db-*",
+                         "key.properties.*", ".envrc.*", "*~", "pactick-backup*.json",
+                         "pactick-export*.json", "pactick-server-export*.json")
+ENV_PATTERNS = (".env", ".env.*", "*.env", "*.env.*")
+ENV_EXAMPLE_PATTERNS = (".env.example", ".env.sample", ".env.template",
+                        ".env.*.example", ".env.*.sample", ".env.*.template",
+                        "*.env.example", "*.env.sample", "*.env.template")
 PATTERNS = {
     "private-key": re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |DSA )?PRIVATE KEY-----"),
     "cloud-access-key": re.compile(r"\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"),
@@ -70,9 +87,13 @@ def allowed(relative: Path) -> bool:
     name = relative.as_posix()
     if set(relative.parts) & BLOCKED_PARTS or relative.suffix.lower() in BLOCKED_SUFFIXES:
         return False
-    if relative.name in {"local.properties", "key.properties", "GeneratedPluginRegistrant.java"}:
+    if relative.name in BLOCKED_NAMES:
         return False
-    if relative.name.startswith(".env") and relative.name != ".env.example":
+    if (relative.name != "key.properties.example"
+            and any(fnmatch.fnmatchcase(relative.name, pattern) for pattern in BLOCKED_NAME_PATTERNS)):
+        return False
+    if (any(fnmatch.fnmatchcase(relative.name, pattern) for pattern in ENV_PATTERNS)
+            and not any(fnmatch.fnmatchcase(relative.name, pattern) for pattern in ENV_EXAMPLE_PATTERNS)):
         return False
     if name in ROOT_FILES or name in {"docs/" + x for x in DOCS}:
         return True

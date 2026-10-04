@@ -30,6 +30,13 @@ jobs:
       PACTICK_TEST_DATABASE_URL: postgres://pactick:pactick@localhost:5432/pactick_test?sslmode=disable
     steps:
       - uses: actions/checkout@v6
+      - name: Reject tracked private or generated files
+        run: |
+          ignored_files="$(git ls-files -ci --exclude-standard)"
+          if [[ -n "$ignored_files" ]]; then
+            printf '%s\n' 'Tracked files match ignore rules:' "$ignored_files"
+            exit 1
+          fi
       - uses: actions/setup-go@v6
         with:
           go-version: '1.26.4'

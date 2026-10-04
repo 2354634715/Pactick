@@ -12,6 +12,9 @@
 !*.env.example
 !*.env.sample
 !*.env.template
+.envrc
+.envrc.*
+.direnv/
 deploy/config/*.env
 deploy/config/*.secret
 deploy/config/*.key
@@ -24,6 +27,8 @@ _netrc
 .pg_service.conf
 .ssh/
 .aws/
+.codex/
+.agents/
 secrets/
 .cache/
 .idea/
@@ -60,6 +65,12 @@ coverage/
 *.dump
 *.dump.*
 backups/
+# 根目录 SQL 文件和本地导出目录存放操作数据；迁移 SQL 仍可提交。
+/*.sql
+/exports/
+pactick-backup*.json
+pactick-export*.json
+pactick-server-export*.json
 *.sql.gz
 *.sql.zip
 *.zip
