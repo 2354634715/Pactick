@@ -24,6 +24,9 @@ sudo bash deploy/scripts/install.sh install --local-only
 | `tests/release_test.sh` | 使用模拟 Docker 验证备份、迁移、替换顺序及失败时停止 |
 | `tests/upgrade_test.sh` | 使用隔离配置与模拟 Docker 验证构建、数据库就绪、备份、停止 API、迁移状态写入、迁移和 API 失败时保留正式镜像配置，以及注册开关与升级重试的处理 |
 | `tests/https_test.sh` | 在隔离目录中验证证书签发、配置检查和重载失败后的站点恢复 |
+| `desktop/compose.yaml` | 为 Windows/Linux 管理程序提供独立 Compose 项目；使用 Release 包内的 Linux amd64 二进制构建镜像，PostgreSQL 不发布主机端口 |
+| `desktop/launch-manager.cmd`、`desktop/launch-manager.sh` | 启动 Release 包中的本机管理程序并打开浏览器界面；操作与数据目录说明见 [服务器管理程序](../docs/SERVER_MANAGER.md) |
+| `desktop/run-server.cmd`、`desktop/run-server.ps1`、`desktop/run-server.sh` | 从 `data/api.env` 或指定配置文件读取本机环境变量，前台运行本机服务端；显式迁移参数仅执行迁移，不启动 API |
 
 ## 手工配置
 
@@ -39,15 +42,20 @@ sudo bash deploy/scripts/install.sh install --local-only
 
 ## 小内存主机
 
-在可信管理端交叉编译，将三份静态 Linux 二进制放到目标源码目录的 `prebuilt/`：
+在可信管理端交叉编译，将四份静态 Linux 二进制放到目标源码目录的 `prebuilt/`：
 
 ```bash
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o prebuilt/server ./cmd/server
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o prebuilt/migrate ./cmd/migrate
 CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o prebuilt/healthcheck ./cmd/healthcheck
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o prebuilt/admin ./cmd/admin
 ```
 
 ARM64 主机使用 `GOARCH=arm64`。先用 `install --prepare-only` 生成实际部署目录的配置，在 `compose.env` 中设置 `PACTICK_DOCKERFILE=Dockerfile.prebuilt`，然后执行正式安装。运行层仍使用 distroless 非 root 镜像。
+
+Windows/Linux x86 的服务器 Release 包同时包含本机程序、管理界面、上述 Linux 部署脚本和 Docker 预编译程序。解压后从包根目录运行 `launch-manager.cmd` 或 `bash launch-manager.sh`。本机模式需提供既有 PostgreSQL；Docker 模式需安装可运行 Linux 容器的 Docker Engine 与 Compose v2。桌面部署的 Compose 项目和数据库卷独立于本节的 Linux systemd 部署，两者的配置、备份和恢复命令不可直接混用。
+
+桌面 Compose 文件不自动执行迁移。管理程序首次安装时先等待 PostgreSQL 就绪，再运行 `migrate`，迁移成功后启动 `api`；使用命令行时须保持相同顺序。升级既有数据库前必须停止 API、完成备份并显式运行迁移。原 `install.sh` 仅适用于自部署手册列出的 Linux 工具与路径要求，不在 Windows 上运行。
 
 ## 手工渲染 Nginx
 

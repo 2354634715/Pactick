@@ -4,6 +4,7 @@ COPY third_party/licenses /licenses/third-party/
 COPY --chmod=0555 prebuilt/server /server
 COPY --chmod=0555 prebuilt/migrate /migrate
 COPY --chmod=0555 prebuilt/healthcheck /healthcheck
+COPY --chmod=0555 prebuilt/admin /admin
 EXPOSE 8080
 USER nonroot:nonroot
 STOPSIGNAL SIGTERM

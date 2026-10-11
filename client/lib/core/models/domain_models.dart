@@ -109,6 +109,14 @@ class TaskItem {
 
   bool get isCompleted => status == TaskStatus.completed;
 
+  static int compareByPriority(TaskItem left, TaskItem right) {
+    final priority = right.priority.index.compareTo(left.priority.index);
+    if (priority != 0) return priority;
+    final rank = left.rank.compareTo(right.rank);
+    if (rank != 0) return rank;
+    return left.id.compareTo(right.id);
+  }
+
   factory TaskItem.fromDocument(String id, Map<String, Object?> body) {
     return TaskItem(
       id: id,

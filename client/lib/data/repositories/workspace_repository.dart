@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:uuid/uuid.dart';
 
+import '../../core/models/default_focus_policies.dart';
 import '../../core/models/domain_models.dart';
 import '../../core/sync/sync_entity_contract.dart';
 import '../../core/sync/sync_models.dart';
@@ -361,6 +362,7 @@ class WorkspaceRepository {
           .length;
     }
 
+    final policySnapshots = <String, SyncSnapshot>{};
     var cursor = await _store.readSyncCursor(context.accountId);
     while (true) {
       final response = await api.pullChanges(
@@ -373,11 +375,52 @@ class WorkspaceRepository {
         response: response,
       );
       pulled += response.changes.length;
+      for (final change in response.changes) {
+        if (change.entityType == SyncEntityType.focusPolicy &&
+            defaultFocusPolicies.any(
+              (policy) => policy.id == change.entityId,
+            )) {
+          policySnapshots[change.entityId] = change.toSnapshot();
+        }
+      }
       cursor = response.nextCursor;
       if (!response.hasMore) break;
     }
 
-    final rejections = await _store.readRejectedOperations(context.accountId);
+    var rejections = await _store.readRejectedOperations(context.accountId);
+    final duplicatePolicyIds = rejections
+        .where(
+          (value) => isDuplicateDefaultFocusPolicyCreation(
+            value.operation,
+            value.error.code,
+          ),
+        )
+        .map((value) => value.operation.entityId)
+        .toSet();
+    if (duplicatePolicyIds.isNotEmpty) {
+      // Older clients already advanced past the seed policies while retaining
+      // their rejected creates. Read their authoritative history without
+      // rewinding the workspace cursor or replaying unrelated documents.
+      if (!policySnapshots.keys.toSet().containsAll(duplicatePolicyIds)) {
+        policySnapshots.addAll(
+          await _readDefaultPolicySnapshots(
+            api,
+            duplicatePolicyIds,
+            pullPageSize,
+          ),
+        );
+      }
+      for (final id in duplicatePolicyIds) {
+        final snapshot = policySnapshots[id];
+        if (snapshot != null) {
+          await _store.adoptExistingDefaultFocusPolicy(
+            context.accountId,
+            snapshot,
+          );
+        }
+      }
+      rejections = await _store.readRejectedOperations(context.accountId);
+    }
     return SyncRunResult(
       accountId: context.accountId,
       pushedOperations: pushed,
@@ -387,6 +430,40 @@ class WorkspaceRepository {
       rejections: rejections,
       workspace: await _load(context.accountId),
     );
+  }
+
+  Future<Map<String, SyncSnapshot>> _readDefaultPolicySnapshots(
+    SyncApi api,
+    Set<String> ids,
+    int pageSize,
+  ) async {
+    final snapshots = <String, SyncSnapshot>{};
+    var cursor = 0;
+    while (true) {
+      final response = await api.pullChanges(cursor: cursor, limit: pageSize);
+      var previous = cursor;
+      for (final change in response.changes) {
+        if (change.cursor <= previous || change.cursor > response.nextCursor) {
+          throw const FormatException('Pull changes have invalid cursors.');
+        }
+        previous = change.cursor;
+      }
+      if ((response.changes.isNotEmpty && response.nextCursor != previous) ||
+          (response.hasMore && response.changes.isEmpty) ||
+          response.nextCursor < previous ||
+          response.currentCursor < response.nextCursor ||
+          (response.hasMore && response.nextCursor <= cursor)) {
+        throw const FormatException('Pull response has invalid cursor bounds.');
+      }
+      for (final change in response.changes) {
+        if (change.entityType == SyncEntityType.focusPolicy &&
+            ids.contains(change.entityId)) {
+          snapshots[change.entityId] = change.toSnapshot();
+        }
+      }
+      cursor = response.nextCursor;
+      if (!response.hasMore) return snapshots;
+    }
   }
 
   void _validatePushResponse(
@@ -422,7 +499,7 @@ class WorkspaceRepository {
     return documents
         .map((document) => TaskItem.fromDocument(document.id, document.body))
         .toList(growable: false)
-      ..sort((a, b) => a.rank.compareTo(b.rank));
+      ..sort(TaskItem.compareByPriority);
   }
 
   Future<List<PlanBlockItem>> _readPlanBlocks(String accountId) async {
@@ -554,29 +631,8 @@ class WorkspaceRepository {
     String accountId,
     List<FocusPolicyItem> existingPolicies,
   ) async {
-    const policies = [
-      FocusPolicyItem(
-        id: '51111111-1111-4111-8111-111111111111',
-        name: '灵活专注',
-        mode: FocusPolicyMode.normal,
-        allowPause: true,
-        earlyExitMode: 'allow',
-        notificationMode: 'vibrate',
-      ),
-      FocusPolicyItem(
-        id: '52222222-2222-4222-8222-222222222222',
-        name: '深度守护',
-        mode: FocusPolicyMode.guard,
-        allowPause: false,
-        earlyExitMode: 'countdown',
-        earlyExitWaitSeconds: 10,
-        maxAppExits: 2,
-        notificationMode: 'sound_and_vibrate',
-      ),
-    ];
-
     final existingIds = existingPolicies.map((policy) => policy.id).toSet();
-    for (final policy in policies) {
+    for (final policy in defaultFocusPolicies) {
       if (existingIds.contains(policy.id)) continue;
       await _store.putDocument(
         'focus_policy',

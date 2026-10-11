@@ -14,6 +14,7 @@ import '../../../core/utilities/formatters.dart';
 import '../../../core/utilities/persistence_errors.dart';
 import '../../../data/update/client_update_service.dart';
 import 'local_data_settings.dart';
+import 'task_reminder_settings.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -44,13 +45,16 @@ class SettingsPage extends StatelessWidget {
               const SectionHeader(title: '外观'),
               _AppearanceCard(controller: controller),
               const SizedBox(height: AppSpacing.xl),
+              const SectionHeader(title: '任务提醒'),
+              TaskReminderSettingsCard(controller: controller),
+              const SizedBox(height: AppSpacing.xl),
               const SectionHeader(title: '专注与权限'),
               _FocusPermissionCard(controller: controller),
               const ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.info_outline),
                 title: Text('暂不可用'),
-                subtitle: Text('任务与计划提醒、专注震动反馈、严格模式尚未实现。普通专注无需守护权限。'),
+                subtitle: Text('按截止时间或计划时间提醒、专注震动反馈、严格模式尚未实现。普通专注无需守护权限。'),
               ),
               const SizedBox(height: AppSpacing.xl),
               const SectionHeader(title: '同步与设备'),
@@ -280,7 +284,7 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
         _permission(
           icon: Icons.notifications_outlined,
           title: '前台计时通知',
-          description: '用于专注期间的系统通知展示。本接口未提供持续查询状态；拒绝后系统展示受限，本地计时操作仍可使用。',
+          description: '专注计时通知与任务提醒共用系统通知权限。拒绝后仍可使用本地任务和计时。',
           action: () async {
             final granted = await controller.focusPlatform
                 .requestNotificationPermission();
@@ -288,7 +292,7 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
               setState(() {
                 _failed = !granted;
                 _message = granted
-                    ? '本次权限检查返回允许通知展示。'
+                    ? '系统允许应用通知；各通知分类仍可在系统设置中关闭。'
                     : '本次未获通知权限；系统通知展示受限，本地计时仍可使用。';
               });
             }

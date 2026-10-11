@@ -1,7 +1,7 @@
 name: pactick
 description: A local-first planning and focus client.
 publish_to: none
-version: 0.2.0-preview.1+5
+version: 0.3.0-preview.1+6
 
 environment:
   sdk: ^3.13.2

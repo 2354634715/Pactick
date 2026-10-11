@@ -5,6 +5,7 @@ import 'package:pactick/app/theme/app_theme.dart';
 import 'package:pactick/core/components/task_card.dart';
 import 'package:pactick/core/components/task_details_panel.dart';
 import 'package:pactick/core/dialogs/task_editor.dart';
+import 'package:pactick/core/models/domain_models.dart';
 import 'package:pactick/core/state/app_controller.dart';
 import 'package:pactick/core/state/app_scope.dart';
 import 'package:pactick/data/local/local_database.dart';
@@ -46,6 +47,49 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  testWidgets('Tasks keeps priority order when filtering and editing', (
+    tester,
+  ) async {
+    final controller = await controllerFor(tester);
+    final low = await controller.createTask(
+      title: '待办低优先级',
+      priority: TaskPriority.low,
+    );
+    final high = await controller.createTask(
+      title: '待办高优先级',
+      priority: TaskPriority.high,
+    );
+    final urgent = await controller.createTask(
+      title: '其他紧急任务',
+      priority: TaskPriority.urgent,
+    );
+    List<String> visibleTaskIds() => tester
+        .widgetList<TaskCard>(find.byType(TaskCard))
+        .map((card) => card.task.id)
+        .toList();
+
+    await showPage(
+      tester,
+      controller,
+      TasksPage(onOpenSettings: () {}, onOpenFocus: () {}),
+    );
+    expect(visibleTaskIds(), [urgent.id, high.id, low.id]);
+    await tester.enterText(find.byType(TextField).first, '待办');
+    await tester.pumpAndSettle();
+    expect(visibleTaskIds(), [high.id, low.id]);
+    await controller.updateTask(low.copyWith(priority: TaskPriority.urgent));
+    await tester.pumpAndSettle();
+    expect(visibleTaskIds(), [low.id, high.id]);
+    await controller.toggleTask(controller.taskById(low.id)!);
+    await controller.toggleTask(controller.taskById(high.id)!);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ChoiceChip, '已完成'));
+    await tester.pumpAndSettle();
+    expect(visibleTaskIds(), [low.id, high.id]);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox.shrink());
+  });
 
   for (final today in [false, true]) {
     testWidgets(

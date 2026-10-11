@@ -3,13 +3,16 @@ package com.example.pactick
 import android.Manifest
 import android.app.Activity
 import android.app.AppOpsManager
+import android.app.NotificationManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
+import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -22,10 +25,25 @@ import java.nio.charset.CodingErrorAction
 import java.util.concurrent.Executors
 
 class MainActivity : FlutterActivity() {
-    private var notificationPermissionResult: MethodChannel.Result? = null
+    private val notificationPermissionCallbacks = mutableListOf<() -> Unit>()
+    private var notificationPermissionInFlight = false
+    private var openTasksRequested = false
     private var backupResult: MethodChannel.Result? = null
     private var backupContents: ByteArray? = null
     private val backupExecutor = Executors.newSingleThreadExecutor()
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        openTasksRequested = intent?.action == TaskReminderManager.ACTION_OPEN_TASKS
+        super.onCreate(savedInstanceState)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        if (intent.action == TaskReminderManager.ACTION_OPEN_TASKS) {
+            openTasksRequested = true
+        }
+    }
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -37,6 +55,78 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             BACKUP_CHANNEL,
         ).setMethodCallHandler(::handleBackupCall)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            TASK_REMINDERS_CHANNEL,
+        ).setMethodCallHandler(::handleTaskReminderCall)
+    }
+
+    private fun handleTaskReminderCall(call: MethodCall, result: MethodChannel.Result) {
+        when (call.method) {
+            "update" -> {
+                try {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    val count = call.argument<Number>("openTaskCount")?.toInt()?.coerceAtLeast(0) ?: 0
+                    val workspaceId = call.argument<String>("workspaceId") ?: ""
+                    val allowed = TaskReminderManager.update(this, enabled, count, workspaceId)
+                    val wantsPermission = call.argument<Boolean>("requestPermission") ?: false
+                    val automatic = call.argument<Boolean>("automatic") ?: true
+                    val mayRequest = !automatic ||
+                        !TaskReminderManager.hasAutomaticallyRequestedPermission(this)
+                    val mayAutomaticallyRequest = enabled && count > 0 && workspaceId.isNotEmpty()
+                    if (wantsPermission && mayRequest && (!automatic || mayAutomaticallyRequest)
+                    ) {
+                        requestNotificationPermission {
+                            try {
+                                result.success(TaskReminderManager.refresh(this))
+                            } catch (error: Exception) {
+                                taskReminderUpdateFailed(result, error)
+                            }
+                        }
+                    } else {
+                        result.success(allowed)
+                    }
+                } catch (error: Exception) {
+                    taskReminderUpdateFailed(result, error)
+                }
+            }
+
+            "openNotificationSettings" -> {
+                val channelSettings = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
+                    putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                    putExtra(Settings.EXTRA_CHANNEL_ID, TaskReminderManager.CHANNEL_ID)
+                }
+                try {
+                    startActivity(channelSettings)
+                    result.success(null)
+                } catch (_: Exception) {
+                    try {
+                        startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                            putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
+                        })
+                        result.success(null)
+                    } catch (_: Exception) {
+                        result.error("notification_settings_unavailable", "无法打开系统通知设置。", null)
+                    }
+                }
+            }
+
+            "takeOpenTasksRequest" -> {
+                val requested = openTasksRequested
+                openTasksRequested = false
+                if (intent?.action == TaskReminderManager.ACTION_OPEN_TASKS) {
+                    intent.action = Intent.ACTION_MAIN
+                }
+                result.success(requested)
+            }
+
+            else -> result.notImplemented()
+        }
+    }
+
+    private fun taskReminderUpdateFailed(result: MethodChannel.Result, error: Exception) {
+        Log.w("TaskReminders", "Could not update task reminder", error)
+        result.error("task_reminder_update_failed", "任务提醒更新失败，请重试。", null)
     }
 
     private fun handleBackupCall(call: MethodCall, result: MethodChannel.Result) {
@@ -141,6 +231,7 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        finishNotificationPermissionRequests()
         backupResult?.error("backup_interrupted", "文件操作已中断，请重试。", null)
         backupResult = null
         backupContents = null
@@ -220,7 +311,9 @@ class MainActivity : FlutterActivity() {
             "getGuardActivityStats" -> result.success(FocusTimerService.guardActivityStats(this))
             "getTimerState" -> result.success(FocusTimerService.timerState(this))
 
-            "requestNotificationPermission" -> requestNotificationPermission(result)
+            "requestNotificationPermission" -> requestNotificationPermission {
+                result.success(appNotificationsAllowed())
+            }
             else -> result.notImplemented()
         }
     }
@@ -266,25 +359,48 @@ class MainActivity : FlutterActivity() {
             .toList()
     }
 
-    private fun requestNotificationPermission(result: MethodChannel.Result) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
-            result.success(true)
-            return
-        }
-        if (ContextCompat.checkSelfPermission(
+    private fun appNotificationsAllowed(): Boolean = runCatching {
+        val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.areNotificationsEnabled() &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED)
+    }.getOrDefault(false)
+
+    private fun requestNotificationPermission(onComplete: () -> Unit) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU || isFinishing || isDestroyed ||
+            ContextCompat.checkSelfPermission(
                 this,
                 Manifest.permission.POST_NOTIFICATIONS,
             ) == PackageManager.PERMISSION_GRANTED
         ) {
-            result.success(true)
+            onComplete()
             return
         }
-        notificationPermissionResult = result
-        ActivityCompat.requestPermissions(
-            this,
-            arrayOf(Manifest.permission.POST_NOTIFICATIONS),
-            NOTIFICATION_PERMISSION_REQUEST,
-        )
+        notificationPermissionCallbacks.add(onComplete)
+        if (notificationPermissionInFlight) return
+        notificationPermissionInFlight = true
+        try {
+            TaskReminderManager.markPermissionRequested(this)
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.POST_NOTIFICATIONS),
+                NOTIFICATION_PERMISSION_REQUEST,
+            )
+        } catch (error: Exception) {
+            Log.w("TaskReminders", "Could not request notification permission", error)
+            finishNotificationPermissionRequests()
+        }
+    }
+
+    private fun finishNotificationPermissionRequests() {
+        notificationPermissionInFlight = false
+        val callbacks = notificationPermissionCallbacks.toList()
+        notificationPermissionCallbacks.clear()
+        for (callback in callbacks) {
+            runCatching(callback)
+                .onFailure { Log.w("TaskReminders", "Could not return notification permission state", it) }
+        }
     }
 
     override fun onRequestPermissionsResult(
@@ -294,15 +410,13 @@ class MainActivity : FlutterActivity() {
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode != NOTIFICATION_PERMISSION_REQUEST) return
-        notificationPermissionResult?.success(
-            grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED,
-        )
-        notificationPermissionResult = null
+        finishNotificationPermissionRequests()
     }
 
     companion object {
         private const val FOCUS_CHANNEL = "pactick/focus"
         private const val BACKUP_CHANNEL = "pactick/backup_files"
+        private const val TASK_REMINDERS_CHANNEL = "pactick/task_reminders"
         private const val NOTIFICATION_PERMISSION_REQUEST = 901
         private const val SAVE_BACKUP_REQUEST = 902
         private const val OPEN_BACKUP_REQUEST = 903

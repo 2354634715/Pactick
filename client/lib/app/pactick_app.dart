@@ -29,6 +29,9 @@ class PactickApp extends StatefulWidget {
 class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
   AppController? _controller;
   Object? _presentation;
+  final _navigatorKey = GlobalKey<NavigatorState>();
+  final _routes = _AppRouteObserver();
+  bool _checkingReminderLaunch = false;
 
   Object _snapshot(AppController app) => (
     app.themePreference,
@@ -46,6 +49,9 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
     _controller = controller;
     _presentation = _snapshot(controller);
     controller.addListener(_onPresentationChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) unawaited(_handleReminderLaunch());
+    });
   }
 
   void _onPresentationChanged() {
@@ -73,7 +79,30 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
     final app = AppScope.read(context);
     unawaited(app.refreshGuardPermissions());
     unawaited(app.refreshGuardActivityStats());
+    unawaited(app.refreshTaskReminders());
+    unawaited(_handleReminderLaunch());
     unawaited(_resumeSync());
+  }
+
+  Future<void> _handleReminderLaunch() async {
+    if (_checkingReminderLaunch) return;
+    _checkingReminderLaunch = true;
+    try {
+      final app = _controller;
+      if (app == null || !await app.takeTaskReminderOpenRequest() || !mounted) {
+        return;
+      }
+      // Respect existing unsaved-form guards while returning to the task page.
+      while (mounted) {
+        final route = _routes.current;
+        final navigator = _navigatorKey.currentState;
+        if (route == null || route.isFirst || navigator == null) break;
+        await navigator.maybePop();
+        if (route.isActive) break;
+      }
+    } finally {
+      _checkingReminderLaunch = false;
+    }
   }
 
   Future<void> _resumeSync() async {
@@ -89,6 +118,8 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
     final app = AppScope.read(context);
     return DynamicColorBuilder(
       builder: (light, dark) => MaterialApp(
+        navigatorKey: _navigatorKey,
+        navigatorObservers: [_routes],
         debugShowCheckedModeBanner: false,
         title: 'Pactick',
         theme: AppTheme.light(app.useDynamicColor ? light : null),
@@ -119,5 +150,29 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
             : AppDataBoundary(controller: app, child: const AdaptiveAppShell()),
       ),
     );
+  }
+}
+
+class _AppRouteObserver extends NavigatorObserver {
+  Route<dynamic>? current;
+
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    current = route;
+  }
+
+  @override
+  void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    current = previousRoute;
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    if (current == oldRoute) current = newRoute;
+  }
+
+  @override
+  void didRemove(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    if (current == route) current = previousRoute;
   }
 }

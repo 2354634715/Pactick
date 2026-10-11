@@ -4,6 +4,7 @@ import 'package:path/path.dart' as path;
 import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../core/models/default_focus_policies.dart';
 import '../../core/sync/sync_entity_contract.dart';
 import '../../core/sync/sync_models.dart';
 import 'workspace_archive.dart';
@@ -91,6 +92,14 @@ abstract interface class DocumentStore {
   });
 
   Future<List<RejectedSyncOperation>> readRejectedOperations(String accountId);
+
+  /// Atomically removes only unchanged built-in policy creation rejections and
+  /// adopts their current server snapshot, preserving device-local fields and
+  /// any newer queued edits. Does not change the account's sync cursor.
+  Future<bool> adoptExistingDefaultFocusPolicy(
+    String accountId,
+    SyncSnapshot snapshot,
+  );
 
   Future<WorkspaceArchive> exportWorkspace(String accountId);
 
@@ -1007,6 +1016,51 @@ class LocalDatabase implements DocumentStore {
   }
 
   @override
+  Future<bool> adoptExistingDefaultFocusPolicy(
+    String accountId,
+    SyncSnapshot snapshot,
+  ) async {
+    if (!_isExistingDefaultFocusPolicy(snapshot)) return false;
+    final db = await _db;
+    return db.transaction((transaction) async {
+      final documents = await transaction.query(
+        'documents',
+        columns: ['version'],
+        where: 'account_id = ? AND entity_type = ? AND entity_id = ?',
+        whereArgs: [accountId, 'focus_policy', snapshot.entityId],
+      );
+      if (documents.isNotEmpty &&
+          (documents.first['version']! as int) > snapshot.version) {
+        return false;
+      }
+      final rows = await transaction.query(
+        'pending_operations',
+        where: '''account_id = ? AND entity_type = ? AND entity_id = ?
+          AND rejected_at IS NOT NULL AND superseded_at IS NULL''',
+        whereArgs: [accountId, 'focus_policy', snapshot.entityId],
+      );
+      final seeds = rows
+          .where(
+            (row) => isDuplicateDefaultFocusPolicyCreation(
+              _operationFromRow(row),
+              row['error_code'] as String?,
+            ),
+          )
+          .toList();
+      if (seeds.isEmpty) return false;
+      for (final seed in seeds) {
+        await transaction.delete(
+          'pending_operations',
+          where: 'account_id = ? AND operation_id = ?',
+          whereArgs: [accountId, seed['operation_id']],
+        );
+      }
+      await _applySnapshot(transaction, accountId, snapshot);
+      return true;
+    });
+  }
+
+  @override
   Future<int> readSyncCursor(String accountId) async {
     final db = await _db;
     final rows = await db.query(
@@ -1699,6 +1753,34 @@ class MemoryDocumentStore implements DocumentStore {
   }
 
   @override
+  Future<bool> adoptExistingDefaultFocusPolicy(
+    String accountId,
+    SyncSnapshot snapshot,
+  ) async {
+    if (!_isExistingDefaultFocusPolicy(snapshot)) return false;
+    final account = _account(accountId);
+    final existing =
+        account.documents[_documentKey('focus_policy', snapshot.entityId)];
+    if (existing != null && existing.version > snapshot.version) return false;
+    final seeds = account.pending
+        .where(
+          (value) =>
+              value.rejectedAt != null &&
+              value.supersededAt == null &&
+              value.operation.entityId == snapshot.entityId &&
+              isDuplicateDefaultFocusPolicyCreation(
+                value.operation,
+                value.error?.code,
+              ),
+        )
+        .toList();
+    if (seeds.isEmpty) return false;
+    account.pending.removeWhere(seeds.contains);
+    _memoryApplySnapshot(account, snapshot);
+    return true;
+  }
+
+  @override
   Future<int> readSyncCursor(String accountId) async =>
       _account(accountId).cursor;
 
@@ -1812,6 +1894,12 @@ class _MemoryAccount {
   final List<_MemoryPending> pending = [];
   int cursor = 0;
 }
+
+bool _isExistingDefaultFocusPolicy(SyncSnapshot snapshot) =>
+    snapshot.entityType == SyncEntityType.focusPolicy &&
+    !snapshot.deleted &&
+    snapshot.version > 0 &&
+    defaultFocusPolicies.any((policy) => policy.id == snapshot.entityId);
 
 const _globalPortableSettings = {
   'theme_preference',

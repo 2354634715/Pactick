@@ -63,21 +63,38 @@ bash deploy/scripts/install.sh install --prepare-only --local-only \
 
 API 只发布到 `127.0.0.1`；PostgreSQL 不发布主机端口。配置默认在 `/opt/pactick/config`，数据库由 Compose 命名卷持久化。运维脚本需由可信管理员管理，其 `.env` 配置文件使用兼容 shell 的格式。
 
-## 3. 创建初始账户并关闭注册
+## 3. 创建账户
 
-创建账户前临时开启注册：
+`admin create-account` 通过可信管理员的本机数据库连接创建账户，不依赖公开注册开关，也不生成访问令牌、会话或设备登记。数据库迁移必须已完成。服务器管理界面的“创建账户”执行相同操作；操作见 [服务器管理程序](SERVER_MANAGER.md)。
+
+本节 Linux Compose 部署可在应用目录执行以下命令，使用 API 容器中已经配置的数据库连接：
+
+```bash
+sudo docker compose --env-file /opt/pactick/config/compose.env \
+  -f compose.production.yaml exec -T api /admin create-account <<'JSON'
+{"email":"user@example.com","display_name":"用户","time_zone":"Asia/Shanghai"}
+JSON
+```
+
+使用自定义配置目录时，将 `--env-file` 改为该目录下的 `compose.env`，并按安装时的路径设置 `PACTICK_CONFIG_DIR`。该命令要求 API 容器正在运行，镜像中包含 `admin`。不使用 Docker 的管理员可给 `bin/admin`（Windows 为 `bin/admin.exe`）设置 `DATABASE_URL`，再通过标准输入提交同样的 UTF-8 JSON。不得将密码放入命令行参数。
+
+`email` 为必填字段。`password` 省略或为空时生成随机密码，并且仅在账户创建成功后的 JSON 中返回一次；显示名称默认取邮箱的 `@` 前部分，时区默认 `UTC`，语言默认 `zh-CN`，每周默认从周一开始。自定密码长度要求为 10–1024 个 UTF-8 字节。命令拒绝未知字段、超过 32 KiB 的输入、无效邮箱或时区及重复邮箱；连接失败、迁移不一致或创建失败时输出不含数据库凭据的错误 JSON，并以非零状态退出。
+
+生成密码显示在终端或管理页面中，应直接保存到密码管理器，不得附在公开问题、截图或发行附件中。账户创建后，客户端在“同步设置”填写 `https://api.example.com`，使用邮箱和密码登录。客户端连接新服务器默认使用独立工作区，上传已有本地数据需单独选择。
+
+需要允许用户自行注册时，可临时开启原客户端注册入口：
 
 ```bash
 sudo bash deploy/scripts/install.sh registration open
 ```
 
-在客户端“同步设置”填写 `https://api.example.com`，使用服务器开放的注册入口创建账户；若使用 API 建号，接口为 `POST /v1/auth/register`，请求格式见 [OpenAPI](../api/openapi.yaml)。账户创建成功后立即关闭注册：
+在客户端使用注册入口创建账户，或调用 `POST /v1/auth/register`，请求格式见 [OpenAPI](../api/openapi.yaml)。完成后关闭注册：
 
 ```bash
 sudo bash deploy/scripts/install.sh registration close
 ```
 
-关闭注册不会阻止已有用户登录。客户端连接新服务器默认使用独立工作区，上传已有本地数据需单独选择。不得公开 `.env`、数据库备份或注册返回的访问令牌。
+关闭注册不会阻止已有用户登录或管理员通过 `admin` 建号。不得公开 `.env`、数据库备份或注册接口返回的访问令牌。
 
 所有后续命令都支持 `--config-dir /自定义/目录`；使用自定义目录时每次保持一致。
 

@@ -23,10 +23,15 @@ class AdaptiveAppShell extends StatefulWidget {
 class _AdaptiveAppShellState extends State<AdaptiveAppShell> {
   int _selectedIndex = 0;
   bool _settingsOpen = false;
+  int _taskReminderOpenSequence = 0;
 
   @override
   Widget build(BuildContext context) {
     final controller = AppScope.watchData(context);
+    if (_taskReminderOpenSequence != controller.taskReminderOpenSequence) {
+      _taskReminderOpenSequence = controller.taskReminderOpenSequence;
+      _selectedIndex = AppDestination.tasks.index;
+    }
     return CallbackShortcuts(
       bindings: {
         for (var index = 0; index < AppDestination.values.length; index++)

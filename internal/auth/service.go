@@ -50,40 +50,23 @@ func NewService(store Store, issuer *AccessTokenIssuer, refreshTTL time.Duration
 }
 
 func (s *Service) Register(ctx context.Context, input RegisterInput) (Session, error) {
-	email, err := normalizeEmail(input.Email)
+	account, err := NormalizeAccountInput(AccountInput{
+		Email: input.Email, Password: input.Password, DisplayName: input.DisplayName,
+		TimeZone: input.TimeZone, Locale: input.Locale, WeekStartsOn: input.WeekStartsOn,
+	})
 	if err != nil {
-		return Session{}, &InputError{Message: err.Error()}
-	}
-	if len(input.Password) < 10 || len(input.Password) > 1024 {
-		return Session{}, &InputError{Message: "password must contain between 10 and 1024 characters"}
-	}
-	input.DisplayName = strings.TrimSpace(input.DisplayName)
-	input.TimeZone = strings.TrimSpace(input.TimeZone)
-	input.Locale = strings.TrimSpace(input.Locale)
-	if input.Locale == "" {
-		input.Locale = "zh-CN"
-	}
-	if err := validateProfile(input.DisplayName, input.TimeZone, input.Locale, input.WeekStartsOn); err != nil {
-		return Session{}, &InputError{Message: err.Error()}
+		return Session{}, err
 	}
 	if err := validateDevice(input.Device); err != nil {
 		return Session{}, &InputError{Message: err.Error()}
 	}
 	input.Device.Name = strings.TrimSpace(input.Device.Name)
-	passwordHash, err := s.hasher.Hash(input.Password)
+	passwordHash, err := s.hasher.Hash(account.Password)
 	if err != nil {
 		return Session{}, err
 	}
 	now := s.now().UTC()
-	user := User{
-		ID:           uuid.NewString(),
-		Email:        email,
-		DisplayName:  input.DisplayName,
-		TimeZone:     input.TimeZone,
-		Locale:       input.Locale,
-		WeekStartsOn: input.WeekStartsOn,
-		CreatedAt:    now,
-	}
+	user := accountUser(account, now)
 	refresh, rawRefresh, err := s.newRefresh(user.ID, input.Device.ID, uuid.NewString(), now)
 	if err != nil {
 		return Session{}, err

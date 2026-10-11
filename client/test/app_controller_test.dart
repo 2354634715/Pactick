@@ -143,6 +143,104 @@ void main() {
     expect(controller.projectById(task.projectId)?.name, '新产品发布');
   });
 
+  test(
+    'task priority order survives edits, manual ranks and restarts',
+    () async {
+      final none = await controller.createTask(title: '未设优先级');
+      final high = await controller.createTask(
+        title: '高优先级第一项',
+        priority: TaskPriority.high,
+      );
+      final low = await controller.createTask(
+        title: '低优先级',
+        priority: TaskPriority.low,
+      );
+      final urgent = await controller.createTask(
+        title: '紧急优先级',
+        priority: TaskPriority.urgent,
+      );
+      final medium = await controller.createTask(
+        title: '中优先级',
+        priority: TaskPriority.medium,
+      );
+      final otherHigh = await controller.createTask(
+        title: '高优先级第二项',
+        priority: TaskPriority.high,
+      );
+      expect(controller.tasks.map((task) => task.id), [
+        urgent.id,
+        high.id,
+        otherHigh.id,
+        medium.id,
+        low.id,
+        none.id,
+      ]);
+      expect(controller.taskById(none.id)!.rank, none.rank);
+      expect(controller.taskById(urgent.id)!.rank, urgent.rank);
+
+      await controller.updateTask(
+        medium.copyWith(priority: TaskPriority.urgent),
+      );
+      await controller.reorderTasks([high, otherHigh], 0, 1);
+      final expected = [
+        urgent.id,
+        medium.id,
+        otherHigh.id,
+        high.id,
+        low.id,
+        none.id,
+      ];
+      expect(controller.tasks.map((task) => task.id), expected);
+
+      final restarted = AppController(
+        repository: WorkspaceRepository(store),
+        focusPlatform: focusPlatform,
+      );
+      addTearDown(restarted.dispose);
+      await restarted.initialize();
+      expect(restarted.initializationError, isNull);
+      expect(restarted.tasks.map((task) => task.id), expected);
+    },
+  );
+
+  test('Today keeps plan times and manual ranks ahead of priority', () async {
+    final date = DateTime(2026, 10, 11);
+    final low = await controller.createTask(
+      title: '未排期低优先级',
+      dueAt: date,
+      priority: TaskPriority.low,
+    );
+    final urgent = await controller.createTask(
+      title: '未排期紧急任务',
+      dueAt: date,
+      priority: TaskPriority.urgent,
+    );
+    final later = await controller.createTask(
+      title: '稍后排期的紧急任务',
+      priority: TaskPriority.urgent,
+    );
+    final earlier = await controller.createTask(
+      title: '较早排期的低优先级任务',
+      priority: TaskPriority.low,
+    );
+    await controller.scheduleTask(
+      taskId: later.id,
+      startsAt: date.add(const Duration(hours: 10)),
+      duration: const Duration(minutes: 30),
+    );
+    await controller.scheduleTask(
+      taskId: earlier.id,
+      startsAt: date.add(const Duration(hours: 9)),
+      duration: const Duration(minutes: 30),
+    );
+    expect(controller.tasksForDate(date).map((task) => task.id), [
+      earlier.id,
+      later.id,
+      low.id,
+      urgent.id,
+    ]);
+  });
+
   test('planned and actual time stay independent', () async {
     final task = await controller.createTask(title: '安排测试任务');
     final originalActual = controller.actualSecondsForTask(task.id);

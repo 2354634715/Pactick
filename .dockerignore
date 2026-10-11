@@ -10,6 +10,7 @@
 !prebuilt/server
 !prebuilt/migrate
 !prebuilt/healthcheck
+!prebuilt/admin
 !LICENSE
 !THIRD_PARTY_NOTICES.md
 !THIRD_PARTY_NOTICES.json

@@ -30,6 +30,8 @@ DOCS = {
     "RELEASE_AND_PROMOTION_PLAN.md",
     "FINAL_CHECK_20261004.md",
     "ASSET_SOURCES.md", "ANDROID_SIGNING.md",
+    "SERVER_MANAGER.md", "RELEASE_VALIDATION_20261011.md",
+    "PHONE_TEST_CHECKLIST.md", "CLIENT_UPDATES.md",
 }
 CLIENT_FILES = {
     "README.md", "LICENSE", ".gitignore", ".metadata", "analysis_options.yaml",
@@ -104,6 +106,8 @@ def allowed(relative: Path) -> bool:
     if any(name.startswith(tree + "/") for tree in TREES):
         return True
     if name.startswith("deploy/"):
+        if name.startswith("deploy/desktop/"):
+            return relative.suffix in {".yaml", ".sh", ".cmd", ".ps1"}
         return relative.name == "README.md" or relative.suffix in {".sh", ".example", ".template", ".service", ".timer"}
     return False
 

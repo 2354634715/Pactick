@@ -82,6 +82,10 @@ pactick-server-export*.json
 .release-staging/
 .codex-audit-staging/
 output/
+/data/
+manager.json
+manager.lock
+*.exe
 artifacts/
 dist/
 *.apk

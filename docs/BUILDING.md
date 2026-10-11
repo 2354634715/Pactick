@@ -39,6 +39,28 @@ PowerShell 中先执行 `$env:PACTICK_TEST_DATABASE_URL = 'postgres://pactick:pa
 
 通过 [自部署文档](SELF_HOSTING.md) 启动服务端并创建自用账号。
 
+### Windows/Linux 服务器发行包
+
+`scripts/package_server.py` 从 `prepare_public_source.py` 生成的快照交叉编译服务端、迁移命令、健康检查、账户管理命令和浏览器管理程序。构建需要 Go、Python 标准库和可用的 Go 模块依赖；目标主机不需要安装 Go。版本标签必须与快照中 `client/pubspec.yaml` 的版本一致，标签不包含 `+` 后的 Android 构建号。
+
+在仓库根目录执行以下命令。示例版本为 `0.3.0-preview.1`；其他版本须同时修改标签和目录名。创建快照前先完成本节检查，并提交将要分发的源文件；快照目标目录必须不存在。
+
+```sh
+python3 scripts/prepare_public_source.py output/public-source-v0.3.0-preview.1
+python3 scripts/verify_release_source.py output/public-source-v0.3.0-preview.1 --tag v0.3.0-preview.1 --commit "$(git rev-parse HEAD)" --output output/release-meta/RELEASE_SOURCE.json
+python3 scripts/package_server.py --source output/public-source-v0.3.0-preview.1 --tag v0.3.0-preview.1 --commit "$(git rev-parse HEAD)" --source-metadata output/release-meta/RELEASE_SOURCE.json --output output/dist
+```
+
+Windows PowerShell 中可用 `python` 替换 `python3`，其余参数不变。`--source` 必须指向带有 `SOURCE_MANIFEST.json` 的快照，不能直接指向开发工作目录。脚本在构建前后核对文件大小、哈希、版本和许可证；输入变化、缺少命令源码或部署文件、Go 构建失败时停止。输出目录必须与输入快照分离，已有同名发行包或校验文件不会被覆盖。
+
+Windows 程序保留 Go 调试信息，Linux 程序使用 `-s -w` 精简符号；两者都使用 `-trimpath` 去掉本机构建路径。若操作系统拦截新构建的可执行文件，构建会失败，不更改系统安全设置。
+
+默认输出 `pactick-server-VERSION-windows-amd64.zip`、`pactick-server-VERSION-linux-amd64.tar.gz` 及各自的 `.sha256` 文件。`--os windows` 或 `--os linux` 仅构建指定平台；重复指定 `--arch amd64 --arch 386` 同时生成 x86 的 64 位与 32 位本机程序。所有包中的 Docker 程序均为 Linux amd64，Docker 部署需 64 位 x86 宿主和 Linux 容器支持；32 位本机包不会提供 32 位 Docker 部署。
+
+每个包包含 `bin/` 本机程序、`prebuilt/` Docker 程序、部署脚本、Compose 配置、Go 服务端源码、迁移和许可材料。客户端源码随独立的完整源码归档分发，不重复放入服务器程序包。`launch-manager.cmd` 或 `launch-manager.sh` 启动本机浏览器管理界面，操作与 PostgreSQL／Docker 依赖见 [服务器管理程序](SERVER_MANAGER.md)。
+
+`RELEASE_SOURCE.json` 和 `SOURCE_COMMIT.txt` 标识原始提交与标签；`SOURCE_MANIFEST.json` 对应完整源码快照，包含未在服务器程序包中重复分发的 Android 源码条目。`SERVER_MANIFEST.json` 单独记录当前程序包中的文件哈希，`SERVER_PACKAGE.json` 记录本机架构、Docker 架构和 Go 版本。编译文件和归档只作为 Releases 附件分发，保存在忽略的 `output/dist/` 中，不提交到源码仓库。
+
 ## 3. 构建 Android 开发包
 
 ```sh

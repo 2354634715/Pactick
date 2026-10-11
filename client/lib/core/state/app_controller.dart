@@ -7,6 +7,7 @@ import 'package:flutter/foundation.dart';
 import '../models/domain_models.dart';
 import '../sync/sync_models.dart';
 import '../../data/platform/focus_platform_gateway.dart';
+import '../../data/platform/task_reminder_platform_gateway.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/repositories/workspace_repository.dart';
 
@@ -14,12 +15,16 @@ class AppController extends ChangeNotifier {
   AppController({
     required this.repository,
     required this.focusPlatform,
+    this.taskReminderPlatform = const TaskReminderPlatformGateway(),
     this.apiClient,
     this.syncInterval = const Duration(minutes: 1),
-  });
+  }) {
+    addListener(_onTaskReminderDataChanged);
+  }
 
   final WorkspaceRepository repository;
   final FocusPlatformGateway focusPlatform;
+  final TaskReminderPlatformGateway taskReminderPlatform;
   final ApiClient? apiClient;
   final Duration syncInterval;
   Timer? _focusTicker;
@@ -30,6 +35,11 @@ class AppController extends ChangeNotifier {
   String? _syncDeviceId;
   int _accountGeneration = 0;
   bool _automaticSyncPaused = false;
+  bool _automaticSyncPausedForAuthentication = false;
+  Future<void> _taskReminderMutation = Future<void>.value();
+  Object? _taskReminderSnapshot;
+  int _taskReminderGeneration = 0;
+  bool _disposed = false;
 
   static const inboxWhitelistKey = '__inbox__';
   static const _appWhitelistsSettingKey = 'focus_app_whitelists_v1';
@@ -39,6 +49,10 @@ class AppController extends ChangeNotifier {
   ThemePreference themePreference = ThemePreference.system;
   bool useDynamicColor = false;
   bool notificationsEnabled = true;
+  bool taskRemindersEnabled = true;
+  bool taskReminderNotificationsAllowed = false;
+  String? taskReminderErrorMessage;
+  int taskReminderOpenSequence = 0;
   bool usageAccessGranted = false;
   bool overlayPermissionGranted = false;
   bool installedApplicationsLoading = false;
@@ -116,6 +130,9 @@ class AppController extends ChangeNotifier {
           await repository.readGlobalSetting('use_dynamic_color') == 'true';
       notificationsEnabled =
           await repository.readGlobalSetting('notifications_enabled') !=
+          'false';
+      taskRemindersEnabled =
+          await repository.readGlobalSetting('task_reminders_enabled') !=
           'false';
       _appWhitelists = _decodeAppWhitelists(
         await repository.readSetting(_appWhitelistsSettingKey),
@@ -336,7 +353,7 @@ class AppController extends ChangeNotifier {
       tags: tags,
     );
     await repository.saveTask(task);
-    tasks = [...tasks, task]..sort((a, b) => a.rank.compareTo(b.rank));
+    tasks = [...tasks, task]..sort(TaskItem.compareByPriority);
     notifyListeners();
     await _markPending();
     return task;
@@ -347,7 +364,7 @@ class AppController extends ChangeNotifier {
     tasks = [
       for (final current in tasks)
         if (current.id == task.id) task else current,
-    ]..sort((a, b) => a.rank.compareTo(b.rank));
+    ]..sort(TaskItem.compareByPriority);
     notifyListeners();
     await _markPending();
   }
@@ -382,7 +399,7 @@ class AppController extends ChangeNotifier {
     };
     await repository.saveTasks(updates.values.toList(growable: false));
     tasks = [for (final task in tasks) updates[task.id] ?? task]
-      ..sort((a, b) => a.rank.compareTo(b.rank));
+      ..sort(TaskItem.compareByPriority);
     notifyListeners();
     await _markPending();
   }
@@ -705,6 +722,80 @@ class AppController extends ChangeNotifier {
     }
   }
 
+  Future<void> setTaskRemindersEnabled(bool value) async {
+    await repository.writeGlobalSetting('task_reminders_enabled', '$value');
+    taskRemindersEnabled = value;
+    notifyListeners();
+    await refreshTaskReminders(requestPermission: value, automatic: false);
+  }
+
+  void _onTaskReminderDataChanged() {
+    if (_disposed || !taskReminderPlatform.isSupported) return;
+    final snapshot = _currentTaskReminderSnapshot();
+    if (snapshot == _taskReminderSnapshot) return;
+    unawaited(refreshTaskReminders(requestPermission: true));
+  }
+
+  (bool, int, String) _currentTaskReminderSnapshot() {
+    final usable =
+        isReady &&
+        initializationError == null &&
+        !isSwitchingSyncAccount &&
+        accountConnectionError == null;
+    return (
+      taskRemindersEnabled && usable,
+      usable ? tasks.where((task) => task.status == TaskStatus.open).length : 0,
+      repository.selectedAccountId,
+    );
+  }
+
+  Future<void> refreshTaskReminders({
+    bool requestPermission = false,
+    bool automatic = true,
+  }) {
+    if (_disposed || !taskReminderPlatform.isSupported) {
+      return Future<void>.value();
+    }
+    final snapshot = _currentTaskReminderSnapshot();
+    _taskReminderSnapshot = snapshot;
+    final generation = ++_taskReminderGeneration;
+    _taskReminderMutation = _taskReminderMutation.then((_) async {
+      if (_disposed || generation != _taskReminderGeneration) return;
+      try {
+        final allowed = await taskReminderPlatform.update(
+          enabled: snapshot.$1,
+          openTaskCount: snapshot.$2,
+          workspaceId: snapshot.$3,
+          requestPermission:
+              requestPermission &&
+              (!automatic || (snapshot.$1 && snapshot.$2 > 0)),
+          automatic: automatic,
+        );
+        if (_disposed || generation != _taskReminderGeneration) return;
+        taskReminderNotificationsAllowed = allowed;
+        taskReminderErrorMessage = null;
+      } catch (_) {
+        if (_disposed || generation != _taskReminderGeneration) return;
+        taskReminderErrorMessage = '任务提醒更新失败，可重试；本地任务仍可使用。';
+      }
+      notifyListeners();
+    });
+    return _taskReminderMutation;
+  }
+
+  Future<bool> takeTaskReminderOpenRequest() async {
+    if (_disposed || !taskReminderPlatform.isSupported) return false;
+    try {
+      final requested = await taskReminderPlatform.takeOpenTasksRequest();
+      if (!requested || _disposed) return false;
+      taskReminderOpenSequence++;
+      notifyListeners();
+      return true;
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> refreshGuardPermissions() async {
     try {
       usageAccessGranted = await focusPlatform.hasUsageAccess();
@@ -827,6 +918,21 @@ class AppController extends ChangeNotifier {
         _syncPhase = SyncPhase.offline;
         notifyListeners();
       } else {
+        final generation = _accountGeneration;
+        // A request sent with the old token can finish after token refresh.
+        // Let it report its failure before resuming authenticated sync.
+        await repository.waitForSyncIdle();
+        if (generation != _accountGeneration ||
+            _syncAccountId != userId ||
+            _syncDeviceId != deviceId ||
+            isSwitchingSyncAccount ||
+            accountConnectionError != null) {
+          return;
+        }
+        if (_automaticSyncPausedForAuthentication) {
+          _automaticSyncPaused = false;
+          _automaticSyncPausedForAuthentication = false;
+        }
         _startSyncTimer();
         unawaited(syncNow(automatic: true));
       }
@@ -846,6 +952,7 @@ class AppController extends ChangeNotifier {
     _syncAccountId = userId;
     _syncDeviceId = deviceId;
     _automaticSyncPaused = false;
+    _automaticSyncPausedForAuthentication = false;
     isSwitchingSyncAccount = true;
     accountConnectionError = null;
     syncErrorMessage = null;
@@ -900,7 +1007,11 @@ class AppController extends ChangeNotifier {
 
   Future<void> syncNow({bool automatic = false}) async {
     if (automatic && _automaticSyncPaused) return;
-    if (!automatic) _automaticSyncPaused = false;
+    final resumeAutomaticSync = !automatic && _automaticSyncPaused;
+    if (!automatic) {
+      _automaticSyncPaused = false;
+      _automaticSyncPausedForAuthentication = false;
+    }
     final api = apiClient;
     final accountId = _syncAccountId;
     final deviceId = _syncDeviceId;
@@ -911,6 +1022,7 @@ class AppController extends ChangeNotifier {
         accountConnectionError != null) {
       return;
     }
+    if (resumeAutomaticSync) _startSyncTimer();
     final generation = _accountGeneration;
     _syncPhase = SyncPhase.syncing;
     syncErrorMessage = null;
@@ -949,10 +1061,11 @@ class AppController extends ChangeNotifier {
       }
       syncErrorMessage = error.message;
       if (error.statusCode == 426 ||
-          error.statusCode == 401 ||
           error.code == 'client_update_required' ||
           error.code == 'unsupported_protocol') {
         _pauseAutomaticSync();
+      } else if (error.statusCode == 401) {
+        _pauseAutomaticSync(authentication: error.code != 'invalid_response');
       }
       _syncPhase = error.statusCode == null || error.statusCode! >= 500
           ? SyncPhase.offline
@@ -1151,8 +1264,9 @@ class AppController extends ChangeNotifier {
     );
   }
 
-  void _pauseAutomaticSync() {
+  void _pauseAutomaticSync({bool authentication = false}) {
     _automaticSyncPaused = true;
+    _automaticSyncPausedForAuthentication = authentication;
     _syncTimer?.cancel();
     _syncDebounce?.cancel();
   }
@@ -1176,6 +1290,9 @@ class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
+    _taskReminderGeneration++;
+    removeListener(_onTaskReminderDataChanged);
     _focusTicker?.cancel();
     _syncTimer?.cancel();
     _syncDebounce?.cancel();
