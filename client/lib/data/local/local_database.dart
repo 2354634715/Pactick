@@ -156,7 +156,8 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
         version: _databaseVersion,
         onConfigure: (db) async {
           await db.execute('PRAGMA foreign_keys = ON');
-          await db.execute('PRAGMA secure_delete = ON');
+          // This setter returns a row; Android's execSQL rejects result sets.
+          await db.rawQuery('PRAGMA secure_delete = ON');
         },
         onCreate: (db, version) => _createSchema(db),
         onUpgrade: (db, oldVersion, newVersion) async {
