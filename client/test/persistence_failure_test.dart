@@ -287,7 +287,10 @@ void main() {
           await tester.tap(find.text('打开'));
           await tester.pumpAndSettle();
           if (editor != '白名单') {
-            await tester.enterText(find.byType(TextFormField), '保留输入');
+            final field = editor == '计划'
+                ? find.widgetWithText(TextFormField, '日程标题')
+                : find.byType(TextFormField);
+            await tester.enterText(field, '保留输入');
           }
           final submit = editor == '项目'
               ? '创建项目'

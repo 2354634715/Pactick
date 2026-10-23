@@ -448,6 +448,7 @@ class _DateField extends StatelessWidget {
                 ? '不设置截止日期'
                 : '${formatMonthDay(value!)} ${formatClock(value!)}',
           ),
+          if (value != null) const Text('定时提醒按这里的日期和时间触发；未选择时间时为 00:00。'),
           const SizedBox(height: AppSpacing.xxs),
           Wrap(
             alignment: WrapAlignment.end,

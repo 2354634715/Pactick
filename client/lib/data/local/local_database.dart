@@ -8,6 +8,8 @@ import '../../core/models/default_focus_policies.dart';
 import '../../core/sync/sync_entity_contract.dart';
 import '../../core/sync/sync_models.dart';
 import 'workspace_archive.dart';
+import 'private_vault_crypto.dart';
+import 'private_vault_storage.dart';
 
 class StoredDocument {
   const StoredDocument({
@@ -83,6 +85,11 @@ abstract interface class DocumentStore {
     List<SyncOperationResult> results,
   );
 
+  Future<bool> adoptExistingDefaultFocusPolicy(
+    String accountId,
+    SyncSnapshot snapshot,
+  );
+
   Future<int> readSyncCursor(String accountId);
 
   Future<void> applyPullResponse(
@@ -92,14 +99,6 @@ abstract interface class DocumentStore {
   });
 
   Future<List<RejectedSyncOperation>> readRejectedOperations(String accountId);
-
-  /// Atomically removes only unchanged built-in policy creation rejections and
-  /// adopts their current server snapshot, preserving device-local fields and
-  /// any newer queued edits. Does not change the account's sync cursor.
-  Future<bool> adoptExistingDefaultFocusPolicy(
-    String accountId,
-    SyncSnapshot snapshot,
-  );
 
   Future<WorkspaceArchive> exportWorkspace(String accountId);
 
@@ -122,11 +121,11 @@ abstract interface class DocumentStore {
   Future<List<String>> listWorkspaceIds();
 }
 
-class LocalDatabase implements DocumentStore {
+class LocalDatabase implements DocumentStore, PrivateVaultStorage {
   LocalDatabase({Uuid? uuid, this.databasePath, this.factory})
     : _uuid = uuid ?? const Uuid();
 
-  static const _databaseVersion = 2;
+  static const _databaseVersion = 3;
 
   final Uuid _uuid;
   final String? databasePath;
@@ -155,10 +154,14 @@ class LocalDatabase implements DocumentStore {
       selectedPath,
       options: OpenDatabaseOptions(
         version: _databaseVersion,
-        onConfigure: (db) => db.execute('PRAGMA foreign_keys = ON'),
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON');
+          await db.execute('PRAGMA secure_delete = ON');
+        },
         onCreate: (db, version) => _createSchema(db),
         onUpgrade: (db, oldVersion, newVersion) async {
           if (oldVersion < 2) await _migrateV1(db);
+          if (oldVersion == 2) await _createPrivateVaultSchema(db);
         },
       ),
     );
@@ -171,6 +174,267 @@ class LocalDatabase implements DocumentStore {
     await database?.close();
     _database = null;
     _opening = null;
+  }
+
+  Future<void> _createPrivateVaultSchema(DatabaseExecutor db) => db.execute('''
+    CREATE TABLE private_vaults (
+      account_id TEXT PRIMARY KEY,
+      envelope TEXT NOT NULL,
+      failed_attempts INTEGER NOT NULL DEFAULT 0,
+      retry_after TEXT
+    )
+  ''');
+
+  @override
+  Future<PrivateVaultStoredState?> readPrivateVault(String accountId) async {
+    final db = await _db;
+    final rows = await db.query(
+      'private_vaults',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+    return rows.isEmpty ? null : _privateVaultState(rows.single);
+  }
+
+  Future<void> _replacePrivateVault(
+    DatabaseExecutor tx,
+    String accountId,
+    String envelope,
+    String? expected, {
+    bool ownsFocusRuntime = false,
+  }) async {
+    final rows = await tx.query(
+      'private_vaults',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+    if ((rows.isEmpty ? null : rows.single['envelope']) != expected) {
+      throw StateError('私密任务箱已发生变化，请重新解锁后重试。');
+    }
+    await _ensureAccountRow(tx, accountId);
+    await tx.insert('private_vaults', {
+      'account_id': accountId,
+      'envelope': envelope,
+      'failed_attempts': 0,
+      'retry_after': null,
+    }, conflictAlgorithm: ConflictAlgorithm.replace);
+    final ownershipRows = await tx.query(
+      'app_settings',
+      where: 'account_id = ? AND setting_key = ?',
+      whereArgs: [
+        DocumentStore.localAccountId,
+        PrivateVaultCrypto.ownershipSetting,
+      ],
+    );
+    final previous = ownershipRows.isEmpty
+        ? null
+        : ownershipRows.single['setting_value'] as String;
+    final ownership = await PrivateVaultCrypto.updateOwnership(
+      accountId: accountId,
+      previous: previous,
+      expectedEnvelope: expected,
+      envelope: envelope,
+      claim: ownsFocusRuntime,
+    );
+    if (ownership != previous && ownership != null) {
+      await tx.insert('app_settings', {
+        'account_id': DocumentStore.localAccountId,
+        'setting_key': PrivateVaultCrypto.ownershipSetting,
+        'setting_value': ownership,
+      }, conflictAlgorithm: ConflictAlgorithm.replace);
+    }
+  }
+
+  @override
+  Future<void> writePrivateVault(
+    String accountId,
+    String envelope, {
+    required String? expectedEnvelope,
+    bool ownsFocusRuntime = false,
+  }) async {
+    PrivateVaultEnvelope.decode(envelope);
+    final db = await _db;
+    await db.transaction(
+      (tx) => _replacePrivateVault(
+        tx,
+        accountId,
+        envelope,
+        expectedEnvelope,
+        ownsFocusRuntime: ownsFocusRuntime,
+      ),
+    );
+  }
+
+  @override
+  Future<PrivateVaultStoredState> recordPrivateVaultFailure(
+    String accountId,
+  ) async {
+    final db = await _db;
+    return db.transaction((tx) async {
+      final rows = await tx.query(
+        'private_vaults',
+        where: 'account_id = ?',
+        whereArgs: [accountId],
+      );
+      if (rows.isEmpty) throw StateError('私密任务箱尚未设置密码。');
+      final old = _privateVaultState(rows.single);
+      final attempts = old.failedAttempts + 1;
+      final retryAfter = DateTime.now().toUtc().add(
+        _privateRetryDelay(attempts),
+      );
+      await tx.update(
+        'private_vaults',
+        {
+          'failed_attempts': attempts,
+          'retry_after': retryAfter.toIso8601String(),
+        },
+        where: 'account_id = ?',
+        whereArgs: [accountId],
+      );
+      return PrivateVaultStoredState(
+        envelope: old.envelope,
+        failedAttempts: attempts,
+        retryAfter: retryAfter,
+      );
+    });
+  }
+
+  @override
+  Future<void> resetPrivateVaultFailures(String accountId) async {
+    final db = await _db;
+    await db.update(
+      'private_vaults',
+      {'failed_attempts': 0, 'retry_after': null},
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+  }
+
+  @override
+  Future<void> restorePrivateVault(String accountId, String envelope) async {
+    _validateNewWorkspaceId(accountId);
+    PrivateVaultEnvelope.decode(envelope);
+    final db = await _db;
+    await db.transaction((tx) async {
+      final rows = await tx.query(
+        'sync_state',
+        where: 'account_id = ?',
+        whereArgs: [accountId],
+      );
+      if (rows.isNotEmpty) throw StateError('恢复目标工作区已存在。');
+      await _replacePrivateVault(tx, accountId, envelope, null);
+    });
+  }
+
+  Future<PrivateTransferBundle> _privateImportCandidate(
+    DatabaseExecutor tx,
+    String accountId,
+    String taskId,
+  ) async {
+    if (accountId != DocumentStore.localAccountId) {
+      throw StateError('仅原始本地工作区中从未尝试同步的任务可以转入私密箱。');
+    }
+    final rows = await tx.query(
+      'documents',
+      where: 'account_id = ?',
+      whereArgs: [accountId],
+    );
+    final bundle = collectPrivateTransfer(rows.map(_documentFromRow), taskId);
+    for (final key in bundle.removedKeys) {
+      final split = key.split('\u0000');
+      final attempts = await tx.query(
+        'pending_operations',
+        where:
+            'account_id = ? AND entity_type = ? AND entity_id = ? '
+            'AND (attempt_count > 0 OR last_attempt_at IS NOT NULL OR rejected_at IS NOT NULL)',
+        whereArgs: [accountId, split[0], split[1]],
+        limit: 1,
+      );
+      if (attempts.isNotEmpty) {
+        throw StateError('任务或关联记录已尝试同步，不能直接转入私密箱。');
+      }
+    }
+    return bundle;
+  }
+
+  @override
+  Future<PrivateTransferBundle> readPrivateImportCandidate(
+    String accountId,
+    String taskId,
+  ) async {
+    final db = await _db;
+    return db.transaction(
+      (tx) => _privateImportCandidate(tx, accountId, taskId),
+    );
+  }
+
+  @override
+  Future<void> commitPrivateImport(
+    String accountId, {
+    required String expectedEnvelope,
+    required String envelope,
+    required String taskId,
+    required String expectedSnapshot,
+  }) async {
+    PrivateVaultEnvelope.decode(envelope);
+    final db = await _db;
+    await db.transaction((tx) async {
+      final candidate = await _privateImportCandidate(tx, accountId, taskId);
+      if (candidate.snapshot != expectedSnapshot) {
+        throw StateError('任务或关联记录已变化，请重试。');
+      }
+      await _replacePrivateVault(tx, accountId, envelope, expectedEnvelope);
+      for (final key in candidate.removedKeys) {
+        final split = key.split('\u0000');
+        for (final table in ['documents', 'pending_operations']) {
+          await tx.delete(
+            table,
+            where: 'account_id = ? AND entity_type = ? AND entity_id = ?',
+            whereArgs: [accountId, split[0], split[1]],
+          );
+        }
+      }
+    });
+  }
+
+  @override
+  Future<void> commitPrivateExport(
+    String accountId, {
+    required String expectedEnvelope,
+    required String envelope,
+    required List<ArchiveDocument> documents,
+  }) async {
+    PrivateVaultEnvelope.decode(envelope);
+    final db = await _db;
+    await db.transaction((tx) async {
+      await _replacePrivateVault(tx, accountId, envelope, expectedEnvelope);
+      for (final document in documents) {
+        final existing = await tx.query(
+          'documents',
+          where: 'account_id = ? AND entity_type = ? AND entity_id = ?',
+          whereArgs: [accountId, document.entityType, document.id],
+        );
+        if (existing.isNotEmpty) {
+          if (_samePrivateSharedDocument(
+            document,
+            _documentFromRow(existing.single),
+          )) {
+            continue;
+          }
+          throw StateError('普通工作区含有相同标识的记录，移出操作已取消。');
+        }
+        await _putDocument(
+          tx,
+          document.entityType,
+          document.id,
+          document.body,
+          enqueue:
+              accountId != DocumentStore.localAccountId &&
+              !accountId.startsWith('__local__:'),
+          accountId: accountId,
+        );
+      }
+    });
   }
 
   @override
@@ -223,6 +487,11 @@ class LocalDatabase implements DocumentStore {
         documents.map(_documentFromRow),
         settings,
         pending.map(_operationFromRow),
+        privateVault: (await tx.query(
+          'private_vaults',
+          where: 'account_id = ?',
+          whereArgs: [accountId],
+        )).map((row) => row['envelope']! as String).firstOrNull,
       );
     });
   }
@@ -250,6 +519,9 @@ class LocalDatabase implements DocumentStore {
         throw StateError('Target workspace already exists.');
       }
       await _ensureAccountRow(tx, accountId);
+      if (validated.privateVault case final envelope?) {
+        await _replacePrivateVault(tx, accountId, envelope, null);
+      }
       for (final document in validated.documents) {
         await tx.insert('documents', {
           'account_id': accountId,
@@ -326,6 +598,7 @@ class LocalDatabase implements DocumentStore {
         'documents',
         'pending_operations',
         'app_settings',
+        'private_vaults',
       ]) {
         final rows = await tx.query(
           table,
@@ -342,6 +615,7 @@ class LocalDatabase implements DocumentStore {
   }
 
   Future<void> _createSchema(DatabaseExecutor db) async {
+    await _createPrivateVaultSchema(db);
     await db.execute('''
       CREATE TABLE documents (
         account_id TEXT NOT NULL,
@@ -1254,13 +1528,232 @@ class LocalDatabase implements DocumentStore {
   }
 }
 
-class MemoryDocumentStore implements DocumentStore {
+class MemoryDocumentStore implements DocumentStore, PrivateVaultStorage {
   MemoryDocumentStore({Uuid? uuid}) : _uuid = uuid ?? const Uuid() {
     _accounts[DocumentStore.localAccountId] = _MemoryAccount();
   }
 
   final Uuid _uuid;
   final Map<String, _MemoryAccount> _accounts = {};
+  final Map<String, PrivateVaultStoredState> _privateVaults = {};
+
+  @override
+  Future<PrivateVaultStoredState?> readPrivateVault(String accountId) async =>
+      _privateVaults[accountId];
+
+  void _checkPrivateEnvelope(String accountId, String? expectedEnvelope) {
+    if (_privateVaults[accountId]?.envelope != expectedEnvelope) {
+      throw StateError('私密任务箱已发生变化，请重新解锁后重试。');
+    }
+  }
+
+  Future<String?> _memoryPrivateOwnership(
+    String accountId,
+    String envelope,
+    String? expectedEnvelope, {
+    bool claim = false,
+  }) => PrivateVaultCrypto.updateOwnership(
+    accountId: accountId,
+    previous: _account(DocumentStore.localAccountId)
+        .settings[PrivateVaultCrypto.ownershipSetting],
+    expectedEnvelope: expectedEnvelope,
+    envelope: envelope,
+    claim: claim,
+  );
+
+  void _setMemoryPrivateOwnership(String? ownership) {
+    if (ownership != null) {
+      _account(DocumentStore.localAccountId)
+              .settings[PrivateVaultCrypto.ownershipSetting] =
+          ownership;
+    }
+  }
+
+  @override
+  Future<void> writePrivateVault(
+    String accountId,
+    String envelope, {
+    required String? expectedEnvelope,
+    bool ownsFocusRuntime = false,
+  }) async {
+    PrivateVaultEnvelope.decode(envelope);
+    final ownership = await _memoryPrivateOwnership(
+      accountId,
+      envelope,
+      expectedEnvelope,
+      claim: ownsFocusRuntime,
+    );
+    _checkPrivateEnvelope(accountId, expectedEnvelope);
+    _account(accountId);
+    _privateVaults[accountId] = PrivateVaultStoredState(envelope: envelope);
+    _setMemoryPrivateOwnership(ownership);
+  }
+
+  @override
+  Future<PrivateVaultStoredState> recordPrivateVaultFailure(
+    String accountId,
+  ) async {
+    final old = _privateVaults[accountId];
+    if (old == null) throw StateError('私密任务箱尚未设置密码。');
+    final attempts = old.failedAttempts + 1;
+    return _privateVaults[accountId] = PrivateVaultStoredState(
+      envelope: old.envelope,
+      failedAttempts: attempts,
+      retryAfter: DateTime.now().toUtc().add(_privateRetryDelay(attempts)),
+    );
+  }
+
+  @override
+  Future<void> resetPrivateVaultFailures(String accountId) async {
+    final old = _privateVaults[accountId];
+    if (old != null) {
+      _privateVaults[accountId] = PrivateVaultStoredState(
+        envelope: old.envelope,
+      );
+    }
+  }
+
+  @override
+  Future<void> restorePrivateVault(String accountId, String envelope) async {
+    _validateNewWorkspaceId(accountId);
+    PrivateVaultEnvelope.decode(envelope);
+    if (_accounts.containsKey(accountId)) throw StateError('恢复目标工作区已存在。');
+    _accounts[accountId] = _MemoryAccount();
+    _privateVaults[accountId] = PrivateVaultStoredState(envelope: envelope);
+  }
+
+  PrivateTransferBundle _memoryPrivateImportCandidate(
+    String accountId,
+    String taskId,
+  ) {
+    if (accountId != DocumentStore.localAccountId) {
+      throw StateError('仅原始本地工作区中从未尝试同步的任务可以转入私密箱。');
+    }
+    final account = _account(accountId);
+    final bundle = collectPrivateTransfer(account.documents.values, taskId);
+    if (account.pending.any(
+      (pending) =>
+          bundle.removedKeys.contains(
+            '${pending.operation.entityType.wireName}\u0000${pending.operation.entityId}',
+          ) &&
+          (pending.attemptCount > 0 ||
+              pending.lastAttemptAt != null ||
+              pending.rejectedAt != null),
+    )) {
+      throw StateError('任务或关联记录已尝试同步，不能直接转入私密箱。');
+    }
+    return bundle;
+  }
+
+  @override
+  Future<PrivateTransferBundle> readPrivateImportCandidate(
+    String accountId,
+    String taskId,
+  ) async => _memoryPrivateImportCandidate(accountId, taskId);
+
+  @override
+  Future<void> commitPrivateImport(
+    String accountId, {
+    required String expectedEnvelope,
+    required String envelope,
+    required String taskId,
+    required String expectedSnapshot,
+  }) async {
+    PrivateVaultEnvelope.decode(envelope);
+    final ownership = await _memoryPrivateOwnership(
+      accountId,
+      envelope,
+      expectedEnvelope,
+    );
+    _checkPrivateEnvelope(accountId, expectedEnvelope);
+    final candidate = _memoryPrivateImportCandidate(accountId, taskId);
+    if (candidate.snapshot != expectedSnapshot) {
+      throw StateError('任务或关联记录已变化，请重试。');
+    }
+    final account = _account(accountId);
+    account.documents.removeWhere(
+      (key, _) => candidate.removedKeys.contains(key),
+    );
+    account.pending.removeWhere(
+      (pending) => candidate.removedKeys.contains(
+        '${pending.operation.entityType.wireName}\u0000${pending.operation.entityId}',
+      ),
+    );
+    _privateVaults[accountId] = PrivateVaultStoredState(envelope: envelope);
+    _setMemoryPrivateOwnership(ownership);
+  }
+
+  @override
+  Future<void> commitPrivateExport(
+    String accountId, {
+    required String expectedEnvelope,
+    required String envelope,
+    required List<ArchiveDocument> documents,
+  }) async {
+    PrivateVaultEnvelope.decode(envelope);
+    final ownership = await _memoryPrivateOwnership(
+      accountId,
+      envelope,
+      expectedEnvelope,
+    );
+    _checkPrivateEnvelope(accountId, expectedEnvelope);
+    final account = _account(accountId);
+    final toWrite = <ArchiveDocument>[];
+    for (final document in documents) {
+      final existing = account.documents[document.key];
+      if (existing != null) {
+        if (_samePrivateSharedDocument(document, existing)) continue;
+        throw StateError('普通工作区含有相同标识的记录，移出操作已取消。');
+      }
+      toWrite.add(document);
+    }
+    // Validate before exposing either half of the transaction.
+    WorkspaceArchive.decode(
+      WorkspaceArchive(
+        createdAt: DateTime.now(),
+        settings: const {},
+        pendingChanges: const [],
+        documents: [
+          for (final doc in account.documents.values)
+            ArchiveDocument(
+              entityType: doc.entityType,
+              id: doc.id,
+              body: doc.body,
+              updatedAt: doc.updatedAt,
+              deleted: doc.deleted,
+            ),
+          ...toWrite,
+        ],
+      ).encode(),
+    );
+    final enqueue =
+        accountId != DocumentStore.localAccountId &&
+        !accountId.startsWith('__local__:');
+    for (final document in toWrite) {
+      account.documents[document.key] = StoredDocument(
+        entityType: document.entityType,
+        id: document.id,
+        body: document.body,
+        version: 0,
+        updatedAt: document.updatedAt,
+      );
+      if (enqueue) {
+        final type = SyncEntityType.fromWire(document.entityType);
+        final body = SyncEntityContract.cloudPatch(type, document.body);
+        _memoryEnqueueUpsert(
+          account,
+          type: type,
+          entityId: document.id,
+          baseVersion: 0,
+          patch: body,
+          fullBody: body,
+          createdAt: DateTime.now(),
+        );
+      }
+    }
+    _privateVaults[accountId] = PrivateVaultStoredState(envelope: envelope);
+    _setMemoryPrivateOwnership(ownership);
+  }
 
   _MemoryAccount _account(String accountId) =>
       _accounts.putIfAbsent(accountId, _MemoryAccount.new);
@@ -1290,6 +1783,7 @@ class MemoryDocumentStore implements DocumentStore {
       account.pending
           .where((value) => value.supersededAt == null)
           .map((value) => value.operation),
+      privateVault: _privateVaults[accountId]?.envelope,
     );
   }
 
@@ -1322,6 +1816,9 @@ class MemoryDocumentStore implements DocumentStore {
       );
     }
     _accounts[accountId] = account;
+    if (validated.privateVault case final envelope?) {
+      _privateVaults[accountId] = PrivateVaultStoredState(envelope: envelope);
+    }
   }
 
   @override
@@ -1387,6 +1884,9 @@ class MemoryDocumentStore implements DocumentStore {
       );
     }
     _accounts[namespacedId] = target;
+    if (_privateVaults[legacyId] case final vault?) {
+      _privateVaults[namespacedId] = vault;
+    }
     return true;
   }
 
@@ -1895,6 +2395,112 @@ class _MemoryAccount {
   int cursor = 0;
 }
 
+PrivateVaultStoredState _privateVaultState(Map<String, Object?> row) =>
+    PrivateVaultStoredState(
+      envelope: row['envelope']! as String,
+      failedAttempts: row['failed_attempts']! as int,
+      retryAfter: row['retry_after'] == null
+          ? null
+          : DateTime.parse(row['retry_after']! as String),
+    );
+
+Duration _privateRetryDelay(int attempts) =>
+    Duration(seconds: (1 << attempts.clamp(1, 8)).clamp(2, 300));
+
+bool _samePrivateSharedDocument(
+  ArchiveDocument incoming,
+  StoredDocument existing,
+) =>
+    {'project', 'tag', 'focus_policy'}.contains(incoming.entityType) &&
+    !existing.deleted &&
+    jsonEncode(incoming.body) == jsonEncode(existing.body);
+
+/// Computes the complete dependent graph, then includes shared references in
+/// the encrypted copy. Public project/tag/policy records remain in place.
+PrivateTransferBundle collectPrivateTransfer(
+  Iterable<StoredDocument> stored,
+  String taskId,
+) {
+  final all = {
+    for (final doc in stored) '${doc.entityType}\u0000${doc.id}': doc,
+  };
+  final root = all['task\u0000$taskId'];
+  if (root == null || root.deleted) throw StateError('任务不存在。');
+  ArchiveDocument archive(StoredDocument doc) => ArchiveDocument(
+    entityType: doc.entityType,
+    id: doc.id,
+    body: doc.body,
+    updatedAt: doc.updatedAt,
+    deleted: doc.deleted,
+  );
+  final removed = <String>{'task\u0000$taskId'};
+  var changed = true;
+  while (changed) {
+    changed = false;
+    for (final entry in all.entries) {
+      if (!removed.contains(entry.key) &&
+          archive(entry.value).referenceKeys.any(removed.contains)) {
+        if (entry.value.entityType == 'task') {
+          throw StateError('此任务被其他任务或重复规则引用，暂不支持直接转入。');
+        }
+        removed.add(entry.key);
+        changed = true;
+      }
+    }
+  }
+  for (final key in removed) {
+    final doc = all[key]!;
+    if (doc.version != 0 || doc.cursor != 0) {
+      throw StateError('任务或关联记录存在同步历史，不能直接转入私密箱。');
+    }
+    if (doc.entityType == 'focus_session' &&
+        {'running', 'paused'}.contains(doc.body['status'])) {
+      throw StateError('任务仍在专注中，请先结束专注。');
+    }
+  }
+  final included = <String>{...removed};
+  changed = true;
+  while (changed) {
+    changed = false;
+    for (final key in included.toList()) {
+      for (final ref in archive(all[key]!).referenceKeys) {
+        if (included.contains(ref)) continue;
+        final dependency = all[ref];
+        if (dependency == null || dependency.deleted) {
+          throw StateError('关联记录缺失，转入已取消。');
+        }
+        if (!{
+          'project',
+          'tag',
+          'focus_policy',
+        }.contains(dependency.entityType)) {
+          throw StateError('任务关联了其他任务的记录，暂不支持直接转入。');
+        }
+        included.add(ref);
+        changed = true;
+      }
+    }
+  }
+  final keys = included.toList()..sort();
+  return PrivateTransferBundle(
+    documents: [
+      for (final key in keys)
+        if (!all[key]!.deleted) archive(all[key]!),
+    ],
+    removedKeys: removed,
+    snapshot: jsonEncode([
+      for (final key in keys)
+        {
+          'key': key,
+          'body': all[key]!.body,
+          'version': all[key]!.version,
+          'updated_at': all[key]!.updatedAt.toUtc().toIso8601String(),
+          'deleted': all[key]!.deleted,
+        },
+    ]),
+  );
+}
+
 bool _isExistingDefaultFocusPolicy(SyncSnapshot snapshot) =>
     snapshot.entityType == SyncEntityType.focusPolicy &&
     !snapshot.deleted &&
@@ -1910,8 +2516,9 @@ const _globalPortableSettings = {
 WorkspaceArchive _makeArchive(
   Iterable<StoredDocument> documents,
   Map<String, String> settings,
-  Iterable<SyncOperation> operations,
-) {
+  Iterable<SyncOperation> operations, {
+  String? privateVault,
+}) {
   final archive = WorkspaceArchive(
     createdAt: DateTime.now().toUtc(),
     documents: documents
@@ -1927,6 +2534,7 @@ WorkspaceArchive _makeArchive(
         .toList(),
     settings: settings,
     pendingChanges: operations.map(ArchivePendingChange.fromOperation).toList(),
+    privateVault: privateVault,
   );
   return WorkspaceArchive.decode(archive.encode());
 }

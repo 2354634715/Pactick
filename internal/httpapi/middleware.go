@@ -57,7 +57,7 @@ func (w *statusRecorder) Unwrap() http.ResponseWriter {
 }
 
 func (s *Server) middleware(next http.Handler) http.Handler {
-	return s.requestID(s.recoverPanic(s.securityHeaders(s.cors(s.accessLog(next)))))
+	return s.requestID(s.recoverPanic(s.securityHeaders(s.cors(s.accessLog(s.rateLimit(next))))))
 }
 
 func (s *Server) requestID(next http.Handler) http.Handler {
@@ -115,6 +115,10 @@ func (s *Server) securityHeaders(next http.Handler) http.Handler {
 func (s *Server) cors(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origin := r.Header.Get("Origin")
+		if origin != "" && !s.originAllowed(origin) {
+			writeError(w, r, http.StatusForbidden, "origin_not_allowed", "origin is not allowed", nil)
+			return
+		}
 		if origin != "" && s.originAllowed(origin) {
 			w.Header().Set("Access-Control-Allow-Origin", origin)
 			w.Header().Set("Vary", "Origin")

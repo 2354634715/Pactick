@@ -3,6 +3,7 @@ import 'dart:convert';
 import '../../core/models/domain_models.dart';
 import '../../core/sync/sync_entity_contract.dart';
 import '../../core/sync/sync_models.dart';
+import 'private_vault_crypto.dart';
 
 /// Portable user content only. Server identities, credentials, device
 /// registrations, operation IDs and sync cursors are deliberately absent.
@@ -12,10 +13,11 @@ class WorkspaceArchive {
     required this.documents,
     required this.settings,
     required this.pendingChanges,
+    this.privateVault,
   });
 
   static const format = 'pactick-workspace';
-  static const version = 1;
+  static const version = 2;
   static const maxBytes = 50 * 1024 * 1024;
   static const maxDocuments = 100000;
   static const portableSettings = {
@@ -31,6 +33,9 @@ class WorkspaceArchive {
   final Map<String, String> settings;
   final List<ArchivePendingChange> pendingChanges;
 
+  /// A portable authenticated envelope; never decrypted by ordinary backups.
+  final String? privateVault;
+
   Map<String, Object?> toJson() => {
     'format': format,
     'version': version,
@@ -38,6 +43,7 @@ class WorkspaceArchive {
     'documents': documents.map((value) => value.toJson()).toList(),
     'settings': settings,
     'pending_changes': pendingChanges.map((value) => value.toJson()).toList(),
+    'private_vault': privateVault,
   };
 
   String encode() {
@@ -56,6 +62,7 @@ class WorkspaceArchive {
   }
 
   factory WorkspaceArchive.fromJson(Map<String, Object?> json) {
+    final archiveVersion = json['version'];
     _keys(json, {
       'format',
       'version',
@@ -63,11 +70,19 @@ class WorkspaceArchive {
       'documents',
       'settings',
       'pending_changes',
+      if (archiveVersion == version) 'private_vault',
     });
-    if (json['format'] != format || json['version'] != version) {
+    if (json['format'] != format || !{1, version}.contains(archiveVersion)) {
       throw const FormatException('不支持的备份格式或版本。');
     }
     final createdAt = _date(json['created_at'], 'created_at');
+    final privateVault = json['private_vault'];
+    if (privateVault != null) {
+      if (privateVault is! String) {
+        throw const FormatException('私密任务箱密文无效。');
+      }
+      PrivateVaultEnvelope.decode(privateVault);
+    }
     final documents = _list(json['documents'], 'documents')
         .map((value) => ArchiveDocument.fromJson(_map(value, 'document')))
         .toList(growable: false);
@@ -119,6 +134,7 @@ class WorkspaceArchive {
       documents: List.unmodifiable(documents),
       settings: Map.unmodifiable(settings),
       pendingChanges: List.unmodifiable(changes),
+      privateVault: privateVault as String?,
     );
   }
 }

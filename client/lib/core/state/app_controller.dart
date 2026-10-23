@@ -10,6 +10,7 @@ import '../../data/platform/focus_platform_gateway.dart';
 import '../../data/platform/task_reminder_platform_gateway.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/repositories/workspace_repository.dart';
+import 'private_vault_controller.dart';
 
 class AppController extends ChangeNotifier {
   AppController({
@@ -19,6 +20,15 @@ class AppController extends ChangeNotifier {
     this.apiClient,
     this.syncInterval = const Duration(minutes: 1),
   }) {
+    privateVault = PrivateVaultController(
+      store: repository.store,
+      canStartFocus: () =>
+          !focusSessions.any((session) => session.isActive) &&
+          !_ordinaryFocusStarting &&
+          !isSwitchingSyncAccount,
+      onFocusRuntimeChanged: _restorePrivateFocusRuntime,
+    );
+    privateVault.addListener(notifyListeners);
     addListener(_onTaskReminderDataChanged);
   }
 
@@ -27,8 +37,12 @@ class AppController extends ChangeNotifier {
   final TaskReminderPlatformGateway taskReminderPlatform;
   final ApiClient? apiClient;
   final Duration syncInterval;
+  late final PrivateVaultController privateVault;
   Timer? _focusTicker;
   Future<void> _focusMutation = Future<void>.value();
+  bool _ordinaryFocusStarting = false;
+  Stopwatch? _earlyExitClock;
+  String? _earlyExitSessionId;
   Timer? _syncTimer;
   Timer? _syncDebounce;
   String? _syncAccountId;
@@ -37,7 +51,7 @@ class AppController extends ChangeNotifier {
   bool _automaticSyncPaused = false;
   bool _automaticSyncPausedForAuthentication = false;
   Future<void> _taskReminderMutation = Future<void>.value();
-  Object? _taskReminderSnapshot;
+  (bool, int, String, bool, String)? _taskReminderSnapshot;
   int _taskReminderGeneration = 0;
   bool _disposed = false;
 
@@ -49,8 +63,12 @@ class AppController extends ChangeNotifier {
   ThemePreference themePreference = ThemePreference.system;
   bool useDynamicColor = false;
   bool notificationsEnabled = true;
+  bool focusVibrationEnabled = true;
+  String? focusPlatformErrorMessage;
   bool taskRemindersEnabled = true;
+  bool scheduledTaskRemindersEnabled = true;
   bool taskReminderNotificationsAllowed = false;
+  bool scheduledTaskReminderNotificationsAllowed = false;
   String? taskReminderErrorMessage;
   int taskReminderOpenSequence = 0;
   bool usageAccessGranted = false;
@@ -120,7 +138,7 @@ class AppController extends ChangeNotifier {
       _ownedFocusSessions = owned == null
           ? {}
           : Map<String, String>.from(jsonDecode(owned) as Map);
-      _applyWorkspaceSnapshot(snapshot);
+      await _applyWorkspaceSnapshot(snapshot);
       _syncPhase = SyncPhase.localOnly;
       final savedTheme = await repository.readGlobalSetting('theme_preference');
       if (savedTheme != null) {
@@ -131,8 +149,16 @@ class AppController extends ChangeNotifier {
       notificationsEnabled =
           await repository.readGlobalSetting('notifications_enabled') !=
           'false';
+      focusVibrationEnabled =
+          await repository.readGlobalSetting('focus_vibration_enabled') !=
+          'false';
       taskRemindersEnabled =
           await repository.readGlobalSetting('task_reminders_enabled') !=
+          'false';
+      scheduledTaskRemindersEnabled =
+          await repository.readGlobalSetting(
+            'scheduled_task_reminders_enabled',
+          ) !=
           'false';
       _appWhitelists = _decodeAppWhitelists(
         await repository.readSetting(_appWhitelistsSettingKey),
@@ -170,12 +196,15 @@ class AppController extends ChangeNotifier {
     return null;
   }
 
-  bool get canStartFocus => !focusSessions.any(
-    (session) =>
-        session.isActive &&
-        (isLocalFocusSession(session) ||
-            !repository.selectedAccountId.startsWith('__local__:')),
-  );
+  bool get canStartFocus =>
+      !privateVault.hasActiveFocus &&
+      !privateVault.isBusy &&
+      !focusSessions.any(
+        (session) =>
+            session.isActive &&
+            (isLocalFocusSession(session) ||
+                !repository.selectedAccountId.startsWith('__local__:')),
+      );
 
   FocusSessionItem? get lastCompletedFocus {
     for (final session in focusSessions) {
@@ -410,21 +439,83 @@ class AppController extends ChangeNotifier {
     required DateTime startsAt,
     required Duration duration,
   }) async {
+    final accountId = repository.selectedAccountId;
+    _validatePlanBlock(taskId: taskId, title: title, duration: duration);
     final block = PlanBlockItem(
       id: repository.createId(),
       taskId: taskId,
-      title: taskId == null ? title : null,
+      title: taskId == null ? title!.trim() : null,
       startsAt: startsAt,
       endsAt: startsAt.add(duration),
       timeZone: 'Asia/Shanghai',
       status: PlanBlockStatus.scheduled,
     );
     await repository.savePlanBlock(block);
+    if (repository.selectedAccountId != accountId) return block;
     planBlocks = [...planBlocks, block]
       ..sort((a, b) => a.startsAt.compareTo(b.startsAt));
     notifyListeners();
     await _markPending();
     return block;
+  }
+
+  Future<PlanBlockItem> updatePlanBlock({
+    required PlanBlockItem block,
+    String? taskId,
+    String? title,
+    required DateTime startsAt,
+    required Duration duration,
+  }) async {
+    final accountId = repository.selectedAccountId;
+    if (!planBlocks.any((current) => current.id == block.id)) {
+      throw StateError('当前工作区中没有这个计划时段。');
+    }
+    _validatePlanBlock(taskId: taskId, title: title, duration: duration);
+    final updated = PlanBlockItem(
+      id: block.id,
+      taskId: taskId,
+      title: taskId == null ? title!.trim() : null,
+      startsAt: startsAt,
+      endsAt: startsAt.add(duration),
+      timeZone: block.timeZone,
+      status: block.status,
+      originalPlanBlockId: block.originalPlanBlockId,
+    );
+    await repository.savePlanBlock(updated);
+    if (repository.selectedAccountId != accountId) return updated;
+    planBlocks = [
+      for (final current in planBlocks)
+        if (current.id == block.id) updated else current,
+    ]..sort((a, b) => a.startsAt.compareTo(b.startsAt));
+    notifyListeners();
+    await _markPending();
+    return updated;
+  }
+
+  Future<void> deletePlanBlock(PlanBlockItem block) async {
+    final accountId = repository.selectedAccountId;
+    if (!planBlocks.any((current) => current.id == block.id)) return;
+    await repository.deletePlanBlock(block.id);
+    if (repository.selectedAccountId != accountId) return;
+    planBlocks = planBlocks.where((current) => current.id != block.id).toList();
+    notifyListeners();
+    await _markPending();
+  }
+
+  void _validatePlanBlock({
+    required String? taskId,
+    required String? title,
+    required Duration duration,
+  }) {
+    if (duration.inSeconds <= 0) {
+      throw ArgumentError('计划时长必须大于零。');
+    }
+    if (taskId != null && taskById(taskId) == null) {
+      throw StateError('当前工作区中没有关联任务。');
+    }
+    if (taskId == null && (title == null || title.trim().isEmpty)) {
+      throw ArgumentError('未关联任务的计划必须填写标题。');
+    }
   }
 
   Future<T> _serializeFocus<T>(Future<T> Function() action) async {
@@ -443,13 +534,19 @@ class AppController extends ChangeNotifier {
     required TaskItem task,
     required int durationSeconds,
     required FocusPolicyItem policy,
-  }) => _serializeFocus(
-    () => _startFocus(
-      task: task,
-      durationSeconds: durationSeconds,
-      policy: policy,
-    ),
-  );
+  }) => _serializeFocus(() async {
+    if (!canStartFocus) return;
+    _ordinaryFocusStarting = true;
+    try {
+      await _startFocus(
+        task: task,
+        durationSeconds: durationSeconds,
+        policy: policy,
+      );
+    } finally {
+      _ordinaryFocusStarting = false;
+    }
+  });
 
   Future<void> _startFocus({
     required TaskItem task,
@@ -457,6 +554,18 @@ class AppController extends ChangeNotifier {
     required FocusPolicyItem policy,
   }) async {
     if (!canStartFocus) return;
+    if (durationSeconds <= 0 || durationSeconds > 24 * 60 * 60) {
+      throw ArgumentError('专注时长须大于零且不超过 24 小时。');
+    }
+    final storedPolicy = policyById(policy.id);
+    if (storedPolicy == null || taskById(task.id)?.status != TaskStatus.open) {
+      throw StateError('任务或专注规则已变化，请重新选择。');
+    }
+    policy = storedPolicy;
+    if (policy.mode != FocusPolicyMode.normal && !guardPermissionsGranted) {
+      throw StateError('请先授予使用情况访问和显示在其他应用上层权限。');
+    }
+    cancelEarlyFocusExit();
     final now = DateTime.now();
     final session = FocusSessionItem(
       id: repository.createId(),
@@ -492,6 +601,10 @@ class AppController extends ChangeNotifier {
   Future<void> _pauseFocus() async {
     final session = activeFocusSession;
     if (session == null || session.status != FocusSessionStatus.running) return;
+    final policy = policyById(session.focusPolicyId);
+    if (policy?.allowPause == false || policy?.mode == FocusPolicyMode.strict) {
+      throw StateError('当前专注规则不允许暂停。');
+    }
     final updated = session.copyWith(
       status: FocusSessionStatus.paused,
       pauseStartedAt: DateTime.now(),
@@ -527,16 +640,66 @@ class AppController extends ChangeNotifier {
     String? reason,
   }) => _serializeFocus(() => _finishFocus(status: status, reason: reason));
 
+  int get earlyExitRemainingSeconds {
+    final session = activeFocusSession;
+    if (session == null) return 0;
+    final policy = policyById(session.focusPolicyId);
+    if (policy?.earlyExitMode != 'countdown' &&
+        policy?.mode != FocusPolicyMode.strict) {
+      return 0;
+    }
+    final wait = policy?.mode == FocusPolicyMode.strict
+        ? math.max(30, policy?.earlyExitWaitSeconds ?? 30)
+        : math.max(0, policy?.earlyExitWaitSeconds ?? 0);
+    if (_earlyExitSessionId != session.id || _earlyExitClock == null) {
+      return wait;
+    }
+    return math.max(0, wait - _earlyExitClock!.elapsed.inSeconds);
+  }
+
+  void beginEarlyFocusExit() {
+    final session = activeFocusSession;
+    if (session == null || _earlyExitSessionId == session.id) return;
+    _earlyExitSessionId = session.id;
+    _earlyExitClock = Stopwatch()..start();
+  }
+
+  void cancelEarlyFocusExit() {
+    _earlyExitClock?.stop();
+    _earlyExitClock = null;
+    _earlyExitSessionId = null;
+  }
+
   Future<FocusSessionItem?> _finishFocus({
     FocusSessionStatus status = FocusSessionStatus.completed,
     String? reason,
   }) async {
     final session = activeFocusSession;
     if (session == null) return null;
+    if (status != FocusSessionStatus.completed &&
+        status != FocusSessionStatus.abandoned) {
+      throw ArgumentError('只能完成专注或提前结束专注。');
+    }
+    final policy = policyById(session.focusPolicyId);
+    if (status == FocusSessionStatus.completed &&
+        policy?.mode == FocusPolicyMode.strict &&
+        activeFocusRemainingSeconds > 0) {
+      throw StateError('严格模式须达到目标时间后才能完成。紧急情况可选择提前结束。');
+    }
+    if (status == FocusSessionStatus.abandoned) {
+      if (earlyExitRemainingSeconds > 0) {
+        throw StateError('请在结束确认中等待倒计时完成。');
+      }
+      if ((policy?.mode == FocusPolicyMode.strict ||
+              policy?.earlyExitMode == 'reason') &&
+          (reason?.trim().isEmpty ?? true)) {
+        throw StateError('当前专注规则提前结束须填写原因。');
+      }
+    }
     final actual = activeFocusElapsedSeconds;
     var appExitCount = session.appExitCount;
     var interruptionCount = session.interruptionCount;
-    if (policyById(session.focusPolicyId)?.mode == FocusPolicyMode.guard) {
+    if (policy?.mode != FocusPolicyMode.normal) {
       try {
         final stats = await focusPlatform.getGuardActivityStats();
         if (stats.sessionId == session.id) {
@@ -558,9 +721,19 @@ class AppController extends ChangeNotifier {
       clearPauseStartedAt: true,
     );
     await _replaceFocusSession(updated);
+    cancelEarlyFocusExit();
     _focusTicker?.cancel();
     try {
       await focusPlatform.stopTimer();
+      focusPlatformErrorMessage = null;
+    } catch (_) {
+      focusPlatformErrorMessage = '专注已保存，但系统计时服务未停止。请在设置中重试。';
+    }
+    notifyListeners();
+    try {
+      await focusPlatform.feedback(
+        status == FocusSessionStatus.completed ? 'completed' : 'abandoned',
+      );
     } catch (_) {}
     return updated;
   }
@@ -572,7 +745,11 @@ class AppController extends ChangeNotifier {
     final session = activeFocusSession;
     if (session == null || session.status != FocusSessionStatus.running) return;
     final policy = policyById(session.focusPolicyId);
-    if (policy?.mode != FocusPolicyMode.guard || !usageAccessGranted) return;
+    if (policy == null ||
+        policy.mode == FocusPolicyMode.normal ||
+        !usageAccessGranted) {
+      return;
+    }
     GuardActivityStats stats;
     try {
       stats = await focusPlatform.getGuardActivityStats();
@@ -608,13 +785,26 @@ class AppController extends ChangeNotifier {
     await _markPending();
   }
 
+  Future<void> reconcileNativeFocus() => _serializeFocus(() async {
+    await _restoreNativeFocus();
+    if (!_disposed) notifyListeners();
+  });
+
   Future<void> _restoreNativeFocus() async {
     final session = activeFocusSession;
     if (session == null) {
+      final privateRuntime = privateVault.activeFocusRuntime;
+      if (privateRuntime != null || privateVault.timerWarning != null) {
+        await privateVault.retryNativeFocus();
+        focusPlatformErrorMessage = privateVault.timerWarning;
+        return;
+      }
       try {
         final state = await focusPlatform.getTimerState();
         if (state.isActive) await focusPlatform.stopTimer();
+        focusPlatformErrorMessage = null;
       } catch (error) {
+        focusPlatformErrorMessage = '系统计时服务状态未更新，可在设置中重试。';
         debugPrint('Reconciling the local focus service failed: $error');
       }
       return;
@@ -622,6 +812,12 @@ class AppController extends ChangeNotifier {
     final task = taskById(session.taskId);
     final policy = policyById(session.focusPolicyId);
     if (policy == null) return;
+    try {
+      await focusPlatform.configureFeedback(
+        enabled: focusVibrationEnabled,
+        notificationMode: policy.notificationMode,
+      );
+    } catch (_) {}
     try {
       if (_ownedFocusSessions[repository.selectedAccountId] != session.id) {
         final owned = {
@@ -651,8 +847,28 @@ class AppController extends ChangeNotifier {
         taskTypeName: whitelistName(task?.projectId),
         maxAppExits: policy.maxAppExits,
       );
+      focusPlatformErrorMessage = null;
     } catch (error) {
+      focusPlatformErrorMessage = '系统计时通知未更新，可在设置中重试；应用内计时仍可使用。';
       debugPrint('Restoring the local focus service failed: $error');
+    }
+  }
+
+  Future<void> _restorePrivateFocusRuntime(PrivateFocusRuntime? runtime) async {
+    if (runtime == null) {
+      if (activeFocusSession == null) await focusPlatform.stopTimer();
+    } else {
+      await focusPlatform.configureFeedback(
+        enabled: focusVibrationEnabled,
+        notificationMode: 'vibrate',
+      );
+      await focusPlatform.startTimer(
+        sessionId: runtime.sessionId,
+        title: '私密任务',
+        taskTypeName: '私密任务',
+        endsAt: runtime.endsAt,
+        mode: FocusPolicyMode.normal,
+      );
     }
   }
 
@@ -708,6 +924,20 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setFocusVibration(bool value) async {
+    await repository.writeGlobalSetting('focus_vibration_enabled', '$value');
+    focusVibrationEnabled = value;
+    notifyListeners();
+    try {
+      await focusPlatform.configureFeedback(
+        enabled: value,
+        notificationMode:
+            policyById(activeFocusSession?.focusPolicyId)?.notificationMode ??
+            'vibrate',
+      );
+    } catch (_) {}
+  }
+
   Future<void> setNotifications(bool value) async {
     await repository.writeGlobalSetting(
       'notifications_enabled',
@@ -729,6 +959,16 @@ class AppController extends ChangeNotifier {
     await refreshTaskReminders(requestPermission: value, automatic: false);
   }
 
+  Future<void> setScheduledTaskRemindersEnabled(bool value) async {
+    await repository.writeGlobalSetting(
+      'scheduled_task_reminders_enabled',
+      '$value',
+    );
+    scheduledTaskRemindersEnabled = value;
+    notifyListeners();
+    await refreshTaskReminders(requestPermission: value, automatic: false);
+  }
+
   void _onTaskReminderDataChanged() {
     if (_disposed || !taskReminderPlatform.isSupported) return;
     final snapshot = _currentTaskReminderSnapshot();
@@ -736,7 +976,7 @@ class AppController extends ChangeNotifier {
     unawaited(refreshTaskReminders(requestPermission: true));
   }
 
-  (bool, int, String) _currentTaskReminderSnapshot() {
+  (bool, int, String, bool, String) _currentTaskReminderSnapshot() {
     final usable =
         isReady &&
         initializationError == null &&
@@ -746,7 +986,40 @@ class AppController extends ChangeNotifier {
       taskRemindersEnabled && usable,
       usable ? tasks.where((task) => task.status == TaskStatus.open).length : 0,
       repository.selectedAccountId,
+      scheduledTaskRemindersEnabled && usable,
+      jsonEncode(usable ? _scheduledTaskReminders() : const []),
     );
+  }
+
+  List<Map<String, Object>> _scheduledTaskReminders() {
+    final openTasks = {
+      for (final task in tasks)
+        if (task.status == TaskStatus.open) task.id: task,
+    };
+    final reminders = <Map<String, Object>>[
+      for (final task in openTasks.values)
+        if (task.dueAt != null)
+          {
+            'id': 'due:${task.id}',
+            'atMillis': task.dueAt!.millisecondsSinceEpoch,
+            'kind': 'deadline',
+          },
+      for (final block in planBlocks)
+        if (block.status == PlanBlockStatus.scheduled &&
+            (block.taskId == null || openTasks.containsKey(block.taskId)))
+          {
+            'id': 'plan:${block.id}',
+            'atMillis': block.startsAt.millisecondsSinceEpoch,
+            'kind': 'plan',
+          },
+    ];
+    reminders.sort((a, b) {
+      final byTime = (a['atMillis']! as int).compareTo(b['atMillis']! as int);
+      return byTime != 0
+          ? byTime
+          : (a['id']! as String).compareTo(b['id']! as String);
+    });
+    return reminders;
   }
 
   Future<void> refreshTaskReminders({
@@ -757,7 +1030,19 @@ class AppController extends ChangeNotifier {
       return Future<void>.value();
     }
     final snapshot = _currentTaskReminderSnapshot();
+    final previous = _taskReminderSnapshot;
     _taskReminderSnapshot = snapshot;
+    if (!isReady ||
+        isSwitchingSyncAccount ||
+        accountConnectionError != null ||
+        initializationError != null ||
+        (previous != null && previous.$3 != snapshot.$3)) {
+      // A permission dialog can keep an older update future pending. Clear the
+      // native snapshot immediately instead of waiting behind that dialog.
+      unawaited(
+        taskReminderPlatform.clearWorkspace().catchError((Object _) {}),
+      );
+    }
     final generation = ++_taskReminderGeneration;
     _taskReminderMutation = _taskReminderMutation.then((_) async {
       if (_disposed || generation != _taskReminderGeneration) return;
@@ -772,7 +1057,20 @@ class AppController extends ChangeNotifier {
           automatic: automatic,
         );
         if (_disposed || generation != _taskReminderGeneration) return;
+        final scheduledAllowed = await taskReminderPlatform.updateSchedule(
+          enabled: snapshot.$4,
+          workspaceId: snapshot.$3,
+          reminders: (jsonDecode(snapshot.$5) as List)
+              .map((item) => Map<String, Object>.from(item as Map))
+              .toList(growable: false),
+          requestPermission:
+              requestPermission &&
+              (!automatic || (snapshot.$4 && snapshot.$5 != '[]')),
+          automatic: automatic,
+        );
+        if (_disposed || generation != _taskReminderGeneration) return;
         taskReminderNotificationsAllowed = allowed;
+        scheduledTaskReminderNotificationsAllowed = scheduledAllowed;
         taskReminderErrorMessage = null;
       } catch (_) {
         if (_disposed || generation != _taskReminderGeneration) return;
@@ -919,8 +1217,8 @@ class AppController extends ChangeNotifier {
         notifyListeners();
       } else {
         final generation = _accountGeneration;
-        // A request sent with the old token can finish after token refresh.
-        // Let it report its failure before resuming authenticated sync.
+        // Requests sent with an old token can complete after token rotation.
+        // Resume only after that request has reported its authentication error.
         await repository.waitForSyncIdle();
         if (generation != _accountGeneration ||
             _syncAccountId != userId ||
@@ -976,7 +1274,7 @@ class AppController extends ChangeNotifier {
         deviceId: deviceId,
       );
       if (generation != _accountGeneration || _syncAccountId != userId) return;
-      _applyWorkspaceSnapshot(snapshot);
+      await _applyWorkspaceSnapshot(snapshot);
       _appWhitelists = _decodeAppWhitelists(
         await repository.readSetting(_appWhitelistsSettingKey),
       );
@@ -1034,7 +1332,7 @@ class AppController extends ChangeNotifier {
           result.accountId != accountId) {
         return;
       }
-      _applyWorkspaceSnapshot(result.workspace);
+      await _applyWorkspaceSnapshot(result.workspace);
       syncRejections = List.unmodifiable(result.rejections);
       lastSuccessfulSyncAt = DateTime.now();
       if (result.needsAttention) {
@@ -1152,7 +1450,7 @@ class AppController extends ChangeNotifier {
       throw StateError('请先结束当前专注，再切换工作区。');
     }
     await disconnectSyncAccount();
-    _applyWorkspaceSnapshot(await repository.openOfflineWorkspace(id));
+    await _applyWorkspaceSnapshot(await repository.openOfflineWorkspace(id));
     _appWhitelists = _decodeAppWhitelists(
       await repository.readSetting(_appWhitelistsSettingKey),
     );
@@ -1180,12 +1478,26 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _applyWorkspaceSnapshot(WorkspaceSnapshot snapshot) {
+  Future<void> refreshAfterPrivateTransfer() async {
+    final accountId = repository.selectedAccountId;
+    final snapshot = await repository.load();
+    if (accountId != repository.selectedAccountId) {
+      throw StateError('工作区已切换，请重新打开私密任务箱。');
+    }
+    await _applyWorkspaceSnapshot(snapshot);
+    notifyListeners();
+    await refreshTaskReminders();
+  }
+
+  Future<void> _applyWorkspaceSnapshot(WorkspaceSnapshot snapshot) async {
+    await privateVault.selectWorkspace(repository.selectedAccountId);
+    final previousFocusId = activeFocusSession?.id;
     projects = snapshot.projects;
     tasks = snapshot.tasks;
     planBlocks = snapshot.planBlocks;
     focusPolicies = snapshot.focusPolicies;
     focusSessions = snapshot.focusSessions;
+    if (previousFocusId != activeFocusSession?.id) cancelEarlyFocusExit();
     pendingOperations = snapshot.pendingOperations;
     if (activeFocusSession != null) {
       _startTicker();
@@ -1290,6 +1602,9 @@ class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    privateVault.removeListener(notifyListeners);
+    privateVault.dispose();
+    cancelEarlyFocusExit();
     _disposed = true;
     _taskReminderGeneration++;
     removeListener(_onTaskReminderDataChanged);

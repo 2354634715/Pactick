@@ -92,6 +92,8 @@ class _AppDataNotifier extends ChangeNotifier {
     controller.themePreference,
     controller.useDynamicColor,
     controller.notificationsEnabled,
+    controller.focusVibrationEnabled,
+    controller.focusPlatformErrorMessage,
     controller.taskRemindersEnabled,
     controller.taskReminderNotificationsAllowed,
     controller.taskReminderErrorMessage,

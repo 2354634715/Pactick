@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -67,6 +68,7 @@ func main() {
 		cfg.ClientUpdates,
 		cfg.AllowedOrigins,
 		cfg.RegistrationEnabled,
+		httpapi.WithTrustedProxies(cfg.TrustedProxies),
 	)
 
 	httpServer := &http.Server{
@@ -76,6 +78,8 @@ func main() {
 		ReadTimeout:       15 * time.Second,
 		WriteTimeout:      30 * time.Second,
 		IdleTimeout:       90 * time.Second,
+		MaxHeaderBytes:    16 << 10,
+		TLSConfig:         &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 	serverErrors := make(chan error, 1)
 	go func() {
@@ -87,7 +91,11 @@ func main() {
 			"registration_enabled", cfg.RegistrationEnabled,
 			"client_update_releases", cfg.ClientUpdates.Len(),
 		)
-		serverErrors <- httpServer.ListenAndServe()
+		if cfg.TLSCertFile != "" {
+			serverErrors <- httpServer.ListenAndServeTLS(cfg.TLSCertFile, cfg.TLSKeyFile)
+		} else {
+			serverErrors <- httpServer.ListenAndServe()
+		}
 	}()
 
 	signalContext, stopSignals := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)

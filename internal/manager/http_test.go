@@ -82,6 +82,7 @@ func TestSettingsAndMigrationGuards(t *testing.T) {
 	r := httptest.NewRequest("POST", "http://127.0.0.1:43992/api/settings", strings.NewReader(body))
 	r.Header.Set("Content-Type", "application/json")
 	r.Header.Set("X-Pactick-Manager-Token", "token")
+	authorizeMutation(h, r, "token")
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, r)
 	if w.Code != http.StatusConflict {
@@ -112,6 +113,7 @@ func TestStrictRequests(t *testing.T) {
 		r := httptest.NewRequest("POST", "http://127.0.0.1:43994/api/action", strings.NewReader(body))
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-Pactick-Manager-Token", "token")
+		authorizeMutation(h, r, "token")
 		w := httptest.NewRecorder()
 		h.ServeHTTP(w, r)
 		if w.Code != 400 {
@@ -122,4 +124,13 @@ func TestStrictRequests(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
+}
+
+func authorizeMutation(handler http.Handler, request *http.Request, token string) {
+	r := httptest.NewRequest("GET", "http://"+request.Host+"/api/status", nil)
+	r.Header.Set("X-Pactick-Manager-Token", token)
+	w := httptest.NewRecorder()
+	handler.ServeHTTP(w, r)
+	request.Header.Set("Origin", "http://"+request.Host)
+	request.Header.Set("X-Pactick-CSRF-Token", w.Header().Get("X-Pactick-CSRF-Token"))
 }

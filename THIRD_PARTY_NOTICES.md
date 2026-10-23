@@ -30,6 +30,7 @@
 | Dart | [code_assets](https://pub.dev/packages/code_assets/versions/1.2.1) | 1.2.1 | [BSD family (review exact terms)](third_party/licenses/Dart-code_assets-1.2.1-0-LICENSE) |
 | Dart | [collection](https://pub.dev/packages/collection/versions/1.19.1) | 1.19.1 | [BSD family (review exact terms)](third_party/licenses/Dart-collection-1.19.1-0-LICENSE) |
 | Dart | [crypto](https://pub.dev/packages/crypto/versions/3.0.7) | 3.0.7 | [BSD family (review exact terms)](third_party/licenses/Dart-crypto-3.0.7-0-LICENSE) |
+| Dart | [cryptography](https://pub.dev/packages/cryptography/versions/2.9.0) | 2.9.0 | [Apache-2.0 (text match; review notices)](third_party/licenses/Dart-cryptography-2.9.0-0-LICENSE) |
 | Dart | [dynamic_color](https://pub.dev/packages/dynamic_color/versions/1.9.0) | 1.9.0 | [Apache-2.0 (text match; review notices)](third_party/licenses/Dart-dynamic_color-1.9.0-0-LICENSE) |
 | Dart | [fake_async](https://pub.dev/packages/fake_async/versions/1.3.3) | 1.3.3 | [Apache-2.0 (text match; review notices)](third_party/licenses/Dart-fake_async-1.3.3-0-LICENSE) |
 | Dart | [ffi](https://pub.dev/packages/ffi/versions/2.2.0) | 2.2.0 | [BSD family (review exact terms)](third_party/licenses/Dart-ffi-2.2.0-0-LICENSE) |

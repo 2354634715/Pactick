@@ -5,6 +5,8 @@ history.replaceState(null, '', location.pathname);
 const $ = s => document.querySelector(s);
 let busy = false;
 let status;
+let csrf = '';
+let settingsDirty = false;
 function feedback(message, error = false) {
   $('#feedback').hidden = false;
   $('#feedback').classList.toggle('error', error);
@@ -12,7 +14,8 @@ function feedback(message, error = false) {
   $('#feedback-body').textContent = message;
 }
 async function api(path, body) {
-  const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-Pactick-Manager-Token': token, ...(body ? {'Content-Type': 'application/json'} : {})}, ...(body ? {body: JSON.stringify(body)} : {})});
+  const response = await fetch(path, {method: body ? 'POST' : 'GET', headers: {'X-Pactick-Manager-Token': token, ...(body ? {'Content-Type': 'application/json', 'X-Pactick-CSRF-Token': csrf} : {})}, ...(body ? {body: JSON.stringify(body)} : {})});
+  if (response.headers.get('X-Pactick-CSRF-Token')) csrf = response.headers.get('X-Pactick-CSRF-Token');
   const result = await response.json();
   if (!response.ok || !result.ok) throw Error(result.message || '操作失败');
   return result;
@@ -28,8 +31,14 @@ async function refresh() {
     $('#address-label').textContent = status.http_address;
     $('#database-label').textContent = status.initialized ? '已初始化' : '待初始化';
     $('#data-label').textContent = '配置与备份目录：' + status.data_directory;
+    const backups = $('#backup-select');
+    const selected = backups.value;
+    backups.replaceChildren(...status.backups.map(name => { const option = document.createElement('option'); option.value = option.textContent = name; return option; }));
+    if (status.backups.includes(selected)) backups.value = selected;
+    $('#restore-check').disabled = !status.backups.length;
+    $('#settings-form').elements.mode.querySelector('option[value="docker"]').disabled = !status.docker_supported;
     const form = $('#settings-form');
-    if (!form.contains(document.activeElement)) {
+    if (!settingsDirty && !form.contains(document.activeElement)) {
       form.elements.mode.value = status.mode;
       const [host, port] = status.http_address.split(':');
       form.elements.bind.value = host;
@@ -60,6 +69,10 @@ document.querySelectorAll('[data-action]').forEach(button => button.addEventList
 }));
 $('#refresh').addEventListener('click', refresh);
 $('#dismiss-feedback').addEventListener('click', () => $('#feedback').hidden = true);
+$('#restore-check').addEventListener('click', () => operate(async () => {
+  const result = await api('/api/action', {action: 'restore-check', backup: $('#backup-select').value});
+  feedback(result.message);
+}));
 function settingsVisibility() {
   const form = $('#settings-form');
   const native = form.elements.mode.value === 'native';
@@ -67,11 +80,13 @@ function settingsVisibility() {
   $('#network-note').hidden = form.elements.bind.value !== '0.0.0.0';
   $('#dependency-note').textContent = native ? '需要已运行的 PostgreSQL。服务端程序随发行包提供；关闭管理程序会停止由它启动的本机 API。' : 'Docker 模式需要 Docker Engine/Desktop 与 Compose v2，首次部署需联网下载容器镜像。';
 }
-$('#settings-form').addEventListener('change', settingsVisibility);
+$('#settings-form').addEventListener('change', () => { settingsDirty = true; settingsVisibility(); });
+$('#settings-form').addEventListener('input', () => { settingsDirty = true; });
 $('#settings-form').addEventListener('submit', e => {e.preventDefault(); operate(async () => {
   const form = e.target;
   const result = await api('/api/settings', {mode: form.elements.mode.value, http_address: form.elements.bind.value + ':' + form.elements.port.value, database_url: form.elements.database_url.value});
   form.elements.database_url.value = '';
+  settingsDirty = false;
   feedback(result.message);
 });});
 $('#account-form').addEventListener('submit', e => {e.preventDefault(); operate(async () => {

@@ -13,6 +13,7 @@ Commands:
   install                  Generate private config, build, migrate, start, back up
   upgrade                  Build a new release (backs up before migration)
   registration open|close  Enable/disable new accounts and recreate the API
+  create-account           Read account JSON from stdin; keep registration closed
   backup                   Create a local database backup
   restore-check FILE       Restore a backup into an isolated temporary database
   status                   Check containers, loopback binding and local backup
@@ -71,7 +72,7 @@ while (( $# > 0 )); do
 done
 case "$command_name" in
     help|-h|--help) usage; exit 0 ;;
-    install|upgrade|registration|backup|restore-check|status) ;;
+    install|upgrade|registration|create-account|backup|restore-check|status) ;;
     *) fail "unknown command: $command_name" ;;
 esac
 case "$command_name" in
@@ -173,6 +174,8 @@ EOF
     cat > "$staging_dir/api.env" <<EOF
 APP_ENV=production
 HTTP_ADDRESS=:8080
+HTTP_BEHIND_PROXY=true
+TRUSTED_PROXIES=
 DATABASE_URL=postgres://pactick:$database_password@postgres:5432/pactick?sslmode=disable
 AUTH_JWT_SECRET=$jwt_secret
 ACCESS_TOKEN_TTL=15m
@@ -349,7 +352,7 @@ EOF
         if [[ -n "$domain" ]]; then export PACTICK_PUBLIC_URL="https://$domain"; fi
         bash "$script_dir/verify-deployment.sh"
         printf '\nReady. API loopback port: %s. Config: %s\n' "$PACTICK_HTTP_PORT" "$config_dir"
-        printf 'Open registration only while creating accounts; then run registration close.\n'
+        printf 'Create accounts through create-account using stdin JSON; public registration stays closed.\n'
         ;;
     registration)
         [[ ! -e "$config_dir/.release-pending" && ! -L "$config_dir/.release-pending" ]] ||
@@ -361,6 +364,7 @@ EOF
         printf 'REGISTRATION_ENABLED=%s\n' "$registration"
         ;;
     backup) bash "$script_dir/backup.sh" daily ;;
+    create-account) "${compose[@]}" exec -T api /admin create-account ;;
     restore-check) bash "$script_dir/restore-check.sh" "$operand" ;;
     status) bash "$script_dir/verify-deployment.sh" ;;
 esac

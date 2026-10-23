@@ -8,8 +8,7 @@ x-runtime: &runtime
   image: ${PACTICK_IMAGE:?Set PACTICK_IMAGE to the package release version}
   build:
     context: .
-    dockerfile: Dockerfile.prebuilt
-  platform: linux/amd64
+    dockerfile: ${PACTICK_DOCKERFILE:-Dockerfile}
   env_file:
     - ${PACTICK_CONFIG_DIR:?Set the absolute configuration directory}/api.env
   networks:
@@ -26,7 +25,6 @@ x-runtime: &runtime
 services:
   postgres:
     image: postgres:17-alpine
-    platform: linux/amd64
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-pactick}
       POSTGRES_USER: ${POSTGRES_USER:-pactick}

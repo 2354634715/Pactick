@@ -8,7 +8,7 @@
   "supplemental_asset": "client/assets/licenses/supplemental.json",
   "supplemental_asset_sha256": "0e23f43213796acd48e66a7edd765c012d6a72c2b2e054e21a1952da48f71b13",
   "go_mod_sha256": "c458c7990b62f14b7fb5862077ed8182002a84232dcae34344c97a98f47f1ee5",
-  "pubspec_lock_sha256": "c143689cb9effc486a338575d1b327f85c61d2bea85c827bda1d80a958ad76f5",
+  "pubspec_lock_sha256": "bf38939bb3ece199695615e037c7d20d6883756847304d1cdfdaff1174d71ffc",
   "runtime_coordinates": [
     "androidx.activity:activity:1.9.0",
     "androidx.annotation:annotation-experimental:1.4.1",
@@ -394,6 +394,17 @@
     {
       "file": "client/android/gradle/wrapper/gradle-wrapper.jar",
       "sha256": "16caeaf66d57a0d1d2087fef6a97efa62de8da69afa5b908f40db35afc4342da"
+    }
+  ],
+  "dependency_review_updates": [
+    {
+      "date": "2026-10-17",
+      "change": "Added cryptography 2.9.0 (Dart package; no Flutter plugin or Android AAR/JAR); existing native supplemental asset unchanged.",
+      "license_evidence": "third_party/licenses/Dart-cryptography-2.9.0-0-LICENSE",
+      "license_sha256": "59899c6091b540582ed617e8eeaac4919dc985ccfc35459ee9752b699be5205b",
+      "verification": "Full package Apache-2.0 text and package name found in debug APK NOTICES.Z; no legal audit or signed release acceptance claimed.",
+      "previous_pubspec_lock_sha256": "c143689cb9effc486a338575d1b327f85c61d2bea85c827bda1d80a958ad76f5",
+      "pubspec_lock_sha256": "bf38939bb3ece199695615e037c7d20d6883756847304d1cdfdaff1174d71ffc"
     }
   ]
 }

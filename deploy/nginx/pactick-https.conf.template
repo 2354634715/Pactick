@@ -6,7 +6,10 @@ map $http_upgrade $pactick_connection_upgrade {
 
 limit_req_zone $binary_remote_addr zone=pactick_register:10m rate=3r/m;
 limit_req_zone $binary_remote_addr zone=pactick_auth:10m rate=10r/m;
+limit_req_zone $binary_remote_addr zone=pactick_api_requests:10m rate=20r/s;
+limit_conn_zone $binary_remote_addr zone=pactick_connections:10m;
 limit_req_status 429;
+limit_conn_status 429;
 
 upstream pactick_api {
     server 127.0.0.1:${PACTICK_HTTP_PORT};
@@ -23,7 +26,7 @@ server {
         try_files $uri =404;
     }
     location / {
-        return 301 https://$host$request_uri;
+        return 301 https://${API_DOMAIN}$request_uri;
     }
 }
 
@@ -43,6 +46,10 @@ server {
     add_header Referrer-Policy no-referrer always;
 
     client_max_body_size 2m;
+    client_header_timeout 10s;
+    client_body_timeout 15s;
+    send_timeout 30s;
+    limit_conn pactick_connections 30;
     proxy_http_version 1.1;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
@@ -70,6 +77,7 @@ server {
     }
 
     location = /v1/ws {
+        limit_req zone=pactick_api_requests burst=10 nodelay;
         # proxy_set_header directives do not partially inherit in Nginx once a
         # location defines one, so repeat the common forwarding headers here.
         proxy_set_header Host $host;
@@ -86,6 +94,7 @@ server {
     }
 
     location / {
+        limit_req zone=pactick_api_requests burst=60 nodelay;
         proxy_pass http://pactick_api;
     }
 }

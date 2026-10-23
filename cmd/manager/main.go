@@ -27,6 +27,7 @@ func main() {
 	}
 	bundle := flag.String("bundle-dir", filepath.Dir(filepath.Dir(executable)), "发行包目录")
 	data := flag.String("data-dir", "", "配置、日志和备份目录；默认发行包内 data")
+	bin := flag.String("binary-dir", "", "本机 server/migrate/healthcheck/admin 程序目录；默认 bundle-dir/bin")
 	noBrowser := flag.Bool("no-browser", false, "仅打印管理网址")
 	listen := flag.String("listen", "127.0.0.1:0", "管理界面回环监听地址；0 表示随机端口")
 	flag.Parse()
@@ -44,6 +45,12 @@ func main() {
 		os.Exit(1)
 	}
 	defer m.Close()
+	if *bin != "" {
+		if err := m.SetBinaryDirectory(*bin); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+	}
 	listener, err := net.Listen("tcp", *listen)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -58,7 +65,7 @@ func main() {
 	token := hex.EncodeToString(random)
 	address := listener.Addr().String()
 	url := "http://" + address + "/#" + token
-	server := &http.Server{Handler: m.Handler(address, token), ReadHeaderTimeout: 5 * time.Second, IdleTimeout: 60 * time.Second}
+	server := &http.Server{Handler: m.Handler(address, token), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 6 * time.Minute, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	errors := make(chan error, 1)

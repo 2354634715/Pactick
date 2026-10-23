@@ -47,7 +47,14 @@ void main() {
         interruptionCount: 2,
       );
       await first.refreshGuardActivityStats();
-      await first.pauseFocus();
+      // Legacy clients could persist paused guard sessions. They remain
+      // recoverable even though new pause requests now enforce the policy.
+      await first.repository.saveFocusSession(
+        first.activeFocusSession!.copyWith(
+          status: FocusSessionStatus.paused,
+          pauseStartedAt: DateTime.now(),
+        ),
+      );
       first.dispose();
 
       final recoveredGateway = _FocusGateway();

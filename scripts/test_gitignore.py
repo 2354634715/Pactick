@@ -60,6 +60,7 @@ class GitIgnoreTests(unittest.TestCase):
             "client/android/.gradle/state", "client/android/local.properties",
             "client/android/app/.cxx/state", "client/android/app/release/output.json",
             "client/android/app/src/main/java/io/flutter/plugins/GeneratedPluginRegistrant.java",
+            "data/pactick.db", "manager.json", "manager.lock", "pactick-manager.exe",
         )
         self.assertEqual(self.ignored(paths), set(paths))
 

@@ -61,7 +61,7 @@ func (s *Service) Register(ctx context.Context, input RegisterInput) (Session, e
 		return Session{}, &InputError{Message: err.Error()}
 	}
 	input.Device.Name = strings.TrimSpace(input.Device.Name)
-	passwordHash, err := s.hasher.Hash(account.Password)
+	passwordHash, err := s.hasher.Hash(input.Password)
 	if err != nil {
 		return Session{}, err
 	}

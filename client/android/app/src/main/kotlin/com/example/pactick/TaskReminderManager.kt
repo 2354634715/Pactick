@@ -2,6 +2,7 @@ package com.example.pactick
 
 import android.Manifest
 import android.app.NotificationChannel
+import android.app.AlarmManager
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -10,11 +11,16 @@ import android.content.pm.PackageManager
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import org.json.JSONArray
+import org.json.JSONException
+import org.json.JSONObject
 
 /** Keeps a small reminder snapshot; task data remains in the Flutter database. */
 object TaskReminderManager {
     const val CHANNEL_ID = "task_reminders"
     const val ACTION_OPEN_TASKS = "com.example.pactick.task_reminders.OPEN_TASKS"
+    const val SCHEDULED_CHANNEL_ID = "scheduled_task_reminders"
+    const val ACTION_SCHEDULED_REMINDER = "com.example.pactick.task_reminders.SCHEDULED"
 
     private const val PREFERENCES = "task_reminders"
     private const val KEY_ENABLED = "enabled"
@@ -23,6 +29,158 @@ object TaskReminderManager {
     private const val KEY_PERMISSION_REQUESTED = "permission_requested"
     private const val NOTIFICATION_ID = 1301
     private const val OPEN_TASKS_REQUEST_CODE = 1302
+    private const val SCHEDULED_NOTIFICATION_ID = 1303
+    private const val SCHEDULED_ALARM_REQUEST_CODE = 1304
+    private const val KEY_SCHEDULE_ENABLED = "schedule_enabled"
+    private const val KEY_SCHEDULE_WORKSPACE = "schedule_workspace"
+    private const val KEY_SCHEDULE_EVENTS = "schedule_events"
+    private const val KEY_DELIVERED = "schedule_delivered"
+
+    private data class ScheduledReminder(val id: String, val atMillis: Long, val kind: String) {
+        val signature: String get() = "$id@$atMillis"
+        fun toJson() = JSONObject().put("id", id).put("atMillis", atMillis).put("kind", kind)
+    }
+
+    /** Only opaque IDs, timestamps, and event types cross into native storage. */
+    @Synchronized
+    fun updateSchedule(
+        context: Context,
+        enabled: Boolean,
+        workspaceId: String,
+        reminders: List<Map<String, Any?>>,
+    ): Boolean {
+        val preferences = preferences(context)
+        val sameWorkspace = preferences.getString(KEY_SCHEDULE_WORKSPACE, null) == workspaceId
+        val previous = if (sameWorkspace) readScheduledReminders(context) else emptyList()
+        val previousSignatures = previous.map { it.signature }.toSet()
+        val events = if (enabled && workspaceId.isNotEmpty()) reminders.mapNotNull { item ->
+            val id = item["id"] as? String ?: return@mapNotNull null
+            val timestamp = (item["atMillis"] as? Number)?.toLong() ?: return@mapNotNull null
+            val kind = item["kind"] as? String ?: return@mapNotNull null
+            if (id.isBlank() || timestamp <= 0 || (kind != "deadline" && kind != "plan")) null
+            else ScheduledReminder(id, timestamp, kind)
+        }.distinctBy { it.signature }.sortedBy { it.atMillis } else emptyList()
+        val signatures = events.map { it.signature }.toSet()
+        val previousDelivered = if (sameWorkspace)
+            preferences.getStringSet(KEY_DELIVERED, emptySet()).orEmpty().toSet() else emptySet()
+        val delivered = previousDelivered.intersect(signatures).toMutableSet()
+        val now = System.currentTimeMillis()
+        // Opening an old task or enabling reminders does not alert for its past deadlines.
+        events.filter { it.atMillis <= now && it.signature !in previousSignatures }
+            .forEach { delivered.add(it.signature) }
+        val json = JSONArray()
+        events.forEach { json.put(it.toJson()) }
+        check(preferences.edit()
+            .putBoolean(KEY_SCHEDULE_ENABLED, enabled)
+            .putString(KEY_SCHEDULE_WORKSPACE, workspaceId)
+            .putString(KEY_SCHEDULE_EVENTS, json.toString())
+            .putStringSet(KEY_DELIVERED, delivered)
+            .commit()) { "Could not persist task reminder schedule" }
+        if (!sameWorkspace || !enabled || !delivered.containsAll(previousDelivered)) {
+            notificationManager(context).cancel(SCHEDULED_NOTIFICATION_ID)
+        }
+        return refreshSchedule(context)
+    }
+
+    @Synchronized
+    fun refreshSchedule(context: Context): Boolean {
+        val preferences = preferences(context)
+        val allowed = scheduledNotificationsAllowed(context)
+        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        val pending = scheduledAlarm(context)
+        alarmManager.cancel(pending)
+        if (!preferences.getBoolean(KEY_SCHEDULE_ENABLED, false) ||
+            preferences.getString(KEY_SCHEDULE_WORKSPACE, null).isNullOrEmpty()
+        ) {
+            notificationManager(context).cancel(SCHEDULED_NOTIFICATION_ID)
+            return allowed
+        }
+        val events = readScheduledReminders(context)
+        val delivered = preferences.getStringSet(KEY_DELIVERED, emptySet()).orEmpty().toMutableSet()
+        val now = System.currentTimeMillis()
+        val due = events.filter { it.atMillis <= now && it.signature !in delivered }
+        if (due.isNotEmpty()) {
+            delivered.addAll(due.map { it.signature })
+            check(preferences.edit().putStringSet(KEY_DELIVERED, delivered).commit()) {
+                "Could not persist delivered task reminders"
+            }
+            if (allowed) showScheduledNotification(context, due)
+        }
+        val next = events.firstOrNull { it.atMillis > now && it.signature !in delivered }
+        if (next != null) {
+            // Inexact by design; no SCHEDULE_EXACT_ALARM permission or background polling.
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, next.atMillis, pending)
+        }
+        return allowed
+    }
+
+    fun scheduledNotificationsAllowed(context: Context): Boolean {
+        createScheduledNotificationChannel(context)
+        val manager = notificationManager(context)
+        val channel = manager.getNotificationChannel(SCHEDULED_CHANNEL_ID)
+        return appNotificationsAllowed(context) &&
+            channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE
+    }
+
+    private fun readScheduledReminders(context: Context): List<ScheduledReminder> {
+        return try {
+            val json = JSONArray(preferences(context).getString(KEY_SCHEDULE_EVENTS, "[]"))
+            (0 until json.length()).mapNotNull { index ->
+                val item = json.optJSONObject(index) ?: return@mapNotNull null
+                val id = item.optString("id")
+                val atMillis = item.optLong("atMillis")
+                val kind = item.optString("kind")
+                if (id.isBlank() || atMillis <= 0 || (kind != "deadline" && kind != "plan")) null
+                else ScheduledReminder(id, atMillis, kind)
+            }.sortedBy { it.atMillis }
+        } catch (_: JSONException) {
+            // The next Flutter update can reconstruct this non-authoritative snapshot.
+            emptyList()
+        }
+    }
+
+    private fun scheduledAlarm(context: Context): PendingIntent = PendingIntent.getBroadcast(
+        context,
+        SCHEDULED_ALARM_REQUEST_CODE,
+        Intent(context, TaskReminderReceiver::class.java).setAction(ACTION_SCHEDULED_REMINDER),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
+
+    private fun showScheduledNotification(context: Context, due: List<ScheduledReminder>) {
+        val title = when {
+            due.all { it.kind == "deadline" } -> "任务已到截止时间"
+            due.all { it.kind == "plan" } -> "计划时段已开始"
+            else -> "任务与计划时间提醒"
+        }
+        val openTasks = Intent(context, MainActivity::class.java).apply {
+            action = ACTION_OPEN_TASKS
+            flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
+        }
+        val openTasksPendingIntent = PendingIntent.getActivity(
+            context, OPEN_TASKS_REQUEST_CODE, openTasks,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val notification = NotificationCompat.Builder(context, SCHEDULED_CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_focus_notification)
+            .setContentTitle(title)
+            .setContentText("有 ${due.size} 项任务或计划需要查看，打开 Pactick 查看详情。")
+            .setContentIntent(openTasksPendingIntent)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            .setAutoCancel(true)
+            .build()
+        notificationManager(context).notify(SCHEDULED_NOTIFICATION_ID, notification)
+    }
+
+    private fun createScheduledNotificationChannel(context: Context) {
+        notificationManager(context).createNotificationChannel(
+            NotificationChannel(SCHEDULED_CHANNEL_ID, "截止与计划提醒", NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = "任务到期或计划开始时提醒，不显示任务标题、备注或项目名"
+                setShowBadge(false)
+            },
+        )
+    }
 
     fun update(context: Context, enabled: Boolean, openTaskCount: Int, workspaceId: String): Boolean {
         val preferences = preferences(context)
@@ -47,12 +205,15 @@ object TaskReminderManager {
         createNotificationChannel(context)
         val manager = notificationManager(context)
         val channel = manager.getNotificationChannel(CHANNEL_ID)
-        return manager.areNotificationsEnabled() &&
-            (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-                PackageManager.PERMISSION_GRANTED) &&
+        return appNotificationsAllowed(context) &&
             channel != null && channel.importance != NotificationManager.IMPORTANCE_NONE
     }
+
+    private fun appNotificationsAllowed(context: Context): Boolean =
+        notificationManager(context).areNotificationsEnabled() &&
+            (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+                PackageManager.PERMISSION_GRANTED)
 
     fun refresh(context: Context): Boolean {
         val allowed = notificationsAllowed(context)

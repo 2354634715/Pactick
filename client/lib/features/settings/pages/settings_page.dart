@@ -15,6 +15,7 @@ import '../../../core/utilities/persistence_errors.dart';
 import '../../../data/update/client_update_service.dart';
 import 'local_data_settings.dart';
 import 'task_reminder_settings.dart';
+import '../../tasks/pages/private_vault_page.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -53,8 +54,8 @@ class SettingsPage extends StatelessWidget {
               const ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.info_outline),
-                title: Text('暂不可用'),
-                subtitle: Text('按截止时间或计划时间提醒、专注震动反馈、严格模式尚未实现。普通专注无需守护权限。'),
+                title: Text('专注规则'),
+                subtitle: Text('普通模式无需守护权限。严格模式禁止暂停和提前完成；紧急结束需等待 30 秒并填写原因。'),
               ),
               const SizedBox(height: AppSpacing.xl),
               const SectionHeader(title: '同步与设备'),
@@ -76,6 +77,13 @@ class SettingsPage extends StatelessWidget {
               _DevicesCard(controller: controller, sessionController: session),
               const SizedBox(height: AppSpacing.xl),
               const SectionHeader(title: '数据备份与工作区'),
+              ListTile(
+                leading: const Icon(Icons.lock_outline),
+                title: const Text('私密任务箱'),
+                subtitle: const Text('独立密码、本地加密任务与密文备份；不参与账户同步。'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => showPrivateVault(context),
+              ),
               const LocalDataCard(),
               const SizedBox(height: AppSpacing.xl),
               const SectionHeader(title: '关于'),
@@ -261,6 +269,31 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          secondary: const Icon(Icons.vibration),
+          title: const Text('专注震动反馈'),
+          subtitle: const Text(
+            '默认开启；开始、暂停、继续、结束、目标到时与白名单外应用提醒时震动。受系统震动设置和硬件支持影响。',
+          ),
+          value: controller.focusVibrationEnabled,
+          onChanged: _busy
+              ? null
+              : (value) => _run(() => controller.setFocusVibration(value)),
+        ),
+        if (controller.focusPlatformErrorMessage case final message?) ...[
+          Text(
+            message,
+            style: TextStyle(color: Theme.of(context).colorScheme.error),
+          ),
+          TextButton(
+            onPressed: _busy
+                ? null
+                : () => _run(controller.reconcileNativeFocus),
+            child: const Text('重试计时通知'),
+          ),
+        ],
+        const Divider(),
         _permission(
           icon: Icons.verified_user_outlined,
           title: '使用情况访问',

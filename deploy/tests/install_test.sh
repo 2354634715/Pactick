@@ -35,6 +35,7 @@ set +a
 [[ "$AUTH_JWT_SECRET" =~ ^[[:xdigit:]]{128}$ ]]
 [[ "$DATABASE_URL" == "postgres://pactick:$POSTGRES_PASSWORD@postgres:5432/pactick?sslmode=disable" ]]
 [[ "$AUTO_MIGRATE" == false && "$REGISTRATION_ENABLED" == false ]]
+[[ "$HTTP_BEHIND_PROXY" == true ]]
 ! grep -Fq "$POSTGRES_PASSWORD" "$test_root/output"
 ! grep -Fq "$AUTH_JWT_SECRET" "$test_root/output"
 grep -Fq 'PACTICK_HTTP_PORT=8093' "$test_root/complete/compose.env"

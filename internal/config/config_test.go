@@ -88,3 +88,36 @@ func TestLoadRejectsInvalidClientUpdateManifest(t *testing.T) {
 		t.Fatalf("Load() error = %v, want manifest validation error", err)
 	}
 }
+
+func TestProductionTransportConfiguration(t *testing.T) {
+	t.Setenv("APP_ENV", "production")
+	t.Setenv("DATABASE_URL", "postgres://localhost/test")
+	t.Setenv("AUTH_JWT_SECRET", strings.Repeat("s", 32))
+	t.Setenv("HTTP_ADDRESS", "0.0.0.0:8080")
+	t.Setenv("HTTP_BEHIND_PROXY", "false")
+	if _, err := Load(); err == nil {
+		t.Fatal("accepted public plaintext without explicit reverse proxy")
+	}
+	t.Setenv("HTTP_BEHIND_PROXY", "true")
+	if _, err := Load(); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HTTP_BEHIND_PROXY", "false")
+	t.Setenv("TLS_CERT_FILE", "server.crt")
+	if _, err := Load(); err == nil {
+		t.Fatal("accepted incomplete TLS configuration")
+	}
+	t.Setenv("TLS_KEY_FILE", "server.key")
+	if _, err := Load(); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("TRUSTED_PROXIES", "0.0.0.0")
+	if _, err := Load(); err == nil {
+		t.Fatal("accepted non-CIDR trusted proxy")
+	}
+	t.Setenv("TRUSTED_PROXIES", "127.0.0.1/32")
+	t.Setenv("ALLOWED_ORIGINS", "http://ui.example")
+	if _, err := Load(); err == nil {
+		t.Fatal("accepted plaintext production origin")
+	}
+}

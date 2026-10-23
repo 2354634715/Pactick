@@ -2,8 +2,8 @@ import 'dart:async';
 
 import 'package:uuid/uuid.dart';
 
-import '../../core/models/default_focus_policies.dart';
 import '../../core/models/domain_models.dart';
+import '../../core/models/default_focus_policies.dart';
 import '../../core/sync/sync_entity_contract.dart';
 import '../../core/sync/sync_models.dart';
 import '../local/local_database.dart';
@@ -223,6 +223,9 @@ class WorkspaceRepository {
       accountId: _accountId,
     );
   }
+
+  Future<void> deletePlanBlock(String id) =>
+      _store.deleteDocument('plan_block', id, accountId: _accountId);
 
   Future<void> deleteTask(String id) =>
       _store.deleteDocument('task', id, accountId: _accountId);
@@ -631,8 +634,10 @@ class WorkspaceRepository {
     String accountId,
     List<FocusPolicyItem> existingPolicies,
   ) async {
+    const policies = defaultFocusPolicies;
+
     final existingIds = existingPolicies.map((policy) => policy.id).toSet();
-    for (final policy in defaultFocusPolicies) {
+    for (final policy in policies) {
       if (existingIds.contains(policy.id)) continue;
       await _store.putDocument(
         'focus_policy',

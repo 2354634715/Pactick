@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
 )
@@ -68,9 +69,15 @@ func loadConfiguration(dir string) (configuration, error) {
 	if err != nil {
 		return configuration{}, err
 	}
-	cfg := configuration{Settings: Settings{Mode: "docker", HTTPAddress: "127.0.0.1:8080"}, JWTSecret: jwt, PostgresPassword: password, ProjectName: "pactick-" + project}
+	mode := "docker"
+	if !dockerSupported() {
+		mode = "native"
+	}
+	cfg := configuration{Settings: Settings{Mode: mode, HTTPAddress: "127.0.0.1:8080"}, JWTSecret: jwt, PostgresPassword: password, ProjectName: "pactick-" + project}
 	return cfg, saveConfiguration(dir, cfg)
 }
+
+func dockerSupported() bool { return runtime.GOARCH != "386" }
 
 func validateSettings(s Settings) error {
 	if strings.ContainsAny(s.DatabaseURL, "\r\n") {
@@ -78,6 +85,9 @@ func validateSettings(s Settings) error {
 	}
 	if s.Mode != "native" && s.Mode != "docker" {
 		return errors.New("请选择 Docker 或本机运行模式")
+	}
+	if s.Mode == "docker" && !dockerSupported() {
+		return errors.New("32 位管理器仅支持本机程序模式；Docker 需要受支持的 64 位主机")
 	}
 	host, port, err := net.SplitHostPort(s.HTTPAddress)
 	if err != nil || (host != "127.0.0.1" && host != "0.0.0.0") {
@@ -87,7 +97,7 @@ func validateSettings(s Settings) error {
 	if err != nil || n < 1 || n > 65535 {
 		return errors.New("端口须在 1–65535 之间")
 	}
-	if s.Mode == "native" {
+	if s.Mode == "native" && s.DatabaseURL != "" {
 		u, err := url.Parse(s.DatabaseURL)
 		if err != nil || (u.Scheme != "postgres" && u.Scheme != "postgresql") || u.Host == "" || u.Path == "" {
 			return errors.New("本机模式需要 postgres:// 或 postgresql:// 数据库连接地址")
@@ -127,7 +137,7 @@ func writePrivate(path string, b []byte) error {
 }
 
 func (c configuration) environment(databaseURL string) []string {
-	return []string{"APP_ENV=production", "DATABASE_URL=" + databaseURL, "AUTH_JWT_SECRET=" + c.JWTSecret, "HTTP_ADDRESS=" + c.HTTPAddress, "AUTO_MIGRATE=false", "REGISTRATION_ENABLED=false"}
+	return []string{"APP_ENV=production", "DATABASE_URL=" + databaseURL, "AUTH_JWT_SECRET=" + c.JWTSecret, "HTTP_ADDRESS=" + c.HTTPAddress, "AUTO_MIGRATE=false", "REGISTRATION_ENABLED=false", "ALLOWED_ORIGINS=", "TRUSTED_PROXIES=", "HTTP_BEHIND_PROXY=true", "TLS_CERT_FILE=", "TLS_KEY_FILE="}
 }
 
 func (c configuration) apiEnvironment() string {

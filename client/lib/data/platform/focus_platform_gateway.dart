@@ -52,6 +52,22 @@ class FocusPlatformGateway {
 
   static const _channel = MethodChannel('pactick/focus');
 
+  Future<void> configureFeedback({
+    required bool enabled,
+    required String notificationMode,
+  }) async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('configureFeedback', {
+      'enabled': enabled,
+      'notificationMode': notificationMode,
+    });
+  }
+
+  Future<void> feedback(String event) async {
+    if (!Platform.isAndroid) return;
+    await _channel.invokeMethod<void>('feedback', {'event': event});
+  }
+
   Future<FocusTimerState> getTimerState() async {
     if (!Platform.isAndroid) return const FocusTimerState();
     final result = await _channel.invokeMapMethod<String, Object?>(

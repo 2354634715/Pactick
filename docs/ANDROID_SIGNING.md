@@ -100,4 +100,4 @@ Get-FileHash -LiteralPath 'APK的实际完整路径' -Algorithm SHA256
 
 签名校验必须成功，APK 证书 SHA-256 指纹应与 `keytool` 输出一致。APK 哈希、证书指纹、对应源码版本和构建环境进入候选记录。通知、数据库、真机、备份恢复和多设备检查仍分别执行，不能仅凭构建成功公开分发。
 
-GitHub 候选构建需把这把密钥及相应密码配置到受保护的 `android-release` 环境，变量名见 [发行流程](RELEASING.md)。不要在 Issues、普通 PR 或聊天中上传密钥。GUI 修改完成后重新构建最终候选并验收。
+GitHub 候选构建需把这把密钥及相应密码配置到受保护的 `android-release` 环境，变量名见 [发行流程](RELEASING.md)。不要在 Issues、普通 PR 或聊天中上传密钥。Android 界面、排序或原生通知等影响 APK 的源码修改后，应重新构建最终签名候选、核验来源和制品，并执行相应真机检查；此前候选不代表修改后的版本。

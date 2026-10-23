@@ -2,6 +2,8 @@
 
 核对日期：2026-10-02。适用客户端源码：`0.2.0-preview.1+4`。本文记录当前工作目录的素材来源；每次发行仍须核对源码快照和最终签名 APK。来源记录不构成商标可用性结论。
 
+2026-10-11 用途补充：当前 `0.2.0-preview.1+5` 的任务温馨提醒复用 `ic_focus_notification.xml`，没有新增位图或绘制 XML。通知图标、应用内品牌图及自适应前景/单色图的现有哈希已重新核对，与下列记录一致。该补充不表示重新完成全部素材库存、最终 APK 许可审阅或真机显示验收；下文的逐项清单与符号数量保留 2026-10-02 范围。
+
 ## 核对范围
 
 2026-10-02 的逐项清单保存在维护工作目录 `output/image-sources/{IMAGE_SOURCES.md,image-sources.csv,image-sources.json}`。清单记录了 207 个 PNG 和 79 个 Android 绘制 XML，还单独列出 94 种源码显式引用的 Material 图标、33 种设计预览内联 SVG、截图辅助字体和用户附件。图像与 XML 总数包含历史源码快照及验证附件，不是当前客户端或 APK 的资源数量。
@@ -12,7 +14,7 @@
 | --- | --- | --- |
 | Flutter 页面中的操作和导航图标 | Flutter SDK 捆绑的 Google Material Icons，源码显式引用 94 种符号 | 最终 APK 中的字体许可、署名及许可入口 |
 | Pactick 主图标及应用内品牌标记 | 维护者确认由 ChatGPT 生成；本轮保留了内置 imagegen 的原图、提示词及派生记录 | 最终分发素材与记录是否一致 |
-| Android 原生专注通知和悬浮提醒的小图标 | Google 官方 Material Design Icons 的 `timer`，从固定提交的 SVG 转换为 Android vector | 最终源码与 APK 中的资源及 Apache-2.0 通知是否一致 |
+| Android 任务温馨提醒、专注通知和悬浮提醒的小图标 | Google 官方 Material Design Icons 的 `timer`，从固定提交的 SVG 转换为 Android vector | 最终源码与 APK 中的资源及 Apache-2.0 通知是否一致 |
 
 文件哈希用于核对字节变化，作者、使用条件和商标状态仍须依据相应来源及许可。上述逐项清单描述替换通知图标前的库存；其中旧 XML 的待确认标记属于历史记录，当前文件的来源以下节为准。
 
@@ -23,7 +25,7 @@ Android 启动图标和应用内品牌标记已替换为本次内置 imagegen �
 原始透明前景为 1254 × 1254 RGBA。原图、提示词与生成检查记录保存在项目的 `output/pactick-app-icon/` 中；这些工作文件不随客户端或公开源码快照打包。Android 与 Flutter 使用的资源由该图转换尺寸和画布得到。转换没有为图案加入新的绘制元素。生成记录说明来源，不构成独立的授权或商标审查结论。
 
 - `drawable/ic_launcher_foreground.png`：432 × 432 透明前景，对应 108 dp 自适应图标画布。
-- `mipmap-anydpi-v26/`：前景和固定 `#F4F5FF` 背景组成 Android 26+ 自适应图标；启动与圆形入口共用图案。
+- `mipmap-anydpi-v26/`：前景与 `launcher_background` 组成 Android 26+ 自适应图标；启动与圆形入口共用图案。原 2026-10-02 配色为 `#F4F5FF`，当前 `+5` 的背景配置为 `#F6F1E7`，前景图案字节不变。
 - `drawable/ic_launcher_monochrome.png`：从生成前景 alpha 大于 32 的轮廓转换为单色掩膜，由 `mipmap-anydpi-v33/` 提供给 Android 13+ 主题图标。
 - 五档 `mipmap-*/ic_launcher.png` 和 `ic_launcher_round.png`：48、72、96、144、192 像素的兼容资源。
 - `assets/branding/pactick_icon.png`：512 × 512 应用内品牌标记，已在 `pubspec.yaml` 声明并加入公开源码的精确允许列表。
@@ -52,7 +54,7 @@ Android 启动图标和应用内品牌标记已替换为本次内置 imagegen �
 
 `client/android/app/src/main/res/drawable/ic_focus_notification.xml` 使用 Google 官方 Material Design Icons 的 `timer`，上游固定提交为 `737e3324305806514d7909874fa1818ae1808232`。原始 [24px SVG](../third_party/metadata/material-timer/timer.svg)、[来源与哈希记录](../third_party/metadata/material-timer/SOURCE.json)及对应 [Apache-2.0 原文](../third_party/licenses/Asset-Material-timer-Apache-2.0.txt)随公开源码保留。
 
-2026-10-02 的转换将 SVG 的矩形和路径写为白色 Android vector，保留 24 × 24 viewport 和图形几何，并在 XML 注释中声明来源、许可及转换日期。图标继续用于前台计时通知、守护通知和悬浮提醒。当前工作目录文件 SHA-256 为 `c00963d2e0bd8b9e453a4833f3aa19412683a1ad758b87afc25be07892c75c92`；公开快照对文本换行规范化后，以其 `SOURCE_MANIFEST.json` 为准。
+2026-10-02 的转换将 SVG 的矩形和路径写为白色 Android vector，保留 24 × 24 viewport 和图形几何，并在 XML 注释中声明来源、许可及转换日期。图标用于前台计时通知、守护通知和悬浮提醒，2026-10-11 新增的任务温馨提醒也复用该资源。当前工作目录文件 SHA-256 为 `c00963d2e0bd8b9e453a4833f3aa19412683a1ad758b87afc25be07892c75c92`；公开快照对文本换行规范化后，以其 `SOURCE_MANIFEST.json` 为准。
 
 当前补充许可资产包含 Google timer 来源、转换说明和完整 Apache-2.0 文本，客户端许可页读取该资产。源码原文和通知已准备；最终 APK 是否包含一致内容由[第三方核查命令](THIRD_PARTY_AUDIT.md#每次签名构建后的检查)验证，实际通知显示仍需手机检查。
 

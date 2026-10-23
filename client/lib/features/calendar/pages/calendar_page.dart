@@ -41,7 +41,10 @@ class _CalendarPageState extends State<CalendarPage> {
         .whereType<String>()
         .toSet();
     final unscheduled = controller.tasks
-        .where((task) => !task.isCompleted && !plannedIds.contains(task.id))
+        .where(
+          (task) =>
+              task.status == TaskStatus.open && !plannedIds.contains(task.id),
+        )
         .toList(growable: false);
     final events = _eventsForDate(controller, _selectedDate);
     return FeaturePageScaffold(
@@ -375,7 +378,8 @@ class _CalendarPageState extends State<CalendarPage> {
               final tasks = controller.tasks
                   .where(
                     (task) =>
-                        !task.isCompleted && !plannedIds.contains(task.id),
+                        task.status == TaskStatus.open &&
+                        !plannedIds.contains(task.id),
                   )
                   .toList(growable: false);
               return _UnscheduledPanel(
@@ -462,12 +466,18 @@ class _CalendarPageState extends State<CalendarPage> {
             if (event.kind == _EventKind.plan) ...[
               const SizedBox(height: AppSpacing.md),
               Text(
-                '此处为只读详情，当前计划编辑器仅支持新增。',
+                '可修改计划开始时间、时长和关联任务；实际专注记录单独保留。',
                 style: TextStyle(color: scheme.onSurfaceVariant),
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
-            if (event.kind == _EventKind.deadline && event.task != null)
+            if (event.kind == _EventKind.plan)
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.edit_calendar_outlined),
+                label: const Text('编辑计划时段'),
+              )
+            else if (event.kind == _EventKind.deadline && event.task != null)
               FilledButton.icon(
                 onPressed: () => Navigator.pop(context, true),
                 icon: const Icon(Icons.edit_outlined),
@@ -482,7 +492,20 @@ class _CalendarPageState extends State<CalendarPage> {
         ),
       ),
     );
-    if (mounted && editTask == true && event.task != null) {
+    if (!mounted || editTask != true) return;
+    if (event.kind == _EventKind.plan) {
+      final blockId = event.id.substring('plan-'.length);
+      final block = controller.planBlocks
+          .where((item) => item.id == blockId)
+          .firstOrNull;
+      if (block == null) return;
+      final saved = await showPlanBlockEditor(
+        context,
+        controller: controller,
+        block: block,
+      );
+      if (mounted && saved != null) _selectDate(saved.startsAt);
+    } else if (event.task != null) {
       await showTaskEditor(context, controller: controller, task: event.task);
     }
   }
@@ -547,7 +570,11 @@ List<_CalendarEvent> _eventsForDate(AppController controller, DateTime date) {
         visibleStart: dueAt,
         visibleEnd: dueAt,
         originalTime: '截止 ${_dateTime(dueAt)}',
-        status: task.isCompleted ? '任务已完成' : '任务未完成',
+        status: switch (task.status) {
+          TaskStatus.open => '任务未完成',
+          TaskStatus.completed => '任务已完成',
+          TaskStatus.cancelled => '任务已取消',
+        },
         task: task,
       ),
     );
@@ -1192,7 +1219,7 @@ class _UnscheduledPanel extends StatelessWidget {
       ),
       const SizedBox(height: AppSpacing.xs),
       Text(
-        '未完成且没有任何已保存计划关联的任务。点击“安排时间”设置时段。',
+        '状态为待办且没有任何已保存计划关联的任务。点击“安排时间”设置时段。',
         style: Theme.of(context).textTheme.bodySmall
             ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),

@@ -12,6 +12,10 @@ Pactick 是一个**个人爱好项目**，提供 Android 本地优先的任务�
 
 构建后，在 Android 设备上安装 APK。首次使用进入本地工作区；需要同步时，在设置中填写自己的 HTTPS 服务端地址并登录。问题反馈方式见本文“许可与贡献”部分。
 
+任务列表默认按“紧急 → 高 → 中 → 低 → 无”优先级排列；“今日”保留排期和手动顺序。任务温馨提醒默认开启：系统允许通知且当前工作区有未完成任务时，通知栏显示一条静默提醒，只显示数量；全部完成后移除，可在设置中关闭。操作及限制见 [Android 入门指南](docs/GETTING_STARTED.md)。
+
+私密任务箱、Windows/Linux x86 服务器 GUI 和管理员一键创建账户已列入 [改进计划](PROJECT_PLAN.md#功能改进事项)，尚未实现。服务器 GUI 属于独立运维软件，不代表新增 Windows/Linux 任务客户端。
+
 ## 部署自己的服务端
 
 准备安装了 Docker Engine、Compose v2 和 systemd 的 Ubuntu/Debian 主机。将源码放在固定目录，例如 `/opt/pactick/app`，并在源码根目录运行以下命令。
@@ -65,15 +69,17 @@ go vet ./...
 
 ## 许可与贡献
 
-项目采用 Source Available（源码公开）许可。许可草案允许个人、研究、自部署及公司内部办公使用；免费分发和外部修改版网络服务需要提供对应源码；售卖软件、收费托管、广告变现及纳入对外商业产品受到限制。
+项目采用 Source Available（源码公开）许可。当前许可允许个人、研究、自部署及公司内部办公使用；免费分发和外部修改版网络服务需要提供对应源码；售卖软件、收费托管、广告变现及纳入对外商业产品受到限制。
 
-具体条款见 [完整许可草案](LICENSE)、[中文场景 FAQ](docs/LICENSE_FAQ.md) 和 [第三方声明](THIRD_PARTY_NOTICES.md)。第三方组件继续遵守各自的许可。正式公开前需确认许可正文与依赖审查结果。
+具体条款见 [完整许可](LICENSE)、[中文场景 FAQ](docs/LICENSE_FAQ.md) 和 [第三方声明](THIRD_PARTY_NOTICES.md)。第三方组件继续遵守各自的许可。项目所有者已确认当前许可正文，正式公开前仍须完成相应第三方与分发审查。
 
 提交问题或改进前，阅读 [贡献指南](CONTRIBUTING.md)。问题可通过 GitHub Issues 或邮箱报告，涉及敏感材料时按 [安全说明](SECURITY.md)私下联系。维护优先级依次为数据丢失与安全问题、核心功能缺陷、易用性、新功能；不承诺固定更新频率或响应时间。
 
 ## 项目文档
 
 - [当前路线图](PROJECT_PLAN.md)
+- [Android 入门指南](docs/GETTING_STARTED.md)
+- [Android 排序与任务提醒真机检查](docs/ANDROID_TASK_REMINDER_CHECKLIST.md)
 - [本地优先与可选同步架构](docs/PROJECT_ARCHITECTURE.md)
 - [实体字段契约](docs/ENTITY_SCHEMAS.md)
 - [服务端架构](docs/SERVER_ARCHITECTURE.md)

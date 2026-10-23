@@ -58,7 +58,7 @@ func (i *AccessTokenIssuer) Parse(raw string) (Principal, error) {
 			return nil, errors.New("unexpected signing method")
 		}
 		return i.secret, nil
-	}, jwt.WithIssuer(tokenIssuer), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
+	}, jwt.WithIssuer(tokenIssuer), jwt.WithExpirationRequired(), jwt.WithValidMethods([]string{jwt.SigningMethodHS256.Alg()}))
 	if err != nil || !token.Valid || claims.Subject == "" || claims.DeviceID == "" {
 		return Principal{}, ErrInvalidToken
 	}

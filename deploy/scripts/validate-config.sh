@@ -49,6 +49,7 @@ set +a
 
 [[ "${APP_ENV:-}" == "production" ]] || fail "APP_ENV must be production"
 [[ "${HTTP_ADDRESS:-}" == ":8080" ]] || fail "HTTP_ADDRESS must be :8080 inside the container"
+[[ "${HTTP_BEHIND_PROXY:-}" == "true" ]] || fail "set HTTP_BEHIND_PROXY=true in api.env for the private container upstream; keep the host API port on loopback"
 [[ "${AUTO_MIGRATE:-}" == "false" ]] || fail "AUTO_MIGRATE must be false for explicit production migrations"
 [[ "${REGISTRATION_ENABLED:-}" == "true" || "${REGISTRATION_ENABLED:-}" == "false" ]] || \
     fail "REGISTRATION_ENABLED must be true or false"

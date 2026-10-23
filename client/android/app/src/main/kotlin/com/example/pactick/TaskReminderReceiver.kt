@@ -10,7 +10,14 @@ class TaskReminderReceiver : BroadcastReceiver() {
         try {
             when (intent.action) {
                 Intent.ACTION_BOOT_COMPLETED,
-                Intent.ACTION_MY_PACKAGE_REPLACED -> TaskReminderManager.refresh(context)
+                Intent.ACTION_MY_PACKAGE_REPLACED,
+                Intent.ACTION_TIME_CHANGED,
+                Intent.ACTION_TIMEZONE_CHANGED -> {
+                    TaskReminderManager.refresh(context)
+                    TaskReminderManager.refreshSchedule(context)
+                }
+                TaskReminderManager.ACTION_SCHEDULED_REMINDER ->
+                    TaskReminderManager.refreshSchedule(context)
             }
         } catch (error: Exception) {
             // A system notification failure must not crash the application.

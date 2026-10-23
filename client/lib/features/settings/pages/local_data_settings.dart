@@ -154,7 +154,7 @@ class _LocalDataCardState extends State<LocalDataCard> {
           leading: const Icon(Icons.save_alt),
           title: const Text('导出本地备份'),
           subtitle: const Text(
-            '导出当前工作区、未同步修改及可携带设置（含本机白名单包名），无需联网。不含密码、令牌、服务器配置、专注控制所有权或旧同步游标。',
+            '导出当前工作区、未同步修改及可携带设置（含本机白名单包名），无需联网。私密任务箱仅导出密文；不含密码、令牌、服务器配置、专注控制所有权或旧同步游标。',
           ),
           onTap: _busy
               ? null
@@ -169,7 +169,7 @@ class _LocalDataCardState extends State<LocalDataCard> {
           leading: const Icon(Icons.file_open_outlined),
           title: const Text('从本地备份恢复'),
           subtitle: const Text(
-            '支持 v1 备份，最大 50 MiB / 100000 文档。校验后创建新的本地工作区，原工作区保留；停止当前同步，不自动上传。',
+            '支持 v1、v2 备份，最大 50 MiB / 100000 普通文档。校验后创建新的本地工作区，原工作区保留；停止当前同步，不自动上传。v2 的私密箱保持密文，解锁时再认证。',
           ),
           onTap: _busy || session.isBusy || app.activeFocusSession != null
               ? null

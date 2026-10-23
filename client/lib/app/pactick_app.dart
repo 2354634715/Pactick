@@ -75,8 +75,12 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state != AppLifecycleState.resumed) return;
+    if (state != AppLifecycleState.resumed) {
+      _controller?.privateVault.lock();
+      return;
+    }
     final app = AppScope.read(context);
+    unawaited(app.reconcileNativeFocus());
     unawaited(app.refreshGuardPermissions());
     unawaited(app.refreshGuardActivityStats());
     unawaited(app.refreshTaskReminders());

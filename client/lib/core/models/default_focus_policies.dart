@@ -23,6 +23,16 @@ const defaultFocusPolicies = [
     maxAppExits: 2,
     notificationMode: 'sound_and_vibrate',
   ),
+  FocusPolicyItem(
+    id: '53333333-3333-4333-8333-333333333333',
+    name: '严格专注',
+    mode: FocusPolicyMode.strict,
+    allowPause: false,
+    earlyExitMode: 'countdown',
+    earlyExitWaitSeconds: 30,
+    maxAppExits: 0,
+    notificationMode: 'vibrate',
+  ),
 ];
 
 bool isDuplicateDefaultFocusPolicyCreation(

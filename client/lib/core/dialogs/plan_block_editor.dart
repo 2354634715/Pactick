@@ -13,6 +13,7 @@ Future<PlanBlockItem?> showPlanBlockEditor(
   BuildContext context, {
   required AppController controller,
   TaskItem? task,
+  PlanBlockItem? block,
   DateTime? suggestedStart,
 }) {
   return showGuardedEditor<PlanBlockItem>(
@@ -20,6 +21,7 @@ Future<PlanBlockItem?> showPlanBlockEditor(
     builder: (dismissal) => PlanBlockEditor(
       controller: controller,
       initialTask: task,
+      block: block,
       suggestedStart: suggestedStart,
       dismissal: dismissal,
     ),
@@ -30,6 +32,7 @@ class PlanBlockEditor extends StatefulWidget {
   const PlanBlockEditor({
     required this.controller,
     this.initialTask,
+    this.block,
     this.suggestedStart,
     this.dismissal,
     super.key,
@@ -38,6 +41,7 @@ class PlanBlockEditor extends StatefulWidget {
   final AppController controller;
   final EditorDismissalController? dismissal;
   final TaskItem? initialTask;
+  final PlanBlockItem? block;
   final DateTime? suggestedStart;
 
   @override
@@ -50,27 +54,44 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
   final _guardKey = GlobalKey<EditorDraftGuardState>();
   late final String _initialDraft;
   final _titleController = TextEditingController();
+  final _durationController = TextEditingController();
+  late final String _accountId;
   String? _taskId;
   late DateTime _date;
   late TimeOfDay _time;
-  double _durationMinutes = 45;
   bool _saving = false;
   String? _saveError;
 
   @override
   void initState() {
     super.initState();
-    final start = widget.suggestedStart ?? DateTime.now();
-    _taskId = widget.initialTask?.id;
+    final block = widget.block;
+    _accountId = widget.controller.repository.selectedAccountId;
+    final start = block?.startsAt ?? widget.suggestedStart ?? DateTime.now();
+    _taskId =
+        block?.taskId ??
+        (widget.initialTask?.status == TaskStatus.open
+            ? widget.initialTask?.id
+            : null);
+    _titleController.text =
+        block?.title ??
+        widget.controller.taskById(block?.taskId)?.title ??
+        widget.initialTask?.title ??
+        '';
     _date = DateTime(start.year, start.month, start.day);
     _time = TimeOfDay.fromDateTime(start);
-    _durationMinutes =
-        ((widget.initialTask?.estimatedDurationSeconds ?? 45 * 60) / 60).clamp(
-          15,
-          240,
-        );
+    final seconds =
+        block?.durationSeconds ??
+        widget.initialTask?.estimatedDurationSeconds ??
+        45 * 60;
+    _durationController.text = seconds % 60 == 0
+        ? '${seconds ~/ 60}'
+        : '${seconds / 60}';
     _initialDraft = _draft;
     _titleController.addListener(() {
+      if (mounted) setState(() {});
+    });
+    _durationController.addListener(() {
       if (mounted) setState(() {});
     });
   }
@@ -81,13 +102,14 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
     _date.toIso8601String(),
     _time.hour,
     _time.minute,
-    _durationMinutes,
+    _durationController.text,
   ]);
 
   @override
   void dispose() {
     _titleFocus.dispose();
     _titleController.dispose();
+    _durationController.dispose();
     super.dispose();
   }
 
@@ -116,7 +138,7 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
                 children: [
                   Expanded(
                     child: Text(
-                      '添加日程',
+                      widget.block == null ? '添加日程' : '编辑计划时段',
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ),
@@ -154,8 +176,17 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (_taskId != null &&
+                              widget.controller.taskById(_taskId) == null)
+                            DropdownMenuItem<String?>(
+                              value: _taskId,
+                              child: const Text('原关联任务已不存在，请重新选择'),
+                            ),
                           for (final task in widget.controller.tasks.where(
-                            (task) => !task.isCompleted,
+                            (task) =>
+                                task.status == TaskStatus.open ||
+                                (widget.block != null &&
+                                    task.id == widget.block!.taskId),
                           ))
                             DropdownMenuItem<String?>(
                               value: task.id,
@@ -166,6 +197,11 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
                               ),
                             ),
                         ],
+                        validator: (value) =>
+                            value != null &&
+                                widget.controller.taskById(value) == null
+                            ? '请更换关联任务，或取消关联并填写标题'
+                            : null,
                         onChanged: _saving
                             ? null
                             : (value) => setState(() => _taskId = value),
@@ -201,37 +237,29 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
                         onTap: _saving ? null : _pickTime,
                       ),
                       const SizedBox(height: AppSpacing.md),
-                      Card(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .surfaceContainerHighest,
-                        child: Padding(
-                          padding: const EdgeInsets.all(AppSpacing.md),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Text(
-                                '计划时长 · ${formatDuration((_durationMinutes * 60).round(), compact: true)}',
-                                style: Theme.of(context).textTheme.titleMedium,
-                              ),
-                              Slider(
-                                value: _durationMinutes,
-                                min: 15,
-                                max: 240,
-                                divisions: 15,
-                                label: '${_durationMinutes.round()} 分钟',
-                                onChanged: _saving
-                                    ? null
-                                    : (value) {
-                                        setState(
-                                          () => _durationMinutes = value,
-                                        );
-                                      },
-                              ),
-                            ],
-                          ),
+                      TextFormField(
+                        key: const ValueKey('plan-duration-minutes'),
+                        controller: _durationController,
+                        enabled: !_saving,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
                         ),
+                        decoration: const InputDecoration(
+                          labelText: '计划时长（分钟）',
+                          prefixIcon: Icon(Icons.timelapse),
+                        ),
+                        validator: (value) {
+                          final minutes = double.tryParse(value ?? '');
+                          return minutes == null ||
+                                  !minutes.isFinite ||
+                                  minutes <= 0 ||
+                                  (minutes * 60).round() < 1
+                              ? '请输入大于零的时长（至少 1 秒）'
+                              : null;
+                        },
                       ),
+                      const SizedBox(height: AppSpacing.sm),
+                      const Text('修改计划不会改变已记录的实际专注时长。'),
                     ],
                   ),
                 ),
@@ -252,6 +280,13 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
               ),
             EditorActions(
               children: [
+                if (widget.block != null)
+                  TextButton.icon(
+                    key: const ValueKey('delete-plan-block'),
+                    onPressed: _saving ? null : _delete,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('删除时段'),
+                  ),
                 TextButton(
                   onPressed: _saving
                       ? null
@@ -262,7 +297,7 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
                 FilledButton.icon(
                   onPressed: _saving ? null : _save,
                   icon: const Icon(Icons.event_available_outlined),
-                  label: const Text('加入日历'),
+                  label: Text(widget.block == null ? '加入日历' : '保存修改'),
                 ),
               ],
             ),
@@ -276,8 +311,16 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
     final value = await showDatePicker(
       context: context,
       initialDate: _date,
-      firstDate: DateTime(DateTime.now().year - 1),
-      lastDate: DateTime(DateTime.now().year + 10),
+      firstDate: DateTime(
+        _date.year < DateTime.now().year - 1
+            ? _date.year
+            : DateTime.now().year - 1,
+      ),
+      lastDate: DateTime(
+        _date.year > DateTime.now().year + 10
+            ? _date.year + 1
+            : DateTime.now().year + 10,
+      ),
     );
     if (value != null && mounted) setState(() => _date = value);
   }
@@ -289,6 +332,7 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
 
   Future<void> _save() async {
     if (_saving) return;
+    if (!_checkWorkspace()) return;
     if (!_formKey.currentState!.validate()) {
       _titleFocus.requestFocus();
       return;
@@ -298,19 +342,39 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
       _saveError = null;
     });
     try {
-      final startsAt = DateTime(
-        _date.year,
-        _date.month,
-        _date.day,
-        _time.hour,
-        _time.minute,
+      final original = widget.block?.startsAt;
+      final startsAt =
+          original != null &&
+              original.year == _date.year &&
+              original.month == _date.month &&
+              original.day == _date.day &&
+              original.hour == _time.hour &&
+              original.minute == _time.minute
+          ? original
+          : DateTime(
+              _date.year,
+              _date.month,
+              _date.day,
+              _time.hour,
+              _time.minute,
+            );
+      final duration = Duration(
+        seconds: (double.parse(_durationController.text) * 60).round(),
       );
-      final block = await widget.controller.scheduleTask(
-        taskId: _taskId,
-        title: _titleController.text.trim(),
-        startsAt: startsAt,
-        duration: Duration(minutes: _durationMinutes.round()),
-      );
+      final block = widget.block == null
+          ? await widget.controller.scheduleTask(
+              taskId: _taskId,
+              title: _titleController.text.trim(),
+              startsAt: startsAt,
+              duration: duration,
+            )
+          : await widget.controller.updatePlanBlock(
+              block: widget.block!,
+              taskId: _taskId,
+              title: _titleController.text.trim(),
+              startsAt: startsAt,
+              duration: duration,
+            );
       if (!mounted) return;
       Navigator.pop(context, block);
     } catch (error) {
@@ -318,6 +382,57 @@ class _PlanBlockEditorState extends State<PlanBlockEditor> {
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  Future<void> _delete() async {
+    if (!_checkWorkspace()) return;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('删除计划时段？'),
+        content: const Text('仅删除这个计划时段，关联任务和已记录的实际专注保留。'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('取消'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('删除'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted || _saving) return;
+    if (!_checkWorkspace()) return;
+    setState(() {
+      _saving = true;
+      _saveError = null;
+    });
+    try {
+      await widget.controller.deletePlanBlock(widget.block!);
+      if (mounted) Navigator.pop(context);
+    } catch (error) {
+      if (mounted) setState(() => _saveError = persistenceErrorMessage(error));
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  bool _checkWorkspace() {
+    if (widget.controller.repository.selectedAccountId != _accountId) {
+      setState(() => _saveError = '工作区已切换，请关闭编辑器后重新打开。');
+      return false;
+    }
+    final block = widget.block;
+    if (block != null &&
+        !widget.controller.planBlocks.any(
+          (current) => current.id == block.id,
+        )) {
+      setState(() => _saveError = '这个计划时段已删除，请关闭编辑器查看当前日历。');
+      return false;
+    }
+    return true;
   }
 }
 

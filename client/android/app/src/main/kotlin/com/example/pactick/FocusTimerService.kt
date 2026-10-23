@@ -52,6 +52,7 @@ class FocusTimerService : Service() {
     @Volatile private var sessionId: String? = null
     @Volatile private var guardMonitorGeneration = 0L
     @Volatile private var lastForegroundPackage: String? = null
+    private var targetSignalled = false
 
     private var overlayView: View? = null
     private var dismissingOverlayView: View? = null
@@ -59,6 +60,10 @@ class FocusTimerService : Service() {
     private var lastNotifiedPackage: String? = null
 
     private val targetReached = Runnable {
+        if (targetSignalled || paused) return@Runnable
+        targetSignalled = true
+        preferences.edit().putBoolean(KEY_TARGET_SIGNALLED, true).apply()
+        FocusFeedback.play(this, "target")
         val notification = baseNotification()
             .setContentTitle("目标时间已到")
             .setContentText(title)
@@ -78,6 +83,7 @@ class FocusTimerService : Service() {
             ACTION_START -> {
                 val requestedSessionId = intent.getStringExtra(EXTRA_SESSION_ID)
                 val sameSession = requestedSessionId != null && requestedSessionId == sessionId
+                if (!sameSession) targetSignalled = false
                 handler.removeCallbacks(targetReached)
                 stopGuardMonitoring()
                 removeGuardReminderImmediately()
@@ -117,6 +123,9 @@ class FocusTimerService : Service() {
                     scheduleTargetReached()
                     startGuardMonitoring()
                 }
+                if (!sameSession && !paused && endsAtEpochMillis > System.currentTimeMillis()) {
+                    FocusFeedback.play(this, "started")
+                }
             }
 
             ACTION_PAUSE -> pauseTimer()
@@ -132,6 +141,7 @@ class FocusTimerService : Service() {
                 notificationManager.notify(NOTIFICATION_ID, buildRunningNotification())
                 scheduleTargetReached()
                 startGuardMonitoring()
+                FocusFeedback.play(this, "resumed")
             }
 
             ACTION_STOP -> stopTimer()
@@ -163,6 +173,7 @@ class FocusTimerService : Service() {
     }
 
     private fun pauseTimer() {
+        if (mode == "strict") return
         pausedRemainingMillis = (endsAtEpochMillis - System.currentTimeMillis()).coerceAtLeast(0)
         paused = true
         handler.removeCallbacks(targetReached)
@@ -170,12 +181,16 @@ class FocusTimerService : Service() {
         hideGuardReminder()
         persistState(active = true)
         notificationManager.notify(NOTIFICATION_ID, buildPausedNotification())
+        FocusFeedback.play(this, "paused")
     }
 
     private fun stopTimer() {
         handler.removeCallbacks(targetReached)
         stopGuardMonitoring()
         removeGuardReminderImmediately()
+        title = ""
+        taskTypeName = ""
+        allowedPackageNames = emptySet()
         persistState(active = false)
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -198,7 +213,11 @@ class FocusTimerService : Service() {
     private fun buildRunningNotification(): Notification {
         return baseNotification()
             .setContentTitle(title)
-            .setContentText(if (mode == "guard") "守护模式计时中" else "专注计时中")
+            .setContentText(when (mode) {
+                "guard" -> "守护模式计时中"
+                "strict" -> "严格模式计时中"
+                else -> "专注计时中"
+            })
             .setWhen(endsAtEpochMillis)
             .setUsesChronometer(true)
             .setChronometerCountDown(true)
@@ -228,7 +247,7 @@ class FocusTimerService : Service() {
 
     private fun startGuardMonitoring() {
         stopGuardMonitoring()
-        if (mode != "guard" || paused) return
+        if (mode !in setOf("guard", "strict") || paused) return
         val generation = guardMonitorGeneration
         monitorFuture = monitorExecutor.scheduleWithFixedDelay(
             { inspectForegroundApplication(generation) },
@@ -245,7 +264,7 @@ class FocusTimerService : Service() {
     }
 
     private fun inspectForegroundApplication(generation: Long) {
-        if (generation != guardMonitorGeneration || mode != "guard" || paused) return
+        if (generation != guardMonitorGeneration || mode !in setOf("guard", "strict") || paused) return
         if (!isDeviceInteractive()) {
             handler.post {
                 if (generation == guardMonitorGeneration) hideGuardReminder()
@@ -257,7 +276,7 @@ class FocusTimerService : Service() {
         // State transitions and counters run on the service's main thread.
         // Results from a cancelled monitor cannot modify a subsequent session.
         handler.post {
-            if (generation != guardMonitorGeneration || mode != "guard" || paused) return@post
+            if (generation != guardMonitorGeneration || mode !in setOf("guard", "strict") || paused) return@post
             val previousPackage = lastForegroundPackage
             lastForegroundPackage = foregroundPackage
             if (isAllowed(foregroundPackage)) {
@@ -270,6 +289,7 @@ class FocusTimerService : Service() {
                     interruptionCount += 1
                 }
                 persistGuardStats()
+                FocusFeedback.play(this, "guard")
             }
             showGuardReminder(foregroundPackage, appLabel)
         }
@@ -498,6 +518,7 @@ class FocusTimerService : Service() {
 
     private fun scheduleTargetReached() {
         handler.removeCallbacks(targetReached)
+        if (targetSignalled) return
         val delay = (endsAtEpochMillis - System.currentTimeMillis()).coerceAtLeast(0)
         handler.postDelayed(targetReached, delay)
     }
@@ -537,6 +558,7 @@ class FocusTimerService : Service() {
             .putInt(KEY_APP_EXIT_COUNT, appExitCount)
             .putInt(KEY_INTERRUPTION_COUNT, interruptionCount)
             .putString(KEY_SESSION_ID, sessionId)
+            .putBoolean(KEY_TARGET_SIGNALLED, targetSignalled)
             .apply()
     }
 
@@ -561,6 +583,7 @@ class FocusTimerService : Service() {
         appExitCount = preferences.getInt(KEY_APP_EXIT_COUNT, 0)
         interruptionCount = preferences.getInt(KEY_INTERRUPTION_COUNT, 0)
         sessionId = preferences.getString(KEY_SESSION_ID, null)
+        targetSignalled = preferences.getBoolean(KEY_TARGET_SIGNALLED, false)
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
@@ -614,6 +637,7 @@ class FocusTimerService : Service() {
         private const val KEY_APP_EXIT_COUNT = "app_exit_count"
         private const val KEY_INTERRUPTION_COUNT = "interruption_count"
         private const val KEY_SESSION_ID = "session_id"
+        private const val KEY_TARGET_SIGNALLED = "target_signalled"
         private const val MONITOR_INTERVAL_MILLIS = 750L
         private const val EVENT_LOOKBACK_MILLIS = 15_000L
 

@@ -6,7 +6,7 @@ import tempfile
 import unittest
 import zipfile
 
-from package_server import archive, bundle_source, write_metadata
+from package_server import archive, bundle_source, prebuilt_compose, write_metadata
 
 
 class ServerPackageTests(unittest.TestCase):
@@ -24,7 +24,10 @@ class ServerPackageTests(unittest.TestCase):
         for name in names:
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
-            data = f"fixture: {name}\n".encode()
+            data = (b"x-runtime: &runtime\n  image: example\n  build:\n    context: .\n"
+                    b"    dockerfile: ${PACTICK_DOCKERFILE:-Dockerfile}\n"
+                    b"services:\n  postgres:\n    image: postgres:17-alpine\n  api:\n    <<: *runtime\n"
+                    if name == "deploy/desktop/compose.yaml" else f"fixture: {name}\n".encode())
             path.write_bytes(data)
             entries.append({"path": name, "sha256": hashlib.sha256(data).hexdigest(), "size": len(data)})
         (root / "SOURCE_MANIFEST.json").write_text(json.dumps(entries), encoding="utf-8")
@@ -42,6 +45,19 @@ class ServerPackageTests(unittest.TestCase):
             self.assertTrue((bundle / "launch-manager.cmd").is_file())
             self.assertFalse((bundle / "client").exists())
             self.assertFalse((bundle / "deploy/desktop/api.env").exists())
+            packaged = (bundle / "deploy/desktop/compose.yaml").read_text()
+            self.assertIn("dockerfile: Dockerfile.prebuilt", packaged)
+            self.assertEqual(packaged.count("platform: linux/amd64"), 2)
+            self.assertIn("${PACTICK_DOCKERFILE:-Dockerfile}",
+                          (source / "deploy/desktop/compose.yaml").read_text())
+
+    def test_prebuilt_selection_handles_published_compose_and_rejects_unknown_dockerfile(self):
+        source = (b"x-runtime: &runtime\n  platform: linux/amd64\n  build:\n"
+                  b"    dockerfile: Dockerfile.prebuilt\nservices:\n  postgres:\n"
+                  b"    platform: linux/amd64\n    image: postgres:17-alpine\n  api:\n")
+        self.assertEqual(prebuilt_compose(source), source)
+        with self.assertRaisesRegex(ValueError, "Dockerfile"):
+            prebuilt_compose(source.replace(b"Dockerfile.prebuilt", b"unknown.Dockerfile"))
 
     def test_missing_manager_or_deployment_inputs_block_packaging(self):
         with tempfile.TemporaryDirectory() as temporary:

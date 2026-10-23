@@ -318,6 +318,20 @@
     },
     {
       "ecosystem": "Dart",
+      "name": "cryptography",
+      "version": "2.9.0",
+      "source": "https://pub.dev/packages/cryptography/versions/2.9.0",
+      "status": "local-license-text-collected",
+      "licenses": [
+        {
+          "file": "third_party/licenses/Dart-cryptography-2.9.0-0-LICENSE",
+          "sha256": "59899c6091b540582ed617e8eeaac4919dc985ccfc35459ee9752b699be5205b",
+          "classification": "Apache-2.0 (text match; review notices)"
+        }
+      ]
+    },
+    {
+      "ecosystem": "Dart",
       "name": "dynamic_color",
       "version": "1.9.0",
       "source": "https://pub.dev/packages/dynamic_color/versions/1.9.0",

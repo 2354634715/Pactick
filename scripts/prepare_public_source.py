@@ -27,11 +27,9 @@ ROOT_FILES = {
 DOCS = {
     "BUILDING.md", "RELEASING.md", "SELF_HOSTING.md", "LICENSE_FAQ.md", "GETTING_STARTED.md",
     "ENTITY_SCHEMAS.md", "THIRD_PARTY_AUDIT.md", "PROJECT_ARCHITECTURE.md", "SERVER_ARCHITECTURE.md", "LOCAL_BACKUPS.md",
-    "RELEASE_AND_PROMOTION_PLAN.md",
-    "FINAL_CHECK_20261004.md",
-    "ASSET_SOURCES.md", "ANDROID_SIGNING.md",
-    "SERVER_MANAGER.md", "RELEASE_VALIDATION_20261011.md",
-    "PHONE_TEST_CHECKLIST.md", "CLIENT_UPDATES.md",
+    "RELEASE_AND_PROMOTION_PLAN.md", "AGENT_RELEASE_SPEC.md",
+    "ASSET_SOURCES.md", "ANDROID_SIGNING.md", "ANDROID_TASK_REMINDER_CHECKLIST.md",
+    "FOCUS_MODES.md", "PRIVATE_TASK_VAULT.md", "SERVER_MANAGEMENT.md", "SERVER_MANAGER.md", "TASK_SCHEDULING_AND_REMINDERS.md",
 }
 CLIENT_FILES = {
     "README.md", "LICENSE", ".gitignore", ".metadata", "analysis_options.yaml",
@@ -106,9 +104,12 @@ def allowed(relative: Path) -> bool:
     if any(name.startswith(tree + "/") for tree in TREES):
         return True
     if name.startswith("deploy/"):
-        if name.startswith("deploy/desktop/"):
-            return relative.suffix in {".yaml", ".sh", ".cmd", ".ps1"}
-        return relative.name == "README.md" or relative.suffix in {".sh", ".example", ".template", ".service", ".timer"}
+        if name in {
+            "deploy/desktop/launch-manager.cmd", "deploy/desktop/launch-manager.sh",
+            "deploy/desktop/run-server.cmd", "deploy/desktop/run-server.ps1", "deploy/desktop/run-server.sh",
+        }:
+            return True
+        return relative.name == "README.md" or relative.suffix in {".sh", ".example", ".template", ".service", ".timer"} or name == "deploy/desktop/compose.yaml"
     return False
 
 

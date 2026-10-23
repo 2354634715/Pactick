@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"strings"
 	"time"
@@ -30,6 +31,21 @@ type Server struct {
 	allowedOrigins      []string
 	registrationEnabled bool
 	mux                 *http.ServeMux
+	trustedProxies      []*net.IPNet
+	limiter             *requestLimiter
+}
+
+type Option func(*Server)
+
+// Only explicit trusted proxy peers may supply X-Forwarded-For.
+func WithTrustedProxies(ranges []string) Option {
+	return func(s *Server) {
+		for _, value := range ranges {
+			if _, network, err := net.ParseCIDR(value); err == nil {
+				s.trustedProxies = append(s.trustedProxies, network)
+			}
+		}
+	}
 }
 
 func New(
@@ -43,6 +59,7 @@ func New(
 	clientUpdates *clientupdate.Catalog,
 	allowedOrigins []string,
 	registrationEnabled bool,
+	options ...Option,
 ) *Server {
 	server := &Server{
 		logger:              logger,
@@ -56,12 +73,19 @@ func New(
 		allowedOrigins:      allowedOrigins,
 		registrationEnabled: registrationEnabled,
 		mux:                 http.NewServeMux(),
+		limiter:             newRequestLimiter(),
+	}
+	for _, option := range options {
+		option(server)
 	}
 	server.routes()
 	return server
 }
 
 func (s *Server) Handler() http.Handler {
+	if s.limiter == nil {
+		s.limiter = newRequestLimiter()
+	}
 	return s.middleware(s.mux)
 }
 

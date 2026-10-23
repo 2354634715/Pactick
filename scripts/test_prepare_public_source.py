@@ -38,6 +38,38 @@ class SnapshotTests(unittest.TestCase):
         for value in (secret, ip, "-----BEGIN " + "PRIVATE KEY-----"):
             self.assertTrue(snapshot.findings(Path("README.md"), value.encode(), set()))
 
+    def test_current_feature_docs_and_desktop_compose_remain_exportable(self):
+        public_names = (
+            "docs/AGENT_RELEASE_SPEC.md", "docs/ANDROID_TASK_REMINDER_CHECKLIST.md",
+            "docs/FOCUS_MODES.md", "docs/PRIVATE_TASK_VAULT.md",
+            "docs/SERVER_MANAGEMENT.md", "docs/SERVER_MANAGER.md", "docs/TASK_SCHEDULING_AND_REMINDERS.md",
+            "deploy/desktop/compose.yaml",
+            "deploy/desktop/launch-manager.cmd", "deploy/desktop/launch-manager.sh",
+            "deploy/desktop/run-server.cmd", "deploy/desktop/run-server.ps1", "deploy/desktop/run-server.sh",
+        )
+        for name in public_names:
+            with self.subTest(name=name):
+                self.assertTrue(snapshot.allowed(Path(name)))
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "source"
+            root.mkdir()
+            self.fixture(root)
+            for name in public_names:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("reviewed feature source\n", encoding="utf-8")
+            private_name = "deploy/desktop/production.env"
+            private_path = root / private_name
+            private_path.write_text("local configuration\n", encoding="utf-8")
+            target = Path(directory) / "public"
+            result = subprocess.run([sys.executable, str(SCRIPT), "--source", str(root), str(target)],
+                                    capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            manifest = {entry["path"] for entry in json.loads((target / "SOURCE_MANIFEST.json").read_text())}
+            self.assertTrue(set(public_names).issubset(manifest))
+            self.assertNotIn(private_name, manifest)
+            self.assertEqual(private_path.read_text(), "local configuration\n")
+
     def test_snapshot_omits_private_files_inside_allowed_source_trees(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory) / "source"

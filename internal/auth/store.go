@@ -53,8 +53,27 @@ func (s *PostgresStore) CreateAccount(ctx context.Context, user User, passwordHa
 	return tx.Commit(ctx)
 }
 
+type accountExecutor interface {
+	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
+}
+
 func (s *PostgresStore) CreateLocalAccount(ctx context.Context, user User, passwordHash string) error {
 	return insertUser(ctx, s.pool, user, passwordHash)
+}
+
+func insertUser(ctx context.Context, executor accountExecutor, user User, passwordHash string) error {
+	_, err := executor.Exec(ctx, `
+		INSERT INTO users (id, email, password_hash, display_name, time_zone, locale, week_starts_on, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)`,
+		user.ID, user.Email, passwordHash, user.DisplayName, user.TimeZone, user.Locale, user.WeekStartsOn, user.CreatedAt,
+	)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return ErrEmailTaken
+		}
+		return fmt.Errorf("insert user: %w", err)
+	}
+	return nil
 }
 
 func (s *PostgresStore) FindUserByEmail(ctx context.Context, email string) (User, string, error) {
@@ -307,25 +326,6 @@ func (s *PostgresStore) DeleteAccount(ctx context.Context, userID string) error 
 	}
 	if command.RowsAffected() == 0 {
 		return ErrInvalidToken
-	}
-	return nil
-}
-
-type accountExecutor interface {
-	Exec(context.Context, string, ...any) (pgconn.CommandTag, error)
-}
-
-func insertUser(ctx context.Context, executor accountExecutor, user User, passwordHash string) error {
-	_, err := executor.Exec(ctx, `
-		INSERT INTO users (id, email, password_hash, display_name, time_zone, locale, week_starts_on, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $8)`,
-		user.ID, user.Email, passwordHash, user.DisplayName, user.TimeZone, user.Locale, user.WeekStartsOn, user.CreatedAt,
-	)
-	if err != nil {
-		if isUniqueViolation(err) {
-			return ErrEmailTaken
-		}
-		return fmt.Errorf("insert user: %w", err)
 	}
 	return nil
 }

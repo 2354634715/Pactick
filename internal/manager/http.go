@@ -45,6 +45,10 @@ func decode(w http.ResponseWriter, r *http.Request, v any) error {
 }
 
 func (m *Manager) Handler(host, token string) http.Handler {
+	csrf, err := randomHex(32)
+	if err != nil {
+		panic("cannot initialize management CSRF token")
+	}
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/status", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
@@ -56,7 +60,12 @@ func (m *Manager) Handler(host, token string) http.Handler {
 			return
 		}
 		defer m.mu.Unlock()
-		respond(w, 200, result{OK: true, Data: map[string]any{"busy": false, "mode": m.cfg.Mode, "http_address": m.cfg.HTTPAddress, "database_configured": m.cfg.DatabaseURL != "", "initialized": m.cfg.Initialized, "ready": m.ready(), "data_directory": m.data}})
+		backups, err := m.backupNames()
+		if err != nil {
+			respond(w, 500, result{Message: "读取备份目录失败"})
+			return
+		}
+		respond(w, 200, result{OK: true, Data: map[string]any{"busy": false, "mode": m.cfg.Mode, "http_address": m.cfg.HTTPAddress, "database_configured": m.cfg.DatabaseURL != "", "initialized": m.cfg.Initialized, "ready": m.ready(), "data_directory": m.data, "docker_supported": dockerSupported(), "backups": backups}})
 	})
 	mux.HandleFunc("/api/settings", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
@@ -104,6 +113,7 @@ func (m *Manager) Handler(host, token string) http.Handler {
 		}
 		var input struct {
 			Action string `json:"action"`
+			Backup string `json:"backup,omitempty"`
 		}
 		if err := decode(w, r, &input); err != nil {
 			respond(w, 400, result{Message: err.Error()})
@@ -111,7 +121,13 @@ func (m *Manager) Handler(host, token string) http.Handler {
 		}
 		ctx, cancel := context.WithTimeout(r.Context(), 5*time.Minute)
 		defer cancel()
-		out, err := m.Action(ctx, input.Action)
+		var out string
+		var err error
+		if input.Action == "restore-check" {
+			out, err = m.RestoreCheck(ctx, input.Backup)
+		} else {
+			out, err = m.Action(ctx, input.Action)
+		}
 		if err != nil {
 			respond(w, 400, result{Message: err.Error()})
 			return
@@ -182,6 +198,9 @@ func (m *Manager) Handler(host, token string) http.Handler {
 		contentType := "text/html; charset=utf-8"
 		switch r.URL.Path {
 		case "/":
+		case "/favicon.ico":
+			w.WriteHeader(http.StatusNoContent)
+			return
 		case "/app.js":
 			file = "ui/app.js"
 			contentType = "application/javascript; charset=utf-8"
@@ -216,6 +235,15 @@ func (m *Manager) Handler(host, token string) http.Handler {
 		if strings.HasPrefix(r.URL.Path, "/api/") && subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Pactick-Manager-Token")), []byte(token)) != 1 {
 			respond(w, 401, result{Message: "管理会话已失效，请从管理程序重新打开页面"})
 			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			if r.Method != http.MethodGet && (r.Header.Get("Origin") != "http://"+host || subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Pactick-CSRF-Token")), []byte(csrf)) != 1) {
+				respond(w, 403, result{Message: "管理操作需要同源页面和有效的 CSRF 令牌"})
+				return
+			}
+			if r.Method == http.MethodGet {
+				w.Header().Set("X-Pactick-CSRF-Token", csrf)
+			}
 		}
 		mux.ServeHTTP(w, r)
 	})

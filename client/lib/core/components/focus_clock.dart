@@ -9,6 +9,8 @@ bool canPauseActiveFocus(AppController controller) {
   final session = controller.activeFocusSession;
   return session != null &&
       controller.isLocalFocusSession(session) &&
+      controller.policyById(session.focusPolicyId)?.mode !=
+          FocusPolicyMode.strict &&
       controller.policyById(session.focusPolicyId)?.allowPause != false;
 }
 

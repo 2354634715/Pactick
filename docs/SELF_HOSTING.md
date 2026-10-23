@@ -2,6 +2,8 @@
 
 服务端提供可选的多设备同步，单机本地使用无需部署服务器。本文适用于使用 Ubuntu/Debian、systemd、Docker Engine 和 Compose v2 的单台主机。
 
+本文使用 Linux 命令行部署脚本。Windows/Linux 的本机浏览器管理器支持 API 启停、配置、日志、备份、隔离恢复检查与管理员建号，运行方式及 amd64/386 区分见[本机服务器管理界面](SERVER_MANAGEMENT.md)。Android 通知栏任务提醒由本机显示，不需要部署额外的提醒服务。
+
 ## 1. 主机准备
 
 先按 [Docker 官方 Ubuntu 安装说明](https://docs.docker.com/engine/install/ubuntu/) 安装 Docker Engine 与 Compose 插件。安装后执行以下命令，安装其他工具并启用 Docker：
@@ -63,44 +65,32 @@ bash deploy/scripts/install.sh install --prepare-only --local-only \
 
 API 只发布到 `127.0.0.1`；PostgreSQL 不发布主机端口。配置默认在 `/opt/pactick/config`，数据库由 Compose 命名卷持久化。运维脚本需由可信管理员管理，其 `.env` 配置文件使用兼容 shell 的格式。
 
-## 3. 创建账户
+## 3. 创建初始账户并关闭注册
 
-`admin create-account` 通过可信管理员的本机数据库连接创建账户，不依赖公开注册开关，也不生成访问令牌、会话或设备登记。数据库迁移必须已完成。服务器管理界面的“创建账户”执行相同操作；操作见 [服务器管理程序](SERVER_MANAGER.md)。
-
-本节 Linux Compose 部署可在应用目录执行以下命令，使用 API 容器中已经配置的数据库连接：
+默认公开注册关闭。使用当前版本镜像中的独立 `/admin` 命令可以直接创建普通用户，不需要临时开放公开注册，也不会登记设备或签发登录令牌。在项目根目录运行：
 
 ```bash
-sudo docker compose --env-file /opt/pactick/config/compose.env \
-  -f compose.production.yaml exec -T api /admin create-account <<'JSON'
-{"email":"user@example.com","display_name":"用户","time_zone":"Asia/Shanghai"}
-JSON
+printf '%s\n' '{"email":"member@example.com","time_zone":"Asia/Shanghai"}' | \
+  sudo bash deploy/scripts/install.sh create-account
 ```
 
-使用自定义配置目录时，将 `--env-file` 改为该目录下的 `compose.env`，并按安装时的路径设置 `PACTICK_CONFIG_DIR`。该命令要求 API 容器正在运行，镜像中包含 `admin`。不使用 Docker 的管理员可给 `bin/admin`（Windows 为 `bin/admin.exe`）设置 `DATABASE_URL`，再通过标准输入提交同样的 UTF-8 JSON。不得将密码放入命令行参数。
+命令从标准输入读取一个 UTF-8 JSON 对象，最多 32 KiB。密码留空时生成随机密码并在本次成功输出中返回；请保存到密码管理器，勿把结果写入共享日志。相同邮箱再次创建会失败，不会修改既有密码。可选字段、默认值及独立程序用法见[创建账户](SERVER_MANAGEMENT.md#创建账户)。Docker API 容器必须已启动并包含 `/admin`；旧镜像缺少该命令时应先升级。
 
-`email` 为必填字段。`password` 省略或为空时生成随机密码，并且仅在账户创建成功后的 JSON 中返回一次；显示名称默认取邮箱的 `@` 前部分，时区默认 `UTC`，语言默认 `zh-CN`，每周默认从周一开始。自定密码长度要求为 10–1024 个 UTF-8 字节。命令拒绝未知字段、超过 32 KiB 的输入、无效邮箱或时区及重复邮箱；连接失败、迁移不一致或创建失败时输出不含数据库凭据的错误 JSON，并以非零状态退出。
-
-生成密码显示在终端或管理页面中，应直接保存到密码管理器，不得附在公开问题、截图或发行附件中。账户创建后，客户端在“同步设置”填写 `https://api.example.com`，使用邮箱和密码登录。客户端连接新服务器默认使用独立工作区，上传已有本地数据需单独选择。
-
-需要允许用户自行注册时，可临时开启原客户端注册入口：
-
-```bash
-sudo bash deploy/scripts/install.sh registration open
-```
-
-在客户端使用注册入口创建账户，或调用 `POST /v1/auth/register`，请求格式见 [OpenAPI](../api/openapi.yaml)。完成后关闭注册：
+只有需要开放普通用户自助注册时，才执行 `registration open`；入口是 `POST /v1/auth/register`，请求格式见 [OpenAPI](../api/openapi.yaml)。使用完毕后关闭：
 
 ```bash
 sudo bash deploy/scripts/install.sh registration close
 ```
 
-关闭注册不会阻止已有用户登录或管理员通过 `admin` 建号。不得公开 `.env`、数据库备份或注册接口返回的访问令牌。
+关闭注册不会阻止管理员通过本机命令建号或已有用户登录。在客户端“同步设置”填写 `https://api.example.com` 并登录。客户端连接新服务器默认使用独立工作区，上传已有本地数据需单独选择。不得公开 `.env`、数据库备份或访问令牌。
 
 所有后续命令都支持 `--config-dir /自定义/目录`；使用自定义目录时每次保持一致。
 
 ## 4. 升级
 
 先在管理端检查新版本并保留上一版源码和镜像，然后更新同一服务目录并执行：
+
+从不包含 `HTTP_BEHIND_PROXY` 的旧配置升级时，先在受保护的 `api.env` 中设置 `HTTP_BEHIND_PROXY=true`。此配置表示容器明文 HTTP 只作为受隔离反向代理的上游；主机发布地址仍须为 `127.0.0.1`。新配置由安装脚本自动生成该项，旧配置中的密钥和网络设置不会被自动改写。
 
 ```bash
 sudo bash deploy/scripts/install.sh upgrade
@@ -153,3 +143,19 @@ sudo journalctl -u pactick-backup.service --since yesterday
 ```
 
 部署后还应从另一台设备测试 HTTPS 登录、双设备同步和 WebSocket。定期检查备份时效、磁盘剩余空间和证书续期。本机健康检查仅验证本机服务状态；公网访问、双设备同步和完整灾难恢复须分别验收。
+
+## 7. 通信安全配置
+
+客户端默认只接受 HTTPS origin，证书链和主机名必须通过系统信任校验。当前 Flutter 客户端通过 REST 增量同步；服务端另提供 `/v1/ws` 游标提示接口，接入该接口的客户端须使用同一服务器的 WSS。调试构建只有显式启用 `ALLOW_INSECURE_LOCAL_SERVER` 时才接受 localhost、127.0.0.1、::1 和 Android 模拟器 10.0.2.2 的 HTTP。此例外不允许明文公网域名，也不适用于正式构建。
+
+Go API 的默认监听地址为 `127.0.0.1:8080`。生产环境使用非回环监听时，必须同时配置 `TLS_CERT_FILE` 与 `TLS_KEY_FILE`，或显式设置 `HTTP_BEHIND_PROXY=true`。直接 TLS 最低版本为 TLS 1.2；证书文件不可读或私钥不匹配时启动失败，不回退到 HTTP。`HTTP_BEHIND_PROXY` 不负责验证代理或加密链路，管理员仍须把上游 HTTP 端口限制为回环或专用网络。已有 Docker 部署继续在容器内监听 `:8080`，由 Compose 仅发布到主机回环接口，再由 Nginx 提供公网 TLS。
+
+反向代理配置提供 TLS 1.2/1.3、请求体 2 MiB 限制、登录与刷新限流，以及 WebSocket Upgrade 转发。Nginx 按源 IP 限制 30 个并发连接；普通 API 为每秒 20 次、突发 60 次，WebSocket 握手突发 10 次，认证接口另用较低限额。HTTP 跳转使用配置中的固定域名。API 自身限制 JSON 请求体为 2 MiB、请求头 16 KiB，读取请求头超时 5 秒、读取请求 15 秒、写响应 30 秒、空闲连接 90 秒。WebSocket 使用独立读写截止时间和每 30 秒的 ping，并定期重新验证令牌及设备；过期、撤销或验证失败时关闭连接，客户端随后需重新认证或连接。[Go HTTP Server 文档](https://pkg.go.dev/net/http#Server)和[Nginx WebSocket 代理文档](https://nginx.org/en/docs/http/websocket.html)说明了相关超时和升级行为。
+
+API 自身按来源地址执行令牌桶限流：认证接口每分钟补充 20 次、允许瞬时 10 次；WebSocket 握手每分钟 30 次、瞬时 10 次；其他 API 每分钟 600 次、瞬时 120 次。密码认证最多同时执行 4 次。超限返回 HTTP 429 和 `Retry-After: 3`；健康及就绪探针不计入此限制。此状态保存在单个进程内，不能替代多实例或公网入口的限流。Nginx 的对应限制仍独立生效。
+
+`TRUSTED_PROXIES` 默认空，API 使用 TCP 对端地址计数，不信任任意客户端提供的 `X-Forwarded-For`。位于 Nginx 或其他代理后面时，可将实际代理源地址的 CIDR 列入该项，例如本机直连 Nginx 使用 `127.0.0.1/32,::1/128`；Docker 转发的对端通常是桥接网络地址，须从实际网络配置核对并限制到相应专用代理范围。不要使用 `0.0.0.0/0` 或 `::/0`。未配置时多个用户可能共享上游限额；配置后按从右向左第一个非可信代理地址计数。
+
+`ALLOWED_ORIGINS` 默认空。Android 原生请求通常不发送 Origin，因此无需填写。浏览器请求或 WebSocket 携带 Origin 时，必须与逗号分隔列表中的某个完整 HTTPS origin 完全一致，不带路径或尾斜线；未允许的来源返回 403。开发和测试环境可以使用 HTTP origin。CORS 不替代访问令牌认证。
+
+数据库若通过另一台主机的网络连接，应配置 PostgreSQL TLS 及证书校验；示例中的 `sslmode=disable` 只用于同一部署内不发布主机端口的容器网络。JWT 密钥、数据库密码、管理会话网址和备份都必须保存在管理员控制的私有位置。完成这些配置及本地自动化检查，不表示已完成公网 TLS、证书续期、外部网络访问或真实设备验收。

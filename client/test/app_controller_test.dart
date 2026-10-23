@@ -29,7 +29,7 @@ void main() {
     expect(controller.focusSessions, isEmpty);
     expect(
       controller.focusPolicies.map((policy) => policy.name),
-      unorderedEquals(const ['灵活专注', '深度守护']),
+      unorderedEquals(const ['灵活专注', '深度守护', '严格专注']),
     );
     expect(controller.pendingOperations, 0);
     expect(controller.themePreference, ThemePreference.system);

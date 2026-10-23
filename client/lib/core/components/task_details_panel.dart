@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../app/theme/app_tokens.dart';
 import '../dialogs/task_editor.dart';
+import '../dialogs/plan_block_editor.dart';
 import '../models/domain_models.dart';
 import '../state/app_controller.dart';
 import '../state_views/state_pane.dart';
@@ -74,10 +75,11 @@ class TaskDetailsPanel extends StatelessWidget {
       children: [
         Text(task.title, style: text.titleLarge),
         const SizedBox(height: AppSpacing.sm),
-        Text(
-          task.isCompleted ? '已完成' : '待办',
-          style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant),
-        ),
+        Text(switch (task.status) {
+          TaskStatus.open => '待办',
+          TaskStatus.completed => '已完成',
+          TaskStatus.cancelled => '已取消',
+        }, style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: AppSpacing.lg),
         Text('备注', style: text.titleMedium),
         const SizedBox(height: AppSpacing.xs),
@@ -111,6 +113,47 @@ class TaskDetailsPanel extends StatelessWidget {
         _DetailField(
           label: '标签',
           value: task.tags.isEmpty ? '没有标签' : task.tags.join('、'),
+        ),
+        Text('计划时段', style: text.titleMedium),
+        const SizedBox(height: AppSpacing.xs),
+        if (!controller.planBlocks.any((block) => block.taskId == task.id))
+          const Text('尚未安排时间'),
+        for (final block in controller.planBlocks.where(
+          (block) => block.taskId == task.id,
+        ))
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            leading: const Icon(Icons.event_outlined),
+            title: Text(
+              '${formatFullDate(block.startsAt)} ${formatClock(block.startsAt)}',
+            ),
+            subtitle: Text(
+              '${formatDuration(block.durationSeconds, compact: true)} · ${switch (block.status) {
+                PlanBlockStatus.scheduled => '已安排',
+                PlanBlockStatus.completed => '已完成',
+                PlanBlockStatus.cancelled => '已取消',
+              }}',
+            ),
+            trailing: const Icon(Icons.edit_outlined),
+            onTap: () => showPlanBlockEditor(
+              context,
+              controller: controller,
+              block: block,
+            ),
+          ),
+        Align(
+          alignment: AlignmentDirectional.centerStart,
+          child: TextButton.icon(
+            onPressed: task.status == TaskStatus.open
+                ? () => showPlanBlockEditor(
+                    context,
+                    controller: controller,
+                    task: task,
+                  )
+                : null,
+            icon: const Icon(Icons.add),
+            label: const Text('安排时间'),
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         Align(
@@ -175,6 +218,7 @@ class _TaskDetailsRouteState extends State<_TaskDetailsRoute> {
   TaskItem? _task;
   ProjectItem? _project;
   int _actualSeconds = 0;
+  Object? _plans;
 
   @override
   void initState() {
@@ -189,12 +233,13 @@ class _TaskDetailsRouteState extends State<_TaskDetailsRoute> {
         : null;
     _project = widget.controller.projectById(_task?.projectId);
     _actualSeconds = widget.controller.actualSecondsForTask(widget.taskId);
+    _plans = widget.controller.planBlocks;
   }
 
   void _refresh() {
-    final previous = (_task, _project, _actualSeconds);
+    final previous = (_task, _project, _actualSeconds, _plans);
     _read();
-    if (previous != (_task, _project, _actualSeconds) && mounted) {
+    if (previous != (_task, _project, _actualSeconds, _plans) && mounted) {
       setState(() {});
     }
   }

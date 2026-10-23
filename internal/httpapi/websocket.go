@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
@@ -71,6 +72,21 @@ func (s *Server) websocket(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 		case <-ticker.C:
+			// A connected socket must not outlive its access token or revoked device.
+			header := r.Header.Get("Authorization")
+			_, raw, _ := strings.Cut(header, " ")
+			currentPrincipal, err := s.auth.ParseAccessToken(strings.TrimSpace(raw))
+			if err != nil {
+				_ = connection.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "access token expired"), time.Now().Add(time.Second))
+				return
+			}
+			validation, stop := context.WithTimeout(ctx, 5*time.Second)
+			active, err := s.auth.ValidatePrincipal(validation, currentPrincipal)
+			stop()
+			if err != nil || !active {
+				_ = connection.WriteControl(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.ClosePolicyViolation, "session is no longer active"), time.Now().Add(time.Second))
+				return
+			}
 			_ = connection.SetWriteDeadline(time.Now().Add(10 * time.Second))
 			if err := connection.WriteMessage(websocket.PingMessage, []byte(strconv.FormatInt(time.Now().Unix(), 10))); err != nil {
 				return

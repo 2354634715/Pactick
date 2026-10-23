@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tarfile
@@ -40,6 +41,27 @@ def build_flags(target_os: str) -> list[str]:
     return flags
 
 
+def prebuilt_compose(data: bytes) -> bytes:
+    """Derive package runtime config without changing the source snapshot."""
+    text = data.decode("utf-8").replace("\r\n", "\n")
+    dockerfile = re.compile(r"(?m)^    dockerfile: (?:\$\{PACTICK_DOCKERFILE:-Dockerfile\}|Dockerfile\.prebuilt)$")
+    text, count = dockerfile.subn("    dockerfile: Dockerfile.prebuilt", text)
+    if count != 1:
+        raise ValueError("Desktop Compose has no supported runtime Dockerfile selection")
+    for start, end in (("x-runtime: &runtime\n", "services:\n"), ("  postgres:\n", "  api:\n")):
+        left, right = text.index(start) + len(start), text.index(end)
+        block = text[left:right]
+        indentation = "  " if start.startswith("x-runtime") else "    "
+        pattern = re.compile(r"(?m)^" + indentation + r"platform: [^\n]+\n")
+        block, count = pattern.subn(indentation + "platform: linux/amd64\n", block)
+        if count > 1:
+            raise ValueError("Desktop Compose has duplicate runtime platform settings")
+        if count == 0:
+            block = indentation + "platform: linux/amd64\n" + block
+        text = text[:left] + block + text[right:]
+    return text.encode("utf-8")
+
+
 def bundle_source(source: Path, destination: Path) -> None:
     """Copy server inputs only; every input must already be in the verified manifest."""
     entries = json.loads((source / "SOURCE_MANIFEST.json").read_text(encoding="utf-8"))
@@ -67,6 +89,10 @@ def bundle_source(source: Path, destination: Path) -> None:
     for name in LAUNCHERS:
         shutil.copyfile(source / "deploy/desktop" / name, destination / name)
         (destination / name).chmod(0o755 if name.endswith(".sh") else 0o644)
+    # Source builds retain their normal Dockerfile; release bundles use the
+    # supplied Linux amd64 programs and do not compile Go during deployment.
+    compose = destination / "deploy/desktop/compose.yaml"
+    compose.write_bytes(prebuilt_compose(compose.read_bytes()))
 
 
 def build(go: str, source: Path, destination: Path, target_os: str, target_arch: str,
@@ -97,6 +123,8 @@ def write_metadata(bundle: Path, release_metadata: dict, target_os: str, target_
         "source_manifest_sha256": release_metadata["source_manifest_sha256"],
         "native_platform": f"{target_os}/{target_arch}",
         "docker_platform": "linux/amd64",
+        "packaged_compose": {"dockerfile": "Dockerfile.prebuilt", "platform": "linux/amd64",
+                             "derived_from_source": True},
         "go_version": go_version,
         "build_flags": build_flags(target_os),
         "build_environment": {"CGO_ENABLED": "0", "GOOS": target_os, "GOARCH": target_arch},

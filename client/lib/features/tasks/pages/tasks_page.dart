@@ -12,10 +12,11 @@ import '../../../core/state/app_controller.dart';
 import '../../../core/state/app_scope.dart';
 import '../../../core/state_views/state_pane.dart';
 import '../../../core/utilities/persistence_errors.dart';
+import 'private_vault_page.dart';
 
 enum _TaskSection { inbox, projects, tags, completed }
 
-enum _TaskAction { edit, focus }
+enum _TaskAction { edit, focus, makePrivate }
 
 class TasksPage extends StatefulWidget {
   const TasksPage({
@@ -57,6 +58,11 @@ class _TasksPageState extends State<TasksPage> {
       subtitle: _subtitle(controller, tasks.length),
       scrollable: false,
       actions: [
+        IconButton(
+          tooltip: '私密任务箱',
+          onPressed: () => showPrivateVault(context),
+          icon: const Icon(Icons.lock_outline),
+        ),
         SyncStatusButton(
           phase: controller.syncPhase,
           pendingCount: controller.pendingOperations,
@@ -342,10 +348,16 @@ class _TasksPageState extends State<TasksPage> {
             }
           case _TaskAction.focus:
             _startFocus(controller, task.id);
+          case _TaskAction.makePrivate:
+            showPrivateVault(context, importTaskId: task.id);
         }
       },
       itemBuilder: (context) => [
         const PopupMenuItem(value: _TaskAction.edit, child: Text('编辑任务')),
+        const PopupMenuItem(
+          value: _TaskAction.makePrivate,
+          child: Text('转入私密任务箱'),
+        ),
         if (!task.isCompleted)
           PopupMenuItem(
             value: _TaskAction.focus,

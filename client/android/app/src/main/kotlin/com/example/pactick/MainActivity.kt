@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.os.Process
 import android.provider.Settings
 import android.util.Log
+import android.view.WindowManager
 import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import io.flutter.embedding.android.FlutterActivity
@@ -59,6 +60,18 @@ class MainActivity : FlutterActivity() {
             flutterEngine.dartExecutor.binaryMessenger,
             TASK_REMINDERS_CHANNEL,
         ).setMethodCallHandler(::handleTaskReminderCall)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "pactick/private_vault",
+        ).setMethodCallHandler { call, result ->
+            if (call.method == "setSecure") {
+                val enabled = call.argument<Boolean>("enabled")
+                    ?: call.argument<Boolean>("secure") ?: true
+                if (enabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+                result.success(null)
+            } else result.notImplemented()
+        }
     }
 
     private fun handleTaskReminderCall(call: MethodCall, result: MethodChannel.Result) {
@@ -91,10 +104,50 @@ class MainActivity : FlutterActivity() {
                 }
             }
 
+            "clearWorkspace" -> {
+                try {
+                    TaskReminderManager.update(this, false, 0, "")
+                    TaskReminderManager.updateSchedule(this, false, "", emptyList())
+                    result.success(null)
+                } catch (error: Exception) {
+                    taskReminderUpdateFailed(result, error)
+                }
+            }
+
+            "updateSchedule" -> {
+                try {
+                    val enabled = call.argument<Boolean>("enabled") ?: true
+                    val workspaceId = call.argument<String>("workspaceId") ?: ""
+                    val reminders = call.argument<List<Map<String, Any?>>>("reminders") ?: emptyList()
+                    val allowed = TaskReminderManager.updateSchedule(this, enabled, workspaceId, reminders)
+                    val wantsPermission = call.argument<Boolean>("requestPermission") ?: false
+                    val automatic = call.argument<Boolean>("automatic") ?: true
+                    val mayRequest = !automatic ||
+                        !TaskReminderManager.hasAutomaticallyRequestedPermission(this)
+                    if (wantsPermission && mayRequest &&
+                        (!automatic || (enabled && workspaceId.isNotEmpty() && reminders.isNotEmpty()))
+                    ) {
+                        requestNotificationPermission {
+                            try {
+                                result.success(TaskReminderManager.refreshSchedule(this))
+                            } catch (error: Exception) {
+                                taskReminderUpdateFailed(result, error)
+                            }
+                        }
+                    } else {
+                        result.success(allowed)
+                    }
+                } catch (error: Exception) {
+                    taskReminderUpdateFailed(result, error)
+                }
+            }
+
             "openNotificationSettings" -> {
                 val channelSettings = Intent(Settings.ACTION_CHANNEL_NOTIFICATION_SETTINGS).apply {
                     putExtra(Settings.EXTRA_APP_PACKAGE, packageName)
-                    putExtra(Settings.EXTRA_CHANNEL_ID, TaskReminderManager.CHANNEL_ID)
+                    putExtra(Settings.EXTRA_CHANNEL_ID,
+                        if (call.argument<Boolean>("scheduled") == true)
+                            TaskReminderManager.SCHEDULED_CHANNEL_ID else TaskReminderManager.CHANNEL_ID)
                 }
                 try {
                     startActivity(channelSettings)
@@ -241,6 +294,18 @@ class MainActivity : FlutterActivity() {
 
     private fun handleFocusCall(call: MethodCall, result: MethodChannel.Result) {
         when (call.method) {
+            "configureFeedback" -> {
+                FocusFeedback.configure(
+                    this,
+                    call.argument<Boolean>("enabled") ?: true,
+                    call.argument<String>("notificationMode") ?: "vibrate",
+                )
+                result.success(null)
+            }
+            "feedback" -> {
+                FocusFeedback.play(this, call.argument<String>("event").orEmpty())
+                result.success(null)
+            }
             "startTimer" -> {
                 val title = call.argument<String>("title") ?: getString(R.string.app_name)
                 val endsAt = call.argument<Number>("endsAtEpochMillis")?.toLong()

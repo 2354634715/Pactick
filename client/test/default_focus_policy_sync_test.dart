@@ -12,7 +12,8 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 const _normalId = '51111111-1111-4111-8111-111111111111';
 const _guardId = '52222222-2222-4222-8222-222222222222';
-const _unknownPolicyId = '53333333-3333-4333-8333-333333333333';
+const _strictId = '53333333-3333-4333-8333-333333333333';
+const _unknownPolicyId = '54444444-4444-4444-8444-444444444444';
 const _taskId = '61111111-aaaa-4111-8111-111111111111';
 const _deviceA = '71111111-aaaa-4111-8111-111111111111';
 const _deviceB = '72222222-aaaa-4222-8222-222222222222';
@@ -74,11 +75,12 @@ void main() {
           _expectSettled(await a.repository.syncNow(server));
           final secondLogin = await b.repository.syncNow(server);
           _expectSettled(secondLogin);
-          expect(server.duplicateCreates, 2);
-          expect(server.livePolicies, hasLength(2));
+          expect(server.duplicateCreates, 3);
+          expect(server.livePolicies, hasLength(3));
           expect(secondLogin.workspace.focusPolicies.map((p) => p.id).toSet(), {
             _normalId,
             _guardId,
+            _strictId,
           });
 
           await b.repository.saveTask(_task('created on the second device'));
@@ -116,9 +118,9 @@ void main() {
           for (final result in results) {
             _expectSettled(result);
           }
-          expect(server.duplicateCreates, 2);
-          expect(server.history, hasLength(2));
-          expect(server.livePolicies, hasLength(2));
+          expect(server.duplicateCreates, 3);
+          expect(server.history, hasLength(3));
+          expect(server.livePolicies, hasLength(3));
         },
       );
 
@@ -331,7 +333,7 @@ void main() {
             untouched[accountId],
           );
           expect(await store.pendingOperationCount(accountId: accountId), 2);
-          expect(await store.readSyncCursor(accountId), 2);
+          expect(await store.readSyncCursor(accountId), 3);
         }
       });
 
@@ -432,7 +434,7 @@ void main() {
           expect(result.rejections, hasLength(2));
           expect(await _rejectedIds(client), before);
           expect(result.workspace.pendingOperations, 2);
-          expect(await client.store.readSyncCursor(_account), 2);
+          expect(await client.store.readSyncCursor(_account), 3);
         },
       );
 

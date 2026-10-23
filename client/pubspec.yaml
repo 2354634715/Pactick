@@ -1,7 +1,7 @@
 name: pactick
 description: A local-first planning and focus client.
 publish_to: none
-version: 0.3.0-preview.1+6
+version: 0.3.0-preview.2+7
 
 environment:
   sdk: ^3.13.2
@@ -12,6 +12,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   dynamic_color: ^1.8.1
+  cryptography: ^2.9.0
   flutter_secure_storage: ^10.3.1
   http: ^1.6.0
   intl: ^0.20.3

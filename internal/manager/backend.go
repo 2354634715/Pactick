@@ -21,12 +21,13 @@ import (
 )
 
 type Manager struct {
-	bundle, data string
-	mu           sync.Mutex
-	cfg          configuration
-	process      *exec.Cmd
-	processDone  chan struct{}
-	unlock       func()
+	bundle, data    string
+	binaryDirectory string
+	mu              sync.Mutex
+	cfg             configuration
+	process         *exec.Cmd
+	processDone     chan struct{}
+	unlock          func()
 }
 
 func New(bundle, data string) (*Manager, error) {
@@ -57,7 +58,25 @@ func (m *Manager) binary(name string) string {
 	if runtime.GOOS == "windows" {
 		name += ".exe"
 	}
-	return filepath.Join(m.bundle, "bin", name)
+	dir := m.binaryDirectory
+	if dir == "" {
+		dir = filepath.Join(m.bundle, "bin")
+	}
+	return filepath.Join(dir, name)
+}
+
+// SetBinaryDirectory selects trusted executables before the HTTP console starts.
+func (m *Manager) SetBinaryDirectory(dir string) error {
+	path, err := filepath.Abs(dir)
+	if err != nil {
+		return err
+	}
+	info, err := os.Stat(path)
+	if err != nil || !info.IsDir() {
+		return errors.New("二进制目录不存在")
+	}
+	m.binaryDirectory = path
+	return nil
 }
 
 func mergeEnvironment(overrides []string) []string {
@@ -76,8 +95,13 @@ func mergeEnvironment(overrides []string) []string {
 
 func (m *Manager) redact(value string) string {
 	secrets := []string{m.cfg.DatabaseURL, m.cfg.JWTSecret, m.cfg.PostgresPassword}
-	if u, err := url.Parse(m.cfg.DatabaseURL); err == nil && u.User != nil {
-		if password, ok := u.User.Password(); ok && password != "" {
+	if u, err := url.Parse(m.cfg.DatabaseURL); err == nil {
+		if u.User != nil {
+			if password, ok := u.User.Password(); ok && password != "" {
+				secrets = append(secrets, password)
+			}
+		}
+		if password := u.Query().Get("password"); password != "" {
 			secrets = append(secrets, password)
 		}
 	}
@@ -234,13 +258,19 @@ func (m *Manager) Action(ctx context.Context, action string) (string, error) {
 		return "", errors.New("另一个管理操作正在执行，请稍后重试")
 	}
 	defer m.mu.Unlock()
+	if err := validateSettings(m.cfg.Settings); err != nil {
+		return "", err
+	}
+	if m.cfg.Mode == "native" && m.cfg.DatabaseURL == "" {
+		return "", errors.New("本机模式需要先保存 PostgreSQL 连接地址")
+	}
 	if m.cfg.Mode == "native" {
 		if err := writePrivate(filepath.Join(m.data, "api.env"), []byte(strings.Join(m.cfg.environment(m.cfg.DatabaseURL), "\n")+"\n")); err != nil {
 			return "", err
 		}
 	}
 	pending := filepath.Join(m.data, ".migration-pending")
-	if _, err := os.Stat(pending); err == nil && (action == "start" || (action == "deploy" && m.cfg.Initialized)) {
+	if _, err := os.Stat(pending); err == nil && (action == "start" || action == "restart" || (action == "deploy" && m.cfg.Initialized)) {
 		return "", errors.New("上次迁移未完成，请检查备份及日志后重新执行数据库迁移")
 	}
 	var output strings.Builder
@@ -248,6 +278,16 @@ func (m *Manager) Action(ctx context.Context, action string) (string, error) {
 		out, err := m.docker(ctx, nil, args...)
 		output.WriteString(out)
 		return err
+	}
+	if action == "restart" {
+		if m.cfg.Mode == "docker" {
+			if err := runDocker("stop", "api"); err != nil {
+				return "", err
+			}
+		} else if err := m.stopNative(); err != nil {
+			return "", err
+		}
+		action = "start"
 	}
 	if action == "deploy" || action == "migrate" {
 		if m.cfg.Mode == "docker" {
@@ -259,6 +299,11 @@ func (m *Manager) Action(ctx context.Context, action string) (string, error) {
 			}
 		}
 		if !m.cfg.Initialized || action == "migrate" {
+			out, err := m.backup(ctx)
+			if err != nil {
+				return "", err
+			}
+			output.WriteString(out + "\n")
 			if m.cfg.Mode == "native" && !m.runningNative() && m.ready() {
 				return "", errors.New("监听端口已有其他 API 运行；请先停止外部服务及使用同一数据库的其他写入进程，再执行迁移")
 			}
@@ -363,9 +408,6 @@ func (m *Manager) Action(ctx context.Context, action string) (string, error) {
 }
 
 func (m *Manager) backup(ctx context.Context) (string, error) {
-	if m.cfg.Mode != "docker" {
-		return "", errors.New("本机模式请使用 PostgreSQL pg_dump 及现有备份流程")
-	}
 	dir := filepath.Join(m.data, "backups")
 	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
@@ -379,13 +421,24 @@ func (m *Manager) backup(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := m.prepareDocker(); err != nil {
-		f.Close()
-		os.Remove(path)
-		return "", err
+	if m.cfg.Mode == "docker" {
+		if err := m.prepareDocker(); err != nil {
+			f.Close()
+			os.Remove(path)
+			return "", err
+		}
 	}
 	args := []string{"compose", "--project-name", m.cfg.ProjectName, "--project-directory", m.bundle, "--env-file", filepath.Join(m.data, "docker.env"), "-f", filepath.Join(m.bundle, "deploy", "desktop", "compose.yaml"), "exec", "-T", "postgres", "pg_dump", "-U", "pactick", "-d", "pactick", "-Fc"}
 	cmd := exec.CommandContext(ctx, "docker", args...)
+	if m.cfg.Mode == "native" {
+		var err error
+		cmd, err = nativeBackupCommand(ctx, m.cfg.DatabaseURL)
+		if err != nil {
+			f.Close()
+			os.Remove(path)
+			return "", err
+		}
+	}
 	cmd.Stdout = f
 	var stderr cappedBuffer
 	cmd.Stderr = &stderr
@@ -412,6 +465,19 @@ func (m *Manager) backup(ctx context.Context) (string, error) {
 		return "", err
 	}
 	return "备份已写入 " + path + "，同时生成 SHA-256。请复制到独立介质并验证恢复。", nil
+}
+
+func nativeBackupCommand(ctx context.Context, databaseURL string) (*exec.Cmd, error) {
+	env, err := postgresEnvironment(databaseURL, "")
+	if err != nil {
+		return nil, err
+	}
+	// libpq does not expand a URI supplied only through PGDATABASE. An explicit
+	// dbname argument preserves the selected host, port, database and TLS options.
+	// postgresEnvironment removes the password from that URI.
+	cmd := exec.CommandContext(ctx, "pg_dump", "--no-password", "--format=custom", "--dbname="+strings.TrimPrefix(env[0], "PGDATABASE="))
+	cmd.Env = mergeEnvironment(env)
+	return cmd, nil
 }
 
 func (m *Manager) Close() error {
