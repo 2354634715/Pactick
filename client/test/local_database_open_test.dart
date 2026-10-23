@@ -125,13 +125,13 @@ class _AndroidExecuteContractFactory implements DatabaseFactory {
 }
 
 class _AndroidExecuteContractDatabase implements Database {
-  _AndroidExecuteContractDatabase(this.database);
-  final Database database;
+  _AndroidExecuteContractDatabase(this._delegate);
+  final Database _delegate;
 
   @override
   Future<void> execute(String sql, [List<Object?>? arguments]) async {
     if (sql.trimLeft().toUpperCase().startsWith('PRAGMA')) {
-      final rows = await database.rawQuery(sql, arguments);
+      final rows = await _delegate.rawQuery(sql, arguments);
       if (rows.isNotEmpty) {
         throw StateError(
           'Queries can be performed using query or rawQuery methods only',
@@ -139,14 +139,14 @@ class _AndroidExecuteContractDatabase implements Database {
       }
       return;
     }
-    await database.execute(sql, arguments);
+    await _delegate.execute(sql, arguments);
   }
 
   @override
   Future<List<Map<String, Object?>>> rawQuery(
     String sql, [
     List<Object?>? arguments,
-  ]) => database.rawQuery(sql, arguments);
+  ]) => _delegate.rawQuery(sql, arguments);
 
   @override
   dynamic noSuchMethod(Invocation invocation) =>
