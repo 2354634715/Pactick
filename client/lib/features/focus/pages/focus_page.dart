@@ -1020,7 +1020,7 @@ class _FocusPolicies extends StatelessWidget {
                           policy.mode == FocusPolicyMode.guard
                               ? '顶部提醒 · 分类白名单 · 离开超过 ${policy.maxAppExits ?? 0} 次计为中断'
                               : policy.mode == FocusPolicyMode.strict
-                              ? '暂不可用'
+                              ? '禁止暂停和提前完成；非白名单应用计为中断；紧急结束需等待 30 秒并填写原因'
                               : '允许暂停 · 允许提前结束',
                         ),
                         const SizedBox(height: AppSpacing.sm),
