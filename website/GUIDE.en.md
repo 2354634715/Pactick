@@ -63,6 +63,6 @@ Deleting, renaming, or restricting a GitHub asset can break a fixed link. The pa
 
 ## Delivery scope
 
-This work provides local static source and preview commands. It does not register a site or deploy a server.
+Website source and local preview commands are included in this release's source archive. This task does not register a site or deploy a server.
 
 Site runtime assets are `index.html`, `index.en.html`, `styles.css`, `app.js`, and `assets/`. The local server, this guide, and local validation records are not runtime assets. No site is deployed. Any future hosting needs its own cache, HTTPS, and response-header configuration; the CSP in `server.mjs` applies only to its local HTTP responses. The preview accepts GET/HEAD only and returns 405 for other methods. Paths outside its allowlist return 404; do not replace it with a static server for the entire repository.
