@@ -28,7 +28,6 @@ class MetricCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Container(height: 3, color: color.withValues(alpha: 0.78)),
             Padding(
               padding: const EdgeInsets.all(AppSpacing.md),
               child: Column(
@@ -36,13 +35,7 @@ class MetricCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: color.withValues(alpha: 0.11),
-                          borderRadius: BorderRadius.circular(AppRadii.small),
-                        ),
+                      ExcludeSemantics(
                         child: Icon(icon, color: color, size: 20),
                       ),
                       const SizedBox(width: AppSpacing.sm),
@@ -56,7 +49,15 @@ class MetricCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  Text(value, style: Theme.of(context).textTheme.headlineSmall),
+                  Text(
+                    value,
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontSize: 28,
+                      height: 36 / 28,
+                      fontWeight: FontWeight.w400,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    ),
+                  ),
                   if (supportingText != null) ...[
                     const SizedBox(height: AppSpacing.xxs),
                     Text(

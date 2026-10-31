@@ -1506,6 +1506,20 @@
           "classification": "Unicode-3.0 (review copyright and data notices)"
         }
       ]
+    },
+    {
+      "ecosystem": "Asset",
+      "name": "Noto-Serif-SC",
+      "version": "8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5",
+      "source": "https://github.com/google/fonts/tree/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/notoserifsc",
+      "status": "local-license-text-collected",
+      "licenses": [
+        {
+          "file": "third_party/licenses/Font-NotoSerifSC-OFL-1.1.txt",
+          "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6",
+          "classification": "SIL Open Font License 1.1 (unmodified font)"
+        }
+      ]
     }
   ],
   "android_metadata": [

@@ -1,3 +1,5 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -370,6 +372,10 @@ void main() {
         child: AppDataBoundary(
           controller: app,
           child: MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
             home: Builder(
               builder: (context) {
                 AppScope.watchData(context);
@@ -418,6 +424,10 @@ void main() {
     ];
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('zh', 'CN')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
         theme: AppTheme.light(),
         home: Scaffold(
           body: ActiveFocusDock(controller: app, onOpen: () {}),

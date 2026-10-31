@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_tokens.dart';
@@ -15,7 +17,7 @@ Future<T?> showGuardedEditor<T>(
   return showGeneralDialog<T>(
     context: context,
     barrierDismissible: false,
-    barrierLabel: '关闭编辑器',
+    barrierLabel: context.tr('关闭编辑器'),
     barrierColor: Colors.black54,
     transitionDuration: MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -103,16 +105,16 @@ class EditorDraftGuardState extends State<EditorDraftGuard> {
       final discard = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
-          title: const Text('放弃未保存的修改？'),
-          content: const Text('输入尚未保存。继续编辑可保留当前内容。'),
+          title: Text(context.tr('放弃未保存的修改？')),
+          content: Text(context.tr('输入尚未保存。继续编辑可保留当前内容。')),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text('继续编辑'),
+              child: Text(context.tr('继续编辑')),
             ),
             FilledButton(
               onPressed: () => Navigator.pop(context, true),
-              child: const Text('放弃修改'),
+              child: Text(context.tr('放弃修改')),
             ),
           ],
         ),

@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -42,7 +43,13 @@ void main() {
     await tester.pumpWidget(
       AppScope(
         controller: controller,
-        child: MaterialApp(theme: AppTheme.light(), home: page),
+        child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          supportedLocales: const [Locale('zh', 'CN')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+          theme: AppTheme.light(),
+          home: page,
+        ),
       ),
     );
     await tester.pumpAndSettle();

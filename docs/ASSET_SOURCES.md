@@ -1,8 +1,10 @@
 # 客户端素材来源核对
 
-核对日期：2026-10-02。适用客户端源码：`0.2.0-preview.1+4`。本文记录当前工作目录的素材来源；每次发行仍须核对源码快照和最终签名 APK。来源记录不构成商标可用性结论。
+[English](ASSET_SOURCES.en.md)
 
-2026-10-11 用途补充：当前 `0.2.0-preview.1+5` 的任务温馨提醒复用 `ic_focus_notification.xml`，没有新增位图或绘制 XML。通知图标、应用内品牌图及自适应前景/单色图的现有哈希已重新核对，与下列记录一致。该补充不表示重新完成全部素材库存、最终 APK 许可审阅或真机显示验收；下文的逐项清单与符号数量保留 2026-10-02 范围。
+更新日期：2026-10-31。当前候选源码为 `0.3.0-preview.3+8`；本文记录其素材来源和核对方法。2026-10-02 的详细库存适用于 `0.2.0-preview.1+4`，历史统计与验收范围保留原日期。每次发行仍须核对源码快照和最终签名 APK；来源记录不构成商标可用性结论。
+
+2026-10-11 用途补充：当时 `0.2.0-preview.1+5` 的任务温馨提醒复用 `ic_focus_notification.xml`，没有新增位图或绘制 XML。通知图标、应用内品牌图及自适应前景/单色图的现有哈希已重新核对，与下列记录一致。该补充不表示重新完成全部素材库存、最终 APK 许可审阅或真机显示验收；下文的逐项清单与符号数量保留 2026-10-02 范围。
 
 ## 核对范围
 
@@ -12,7 +14,7 @@
 
 | 用途 | 已确认来源 | 尚需核实的内容 |
 | --- | --- | --- |
-| Flutter 页面中的操作和导航图标 | Flutter SDK 捆绑的 Google Material Icons，源码显式引用 94 种符号 | 最终 APK 中的字体许可、署名及许可入口 |
+| Flutter 页面中的操作和导航图标 | Flutter SDK 捆绑的 Google Material Icons；历史详细库存列出 94 种符号 | 最终 APK 中的字体许可、署名及许可入口 |
 | Pactick 主图标及应用内品牌标记 | 维护者确认由 ChatGPT 生成；本轮保留了内置 imagegen 的原图、提示词及派生记录 | 最终分发素材与记录是否一致 |
 | Android 任务温馨提醒、专注通知和悬浮提醒的小图标 | Google 官方 Material Design Icons 的 `timer`，从固定提交的 SVG 转换为 Android vector | 最终源码与 APK 中的资源及 Apache-2.0 通知是否一致 |
 
@@ -62,7 +64,20 @@ Android 启动图标和应用内品牌标记已替换为本次内置 imagegen �
 
 ## 框架控件图标与字体
 
-界面继续使用 Flutter `Icons` 与 Material 组件；`uses-material-design` 为 true。客户端没有新增字体依赖或独立产品字体，中文由系统字体回退显示。Flutter 在构建时提供 Material 图标字体，并可删除未使用的字形。原 `0.2.0-preview.1+3` APK 的字体资产只有 `MaterialIcons-Regular.otf`，没有 Roboto、Roboto Condensed 或微软雅黑；新候选须重新核对。
+界面继续使用 Flutter `Icons` 与 Material 组件；`uses-material-design` 为 true。2026-10-31 起，页面展示标题使用随包提供的 Noto Serif SC，Flutter 家族名为 `PactickDisplay`；正文、任务标题和操作控件继续使用无衬线字体及系统回退。Flutter 在构建时提供 Material 图标字体，并可删除未使用的字形。原 `0.2.0-preview.1+3` APK 的字体资产只有 `MaterialIcons-Regular.otf`，没有 Roboto、Roboto Condensed 或微软雅黑；新构建须重新核对。
+
+`client/assets/fonts/NotoSerifSC.ttf` 是 Google Fonts 官方仓库中未经修改的可变字体，包含简体中文与拉丁字形。上游固定提交为 [`8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5`](https://github.com/google/fonts/tree/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/notoserifsc)，文件为 25,125,512 字节，SHA-256 为 `050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9`。字体不需要运行时下载，会增加安装包体积；原始[版权与 SIL Open Font License 1.1](../third_party/licenses/Font-NotoSerifSC-OFL-1.1.txt)保存在源码及应用内补充许可页。它沿用独立字体许可，不适用 Pactick 自有代码的商业限制。更换或裁剪字体前须重新核对许可、来源及补充通知；源码导出仅允许该已核对的字体文件，不自动公开其他本机字体。
+
+上述 OFL 原文的 SHA-256 为 `5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6`。`third_party/metadata/distribution-notices.json` 同时固定许可文本、补充通知与源字体哈希。TTF 作为二进制复制和导出，不做换行规范化；`.gitattributes` 也将其标为二进制。源码和归档中的文件大小、哈希必须与该记录一致。
+
+从固定提交构建最终 APK 后，在仓库根目录执行：
+
+```sh
+python3 scripts/verify_supplemental_notices.py --root .
+python3 scripts/verify_apk_notices.py client/build/app/outputs/flutter-apk/app-release.apk --root .
+```
+
+第二条命令要求 Flutter SDK 位于 PATH；否则加 `--engine-license /实际FlutterSDK/bin/cache/pkg/sky_engine/LICENSE`。当源码声明或提供 Noto Serif SC 时，它会核对 APK 中 `assets/flutter_assets/assets/fonts/NotoSerifSC.ttf` 的精确字节，以及 `FontManifest.json` 内 `PactickDisplay` 家族到该字体 400 常规字重的映射；缺失、重复、错误映射或哈希不同均失败。通知文本通过不能代替字体本体检查，旧 debug APK 的结果也不能代替最终签名 APK。真机许可入口和字体显示仍须按实际设备分别验收。
 
 当前 SDK 的 [Material 图标字体许可原文](../third_party/licenses/Asset-Material-icons-fonts-Flutter-bundled-0-materialicons_license.txt)为 Creative Commons Attribution 4.0 International（CC BY 4.0），字体内版权声明为 `Copyright 2019 Google LLC. All Rights Reserved.`。它与上节独立 SVG 的 Apache-2.0 许可不同，不能用上游图标仓库的当前首页说明替换实际字体版本的原文。
 

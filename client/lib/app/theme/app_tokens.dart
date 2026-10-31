@@ -13,10 +13,15 @@ abstract final class AppSpacing {
 abstract final class AppRadii {
   static const double small = 10;
   static const double medium = 14;
-  static const double card = 18;
+  static const double card = 8;
   static const double large = 24;
   static const double overlay = 28;
   static const double pill = 999;
+}
+
+abstract final class AppTypography {
+  /// Bundled serif typeface for page headings; controls retain the platform font.
+  static const String displayFamily = 'PactickDisplay';
 }
 
 abstract final class AppSizes {

@@ -9,6 +9,7 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
+import android.os.Bundle
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import org.json.JSONArray
@@ -148,9 +149,9 @@ object TaskReminderManager {
 
     private fun showScheduledNotification(context: Context, due: List<ScheduledReminder>) {
         val title = when {
-            due.all { it.kind == "deadline" } -> "任务已到截止时间"
-            due.all { it.kind == "plan" } -> "计划时段已开始"
-            else -> "任务与计划时间提醒"
+            due.all { it.kind == "deadline" } -> PactickStrings.text(context, R.string.task_deadline_title)
+            due.all { it.kind == "plan" } -> PactickStrings.text(context, R.string.task_plan_title)
+            else -> PactickStrings.text(context, R.string.task_schedule_title)
         }
         val openTasks = Intent(context, MainActivity::class.java).apply {
             action = ACTION_OPEN_TASKS
@@ -163,7 +164,15 @@ object TaskReminderManager {
         val notification = NotificationCompat.Builder(context, SCHEDULED_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_focus_notification)
             .setContentTitle(title)
-            .setContentText("有 ${due.size} 项任务或计划需要查看，打开 Pactick 查看详情。")
+            .setContentText(PactickStrings.text(context, R.string.task_schedule_text, due.size))
+            .addExtras(Bundle().apply {
+                putInt("pactick_reminder_count", due.size)
+                putString("pactick_reminder_kind", when {
+                    due.all { it.kind == "deadline" } -> "deadline"
+                    due.all { it.kind == "plan" } -> "plan"
+                    else -> "mixed"
+                })
+            })
             .setContentIntent(openTasksPendingIntent)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
@@ -175,8 +184,8 @@ object TaskReminderManager {
 
     private fun createScheduledNotificationChannel(context: Context) {
         notificationManager(context).createNotificationChannel(
-            NotificationChannel(SCHEDULED_CHANNEL_ID, "截止与计划提醒", NotificationManager.IMPORTANCE_DEFAULT).apply {
-                description = "任务到期或计划开始时提醒，不显示任务标题、备注或项目名"
+            NotificationChannel(SCHEDULED_CHANNEL_ID, PactickStrings.text(context, R.string.task_schedule_channel), NotificationManager.IMPORTANCE_DEFAULT).apply {
+                description = PactickStrings.text(context, R.string.task_schedule_channel_description)
                 setShowBadge(false)
             },
         )
@@ -225,6 +234,25 @@ object TaskReminderManager {
         return allowed
     }
 
+    fun refreshLocalization(context: Context) {
+        refresh(context)
+        createScheduledNotificationChannel(context)
+        val manager = notificationManager(context)
+        val current = manager.activeNotifications
+            .firstOrNull { it.id == SCHEDULED_NOTIFICATION_ID }?.notification ?: return
+        val count = current.extras.getInt("pactick_reminder_count", 0)
+        if (count <= 0) return
+        val titleResource = when (current.extras.getString("pactick_reminder_kind")) {
+            "deadline" -> R.string.task_deadline_title
+            "plan" -> R.string.task_plan_title
+            else -> R.string.task_schedule_title
+        }
+        manager.notify(SCHEDULED_NOTIFICATION_ID, NotificationCompat.Builder(context, current)
+            .setContentTitle(PactickStrings.text(context, titleResource))
+            .setContentText(PactickStrings.text(context, R.string.task_schedule_text, count))
+            .setOnlyAlertOnce(true).setSilent(true).build())
+    }
+
     private fun hasOpenTasks(context: Context): Boolean {
         val preferences = preferences(context)
         return preferences.getBoolean(KEY_ENABLED, false) &&
@@ -245,8 +273,8 @@ object TaskReminderManager {
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_focus_notification)
-            .setContentTitle("给自己一点完成任务的时间")
-            .setContentText("还有 $count 项待办，先从一件小事开始吧。")
+            .setContentTitle(PactickStrings.text(context, R.string.task_reminder_title))
+            .setContentText(PactickStrings.text(context, R.string.task_reminder_text, count))
             .setContentIntent(openTasksPendingIntent)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
@@ -260,8 +288,8 @@ object TaskReminderManager {
     }
 
     private fun createNotificationChannel(context: Context) {
-        val channel = NotificationChannel(CHANNEL_ID, "任务温馨提醒", NotificationManager.IMPORTANCE_LOW).apply {
-            description = "有待办时在通知栏显示一条静默提醒，不显示任务标题"
+        val channel = NotificationChannel(CHANNEL_ID, PactickStrings.text(context, R.string.task_reminder_channel), NotificationManager.IMPORTANCE_LOW).apply {
+            description = PactickStrings.text(context, R.string.task_reminder_channel_description)
             setSound(null, null)
             enableVibration(false)
             setShowBadge(false)

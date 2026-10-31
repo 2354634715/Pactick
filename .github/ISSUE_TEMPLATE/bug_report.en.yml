@@ -1,0 +1,31 @@
+name: Bug report (English)
+description: Report a reproducible functional issue. Read SECURITY.en.md first for security vulnerabilities.
+body:
+  - type: markdown
+    attributes:
+      value: Use demonstration data. Do not upload databases, tokens, accounts, or private server addresses. Report security issues privately according to SECURITY.en.md.
+  - type: input
+    id: version
+    attributes:
+      label: App version and operating system version
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Usage mode
+      options: [Local offline, Self-hosted synchronization, Server deployment]
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Minimal reproduction steps
+      description: Include expected and actual behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Redacted logs or screenshots
+      description: Remove keys, email addresses, task content, and private addresses first.

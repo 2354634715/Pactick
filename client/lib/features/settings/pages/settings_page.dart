@@ -1,3 +1,6 @@
+import '../../../core/localization/app_localizations.dart';
+import '../../../core/localization/language_preference.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -15,7 +18,9 @@ import '../../../core/utilities/persistence_errors.dart';
 import '../../../data/update/client_update_service.dart';
 import 'local_data_settings.dart';
 import 'task_reminder_settings.dart';
+import 'system_calendar_settings.dart';
 import '../../tasks/pages/private_vault_page.dart';
+import '../../focus/widgets/focus_desktop_controls.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({
@@ -31,8 +36,8 @@ class SettingsPage extends StatelessWidget {
     final controller = AppScope.watchData(context);
     final session = SessionScope.of(context);
     return FeaturePageScaffold(
-      title: '设置',
-      subtitle: '外观、专注权限、可选同步与本机数据',
+      title: context.tr('设置'),
+      subtitle: context.tr('外观、专注权限、可选同步与本机数据'),
       leading: BackButton(onPressed: onClose),
       body: Align(
         alignment: AlignmentDirectional.topStart,
@@ -43,22 +48,27 @@ class SettingsPage extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SectionHeader(title: '外观'),
+              SectionHeader(title: context.tr('外观')),
               _AppearanceCard(controller: controller),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(title: '任务提醒'),
+              SectionHeader(title: context.tr('任务提醒')),
               TaskReminderSettingsCard(controller: controller),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(title: '专注与权限'),
+              SystemCalendarSettingsTile(app: controller),
+              const SizedBox(height: AppSpacing.xl),
+              SectionHeader(title: context.tr('专注与权限')),
+              FocusDesktopSettingsTile(controller: controller),
               _FocusPermissionCard(controller: controller),
-              const ListTile(
+              ListTile(
                 contentPadding: EdgeInsets.zero,
                 leading: Icon(Icons.info_outline),
-                title: Text('专注规则'),
-                subtitle: Text('普通模式无需守护权限。严格模式禁止暂停和提前完成；紧急结束需等待 30 秒并填写原因。'),
+                title: Text(context.tr('专注规则')),
+                subtitle: Text(
+                  context.tr('普通模式无需守护权限。严格模式禁止暂停和提前完成；紧急结束需等待 30 秒并填写原因。'),
+                ),
               ),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(title: '同步与设备'),
+              SectionHeader(title: context.tr('同步与设备')),
               if (session.user case final user?)
                 ListTile(
                   contentPadding: EdgeInsets.zero,
@@ -67,26 +77,26 @@ class SettingsPage extends StatelessWidget {
                   subtitle: Text(user.email),
                 )
               else
-                const ListTile(
+                ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: Icon(Icons.offline_bolt_outlined),
-                  title: Text('本地工作区'),
-                  subtitle: Text('无需账户，数据保存在本机；登录只用于可选同步'),
+                  title: Text(context.tr('本地工作区')),
+                  subtitle: Text(context.tr('无需账户，数据保存在本机；登录只用于可选同步')),
                 ),
               const SyncSettingsCard(),
               _DevicesCard(controller: controller, sessionController: session),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(title: '数据备份与工作区'),
+              SectionHeader(title: context.tr('数据备份与工作区')),
               ListTile(
                 leading: const Icon(Icons.lock_outline),
-                title: const Text('私密任务箱'),
-                subtitle: const Text('独立密码、本地加密任务与密文备份；不参与账户同步。'),
+                title: Text(context.tr('私密任务箱')),
+                subtitle: Text(context.tr('独立密码、本地加密任务与密文备份；不参与账户同步。')),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => showPrivateVault(context),
               ),
               const LocalDataCard(),
               const SizedBox(height: AppSpacing.xl),
-              const SectionHeader(title: '关于'),
+              SectionHeader(title: context.tr('关于')),
               ReleasesAboutCard(service: clientUpdateService),
             ],
           ),
@@ -129,14 +139,39 @@ class _AppearanceCardState extends State<_AppearanceCard> {
   Widget build(BuildContext context) {
     final controller = widget.controller;
     final labels = {
-      ThemePreference.system: '跟随系统',
-      ThemePreference.light: '浅色',
-      ThemePreference.dark: '深色',
+      ThemePreference.system: context.tr('跟随系统'),
+      ThemePreference.light: context.tr('浅色'),
+      ThemePreference.dark: context.tr('深色'),
     };
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('主题模式', style: Theme.of(context).textTheme.titleMedium),
+        Text(context.tr('语言'), style: Theme.of(context).textTheme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
+        Wrap(
+          spacing: AppSpacing.xs,
+          runSpacing: AppSpacing.xs,
+          children: [
+            for (final option in LanguagePreference.values)
+              ChoiceChip(
+                label: Text(switch (option) {
+                  LanguagePreference.system => context.tr('跟随系统'),
+                  LanguagePreference.chinese => '简体中文',
+                  LanguagePreference.english => 'English',
+                }),
+                selected: controller.languagePreference == option,
+                onSelected: _saving
+                    ? null
+                    : (_) =>
+                          _save(() => controller.setLanguagePreference(option)),
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          context.tr('主题模式'),
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
         const SizedBox(height: AppSpacing.sm),
         Wrap(
           spacing: AppSpacing.xs,
@@ -156,14 +191,15 @@ class _AppearanceCardState extends State<_AppearanceCard> {
         ),
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: const Text('使用系统动态色'),
-          subtitle: const Text('默认使用红、近黑与米白配色。开启后使用系统动态色；不支持时仍使用默认配色。'),
+          title: Text(context.tr('使用系统动态色')),
+          subtitle: Text(context.tr('默认使用红、近黑与米白配色。开启后使用系统动态色；不支持时仍使用默认配色。')),
           value: controller.useDynamicColor,
           onChanged: _saving
               ? null
               : (value) => _save(() => controller.setDynamicColor(value)),
         ),
-        if (_saving) const LinearProgressIndicator(semanticsLabel: '正在保存外观设置'),
+        if (_saving)
+          LinearProgressIndicator(semanticsLabel: context.tr('正在保存外观设置')),
         if (_error != null)
           Semantics(
             liveRegion: true,
@@ -178,7 +214,7 @@ class _AppearanceCardState extends State<_AppearanceCard> {
                   onPressed: _saving || _retry == null
                       ? null
                       : () => _save(_retry!),
-                  child: const Text('重试保存'),
+                  child: Text(context.tr('重试保存')),
                 ),
               ],
             ),
@@ -212,7 +248,10 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
       if (mounted) {
         setState(() {
           _failed = true;
-          _message = '权限操作未完成：$error。普通模式仍可使用。';
+          _message = context.tr(
+            '权限操作未完成：{arg0}。普通模式仍可使用。',
+            args: {'arg0': error},
+          );
         });
       }
     } finally {
@@ -225,7 +264,7 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
     required String title,
     required String description,
     required Future<void> Function() action,
-    String label = '检查 / 申请',
+    String? label,
   }) => Padding(
     padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
     child: Column(
@@ -256,7 +295,7 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
           alignment: AlignmentDirectional.centerStart,
           child: TextButton(
             onPressed: _busy ? null : () => _run(action),
-            child: Text(label),
+            child: Text(label ?? context.tr('检查 / 申请')),
           ),
         ),
       ],
@@ -272,9 +311,9 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           secondary: const Icon(Icons.vibration),
-          title: const Text('专注震动反馈'),
-          subtitle: const Text(
-            '默认开启；开始、暂停、继续、结束、目标到时与白名单外应用提醒时震动。受系统震动设置和硬件支持影响。',
+          title: Text(context.tr('专注震动反馈')),
+          subtitle: Text(
+            context.tr('默认开启；开始、暂停、继续、结束、目标到时与白名单外应用提醒时震动。受系统震动设置和硬件支持影响。'),
           ),
           value: controller.focusVibrationEnabled,
           onChanged: _busy
@@ -290,34 +329,38 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
             onPressed: _busy
                 ? null
                 : () => _run(controller.reconcileNativeFocus),
-            child: const Text('重试计时通知'),
+            child: Text(context.tr('重试计时通知')),
           ),
         ],
         const Divider(),
         _permission(
           icon: Icons.verified_user_outlined,
-          title: '使用情况访问',
+          title: context.tr('使用情况访问'),
           description: controller.usageAccessGranted
-              ? '已授权 · 守护模式用它识别前台应用'
-              : '未授权 · 守护模式需要此权限，普通模式仍可使用',
+              ? context.tr('已授权 · 守护模式用它识别前台应用')
+              : context.tr('未授权 · 守护模式需要此权限，普通模式仍可使用'),
           action: controller.openUsageAccessSettings,
-          label: controller.usageAccessGranted ? '检查系统设置' : '打开授权设置',
+          label: controller.usageAccessGranted
+              ? context.tr('检查系统设置')
+              : context.tr('打开授权设置'),
         ),
         const Divider(),
         _permission(
           icon: Icons.layers_outlined,
-          title: '显示在其他应用上层',
+          title: context.tr('显示在其他应用上层'),
           description: controller.overlayPermissionGranted
-              ? '已授权 · 守护模式用它显示离开应用提醒'
-              : '未授权 · 无法开始守护模式，普通模式仍可使用',
+              ? context.tr('已授权 · 守护模式用它显示离开应用提醒')
+              : context.tr('未授权 · 无法开始守护模式，普通模式仍可使用'),
           action: controller.openOverlayPermissionSettings,
-          label: controller.overlayPermissionGranted ? '检查系统设置' : '打开授权设置',
+          label: controller.overlayPermissionGranted
+              ? context.tr('检查系统设置')
+              : context.tr('打开授权设置'),
         ),
         const Divider(),
         _permission(
           icon: Icons.notifications_outlined,
-          title: '前台计时通知',
-          description: '专注计时通知与任务提醒共用系统通知权限。拒绝后仍可使用本地任务和计时。',
+          title: context.tr('前台计时通知'),
+          description: context.tr('专注计时通知与任务提醒共用系统通知权限。拒绝后仍可使用本地任务和计时。'),
           action: () async {
             final granted = await controller.focusPlatform
                 .requestNotificationPermission();
@@ -325,13 +368,14 @@ class _FocusPermissionCardState extends State<_FocusPermissionCard> {
               setState(() {
                 _failed = !granted;
                 _message = granted
-                    ? '系统允许应用通知；各通知分类仍可在系统设置中关闭。'
-                    : '本次未获通知权限；系统通知展示受限，本地计时仍可使用。';
+                    ? context.tr('系统允许应用通知；各通知分类仍可在系统设置中关闭。')
+                    : context.tr('本次未获通知权限；系统通知展示受限，本地计时仍可使用。');
               });
             }
           },
         ),
-        if (_busy) const LinearProgressIndicator(semanticsLabel: '正在执行权限操作'),
+        if (_busy)
+          LinearProgressIndicator(semanticsLabel: context.tr('正在执行权限操作')),
         if (_message != null)
           Semantics(
             liveRegion: true,
@@ -386,7 +430,13 @@ class _DevicesCardState extends State<_DevicesCard> {
     final lastSync = controller.lastSuccessfulSyncAt;
     final statusDescription =
         controller.syncPhase == SyncPhase.synced && lastSync != null
-        ? '上次成功同步：${formatMonthDay(lastSync)} ${formatClock(lastSync)}'
+        ? context.tr(
+            '上次成功同步：{arg0} {arg1}',
+            args: {
+              'arg0': formatMonthDay(lastSync),
+              'arg1': formatClock(lastSync),
+            },
+          )
         : controller.syncStatusDescription;
     return Column(
       children: [
@@ -395,8 +445,8 @@ class _DevicesCardState extends State<_DevicesCard> {
           title: Text(controller.syncStatusTitle),
           subtitle: Text(statusDescription),
           trailing: switch (controller.syncPhase) {
-            SyncPhase.localOnly when !controller.canSync => const Chip(
-              label: Text('仅本地'),
+            SyncPhase.localOnly when !controller.canSync => Chip(
+              label: Text(context.tr('仅本地')),
             ),
             SyncPhase.syncing => const SizedBox.square(
               dimension: 24,
@@ -404,7 +454,7 @@ class _DevicesCardState extends State<_DevicesCard> {
             ),
             _ => IconButton(
               key: const ValueKey('sync-now'),
-              tooltip: '立即同步',
+              tooltip: context.tr('立即同步'),
               onPressed: controller.canSync
                   ? () => unawaited(controller.syncNow())
                   : null,
@@ -416,15 +466,17 @@ class _DevicesCardState extends State<_DevicesCard> {
         if (controller.devices.isEmpty)
           ListTile(
             leading: Icon(Icons.phone_android),
-            title: Text(sessionController.device?.name ?? '此 Android 设备'),
+            title: Text(
+              sessionController.device?.name ?? context.tr('此 Android 设备'),
+            ),
             subtitle: Text(
               controller.syncPhase == SyncPhase.offline
-                  ? '当前设备 · 离线'
+                  ? context.tr('当前设备 · 离线')
                   : sessionController.isAuthenticated
-                  ? '当前设备 · 等待同步'
-                  : '当前设备 · 仅本地使用',
+                  ? context.tr('当前设备 · 等待同步')
+                  : context.tr('当前设备 · 仅本地使用'),
             ),
-            trailing: const Chip(label: Text('当前')),
+            trailing: Chip(label: Text(context.tr('当前'))),
           )
         else
           for (final device in controller.devices) ...[
@@ -437,22 +489,28 @@ class _DevicesCardState extends State<_DevicesCard> {
               title: Text(device.name),
               subtitle: Text(
                 device.isCurrent
-                    ? '当前设备'
-                    : '上次使用：${formatMonthDay(device.lastSeenAt)} ${formatClock(device.lastSeenAt)}',
+                    ? context.tr('当前设备')
+                    : context.tr(
+                        '上次使用：{arg0} {arg1}',
+                        args: {
+                          'arg0': formatMonthDay(device.lastSeenAt),
+                          'arg1': formatClock(device.lastSeenAt),
+                        },
+                      ),
               ),
               trailing: device.isCurrent
-                  ? const Chip(label: Text('当前'))
+                  ? Chip(label: Text(context.tr('当前')))
                   : IconButton(
-                      tooltip: '撤销设备登录',
+                      tooltip: context.tr('撤销设备登录'),
                       onPressed: _revoking.contains(device.id)
                           ? null
                           : () => _confirmRevoke(context, device),
                       icon: _revoking.contains(device.id)
-                          ? const SizedBox.square(
+                          ? SizedBox.square(
                               dimension: 24,
                               child: CircularProgressIndicator(
                                 strokeWidth: 2,
-                                semanticsLabel: '正在撤销设备登录',
+                                semanticsLabel: context.tr('正在撤销设备登录'),
                               ),
                             )
                           : const Icon(Icons.logout),
@@ -470,16 +528,16 @@ class _DevicesCardState extends State<_DevicesCard> {
       context: context,
       builder: (context) => AlertDialog(
         icon: const Icon(Icons.devices_other_outlined),
-        title: Text('撤销“${device.name}”的登录'),
-        content: const Text('该设备的登录将失效。本机数据不会被删除。'),
+        title: Text(context.tr('撤销“{arg0}”的登录', args: {'arg0': device.name})),
+        content: Text(context.tr('该设备的登录将失效。本机数据不会被删除。')),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('取消'),
+            child: Text(context.tr('取消')),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('撤销登录'),
+            child: Text(context.tr('撤销登录')),
           ),
         ],
       ),
@@ -491,13 +549,20 @@ class _DevicesCardState extends State<_DevicesCard> {
         if (!context.mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(revoked ? '已撤销“${device.name}”的登录' : '撤销失败，请检查网络后重试'),
+            content: Text(
+              revoked
+                  ? context.tr('已撤销“{arg0}”的登录', args: {'arg0': device.name})
+                  : context.tr('撤销失败，请检查网络后重试'),
+            ),
           ),
         );
       } catch (error) {
         if (context.mounted) {
-          ScaffoldMessenger.of(context)
-              .showSnackBar(SnackBar(content: Text('撤销未完成：$error')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(context.tr('撤销未完成：{arg0}', args: {'arg0': error})),
+            ),
+          );
         }
       } finally {
         if (mounted) setState(() => _revoking.remove(device.id));

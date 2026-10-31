@@ -1,3 +1,6 @@
+import 'package:pactick/core/calendar/system_calendar_privacy.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -244,6 +247,79 @@ void main() {
           expect(
             (await store.readDocuments('reminder')).single.id,
             _reminderId,
+          );
+        },
+      );
+
+      for (final exposedKey in [
+        'task\u0000$_taskId',
+        'plan_block\u0000$_planId',
+      ]) {
+        test(
+          'system calendar exposure blocks private transfer: ${exposedKey.split('\u0000').first}',
+          () async {
+            await _seedOrdinaryTask(store);
+            await vault.unlock(_password);
+            await store.writeSetting(
+              calendarExposureSettingKey,
+              encodeSystemCalendarExposure({exposedKey}),
+            );
+            final before = (await storage.readPrivateVault(_local))!.envelope;
+            await expectLater(vault.importLocalTask(_taskId), throwsStateError);
+            expect((await storage.readPrivateVault(_local))!.envelope, before);
+            expect(await store.readDocuments('task'), hasLength(1));
+            expect(await store.readDocuments('plan_block'), hasLength(1));
+            expect(vault.tasks, isEmpty);
+            expect(
+              (await store.exportWorkspace(_local)).settings,
+              isNot(contains(calendarExposureSettingKey)),
+            );
+          },
+        );
+      }
+
+      test(
+        'calendar exposure is rechecked at the private transfer commit',
+        () async {
+          await _seedOrdinaryTask(store);
+          final candidate = await storage.readPrivateImportCandidate(
+            _local,
+            _taskId,
+          );
+          final before = (await storage.readPrivateVault(_local))!.envelope;
+          await store.writeSetting(
+            calendarExposureSettingKey,
+            encodeSystemCalendarExposure({'plan_block\u0000$_planId'}),
+          );
+          await expectLater(
+            storage.commitPrivateImport(
+              _local,
+              expectedEnvelope: before,
+              envelope: before,
+              taskId: _taskId,
+              expectedSnapshot: candidate.snapshot,
+            ),
+            throwsStateError,
+          );
+          expect((await storage.readPrivateVault(_local))!.envelope, before);
+          expect(await store.readDocuments('task'), hasLength(1));
+          expect(await store.readDocuments('plan_block'), hasLength(1));
+        },
+      );
+
+      test(
+        'corrupt calendar exposure fails closed before private transfer',
+        () async {
+          await _seedOrdinaryTask(store);
+          await store.writeSetting(calendarExposureSettingKey, '{invalid');
+          await expectLater(
+            storage.readPrivateImportCandidate(_local, _taskId),
+            throwsStateError,
+          );
+          expect(await store.readDocuments('task'), hasLength(1));
+          expect(
+            (await storage.readPrivateVault(_local))!.envelope,
+            emptyEnvelope,
           );
         },
       );
@@ -724,7 +800,14 @@ void main() {
         _task.copyWith(status: TaskStatus.cancelled),
       );
     });
-    await tester.pumpWidget(MaterialApp(home: PrivateVaultPage(app: app)));
+    await tester.pumpWidget(
+      MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('zh', 'CN')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+        home: PrivateVaultPage(app: app),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text(_secret), findsOneWidget);
     expect(find.text('开始专注'), findsNothing);
@@ -758,6 +841,10 @@ void main() {
         AppScope(
           controller: app,
           child: MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
             home: Builder(
               builder: (context) => Scaffold(
                 body: TextButton(

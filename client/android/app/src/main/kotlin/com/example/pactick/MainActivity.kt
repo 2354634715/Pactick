@@ -5,11 +5,14 @@ import android.app.Activity
 import android.app.AppOpsManager
 import android.app.NotificationManager
 import android.content.Context
+import android.content.res.Configuration
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.os.Process
 import android.provider.Settings
 import android.util.Log
@@ -32,6 +35,20 @@ class MainActivity : FlutterActivity() {
     private var backupResult: MethodChannel.Result? = null
     private var backupContents: ByteArray? = null
     private val backupExecutor = Executors.newSingleThreadExecutor()
+    private var systemCalendarBridge: SystemCalendarBridge? = null
+    private var focusDesktopRequestGeneration = 0
+    private var lastRequestedFocusSessionId: String? = null
+    private var activityResumed = false
+
+    override fun onResume() {
+        super.onResume()
+        activityResumed = true
+    }
+
+    override fun onPause() {
+        activityResumed = false
+        super.onPause()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         openTasksRequested = intent?.action == TaskReminderManager.ACTION_OPEN_TASKS
@@ -48,6 +65,22 @@ class MainActivity : FlutterActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
+        systemCalendarBridge?.dispose()
+        systemCalendarBridge = SystemCalendarBridge(this, flutterEngine.dartExecutor.binaryMessenger)
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "pactick/language",
+        ).setMethodCallHandler { call, result ->
+            if (call.method == "configure") {
+                try {
+                    PactickStrings.configure(this, call.argument<String>("preference") ?: "system")
+                    refreshNativeLanguage()
+                    result.success(null)
+                } catch (error: Exception) {
+                    result.error("language_update_failed", error.message, null)
+                }
+            } else result.notImplemented()
+        }
         MethodChannel(
             flutterEngine.dartExecutor.binaryMessenger,
             FOCUS_CHANNEL,
@@ -72,6 +105,16 @@ class MainActivity : FlutterActivity() {
                 result.success(null)
             } else result.notImplemented()
         }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        refreshNativeLanguage()
+    }
+
+    private fun refreshNativeLanguage() {
+        TaskReminderManager.refreshLocalization(this)
+        FocusTimerService.refreshLanguage()
     }
 
     private fun handleTaskReminderCall(call: MethodCall, result: MethodChannel.Result) {
@@ -159,7 +202,7 @@ class MainActivity : FlutterActivity() {
                         })
                         result.success(null)
                     } catch (_: Exception) {
-                        result.error("notification_settings_unavailable", "无法打开系统通知设置。", null)
+                        result.error("notification_settings_unavailable", PactickStrings.text(this@MainActivity, R.string.notification_settings_unavailable), null)
                     }
                 }
             }
@@ -179,7 +222,7 @@ class MainActivity : FlutterActivity() {
 
     private fun taskReminderUpdateFailed(result: MethodChannel.Result, error: Exception) {
         Log.w("TaskReminders", "Could not update task reminder", error)
-        result.error("task_reminder_update_failed", "任务提醒更新失败，请重试。", null)
+        result.error("task_reminder_update_failed", PactickStrings.text(this@MainActivity, R.string.task_reminder_update_failed), null)
     }
 
     private fun handleBackupCall(call: MethodCall, result: MethodChannel.Result) {
@@ -188,19 +231,19 @@ class MainActivity : FlutterActivity() {
             return
         }
         if (backupResult != null) {
-            result.error("backup_busy", "正在选择或读写文件，请等待当前操作完成。", null)
+            result.error("backup_busy", PactickStrings.text(this@MainActivity, R.string.backup_busy), null)
             return
         }
         val saving = call.method == "saveJson"
         if (saving) {
             val contents = call.argument<String>("contents")
             if (contents == null) {
-                result.error("invalid_backup", "缺少备份内容。", null)
+                result.error("invalid_backup", PactickStrings.text(this@MainActivity, R.string.invalid_backup), null)
                 return
             }
             val bytes = contents.toByteArray(Charsets.UTF_8)
             if (bytes.size > MAX_BACKUP_BYTES) {
-                result.error("backup_too_large", "备份超过 50 MiB 限制。", null)
+                result.error("backup_too_large", PactickStrings.text(this@MainActivity, R.string.backup_too_large), null)
                 return
             }
             backupContents = bytes
@@ -219,7 +262,7 @@ class MainActivity : FlutterActivity() {
         } catch (error: Exception) {
             backupResult = null
             backupContents = null
-            result.error("file_picker_unavailable", "无法打开系统文件选择器。", null)
+            result.error("file_picker_unavailable", PactickStrings.text(this@MainActivity, R.string.file_picker_unavailable), null)
         }
     }
 
@@ -255,7 +298,7 @@ class MainActivity : FlutterActivity() {
                             val read = input.read(buffer)
                             if (read < 0) break
                             if (output.size() + read > MAX_BACKUP_BYTES) {
-                                throw IllegalArgumentException("备份超过 50 MiB 限制。")
+                                throw IllegalArgumentException(PactickStrings.text(this@MainActivity, R.string.backup_too_large))
                             }
                             output.write(buffer, 0, read)
                         }
@@ -276,7 +319,7 @@ class MainActivity : FlutterActivity() {
                 runOnUiThread {
                     if (backupResult === result) {
                         backupResult = null
-                        result.error("backup_io_error", "文件读写失败，请检查文件、可用空间和访问权限。备份文件须使用 UTF-8 编码，且不超过 50 MiB。", null)
+                        result.error("backup_io_error", PactickStrings.text(this@MainActivity, R.string.backup_io_error), null)
                     }
                 }
             }
@@ -284,8 +327,10 @@ class MainActivity : FlutterActivity() {
     }
 
     override fun onDestroy() {
+        systemCalendarBridge?.dispose()
+        systemCalendarBridge = null
         finishNotificationPermissionRequests()
-        backupResult?.error("backup_interrupted", "文件操作已中断，请重试。", null)
+        backupResult?.error("backup_interrupted", PactickStrings.text(this@MainActivity, R.string.backup_interrupted), null)
         backupResult = null
         backupContents = null
         backupExecutor.shutdown()
@@ -307,27 +352,31 @@ class MainActivity : FlutterActivity() {
                 result.success(null)
             }
             "startTimer" -> {
+                lastRequestedFocusSessionId = call.argument<String>("sessionId")
                 val title = call.argument<String>("title") ?: getString(R.string.app_name)
                 val endsAt = call.argument<Number>("endsAtEpochMillis")?.toLong()
                     ?: System.currentTimeMillis()
                 val mode = call.argument<String>("mode") ?: "normal"
                 val allowedPackageNames =
                     call.argument<List<String>>("allowedPackageNames").orEmpty()
-                val taskTypeName = call.argument<String>("taskTypeName") ?: "收集箱"
+                val taskTypeName = call.argument<String>("taskTypeName") ?: PactickStrings.text(this@MainActivity, R.string.inbox)
                 val maxAppExits = call.argument<Number>("maxAppExits")?.toInt()
                 val intent = FocusTimerService.intent(
                     context = this,
                     action = FocusTimerService.ACTION_START,
                     title = title,
+                    titleKey = call.argument<String>("titleKey"),
                     endsAtEpochMillis = endsAt,
                     mode = mode,
                     allowedPackageNames = allowedPackageNames,
                     taskTypeName = taskTypeName,
+                    taskTypeKey = call.argument<String>("taskTypeKey"),
                     maxAppExits = maxAppExits,
                     sessionId = call.argument<String>("sessionId"),
                     paused = call.argument<Boolean>("paused") ?: false,
                     appExitCount = call.argument<Number>("appExitCount")?.toInt() ?: 0,
                     interruptionCount = call.argument<Number>("interruptionCount")?.toInt() ?: 0,
+                    focusDesktopEnabled = call.argument<Boolean>("focusDesktopEnabled") ?: false,
                 )
                 ContextCompat.startForegroundService(this, intent)
                 result.success(null)
@@ -352,9 +401,18 @@ class MainActivity : FlutterActivity() {
             }
 
             "stopTimer" -> {
+                focusDesktopRequestGeneration++
                 startService(FocusTimerService.intent(this, FocusTimerService.ACTION_STOP))
                 result.success(null)
             }
+
+            "configureFocusDesktop" -> {
+                focusDesktopRequestGeneration++
+                FocusTimerService.configureDesktop(call.argument<Boolean>("enabled") ?: false)
+                result.success(null)
+            }
+
+            "openFocusDesktop" -> openFocusDesktop(result)
 
             "hasUsageAccess" -> result.success(hasUsageAccess())
             "openUsageAccessSettings" -> {
@@ -381,6 +439,32 @@ class MainActivity : FlutterActivity() {
             }
             else -> result.notImplemented()
         }
+    }
+
+    private fun openFocusDesktop(result: MethodChannel.Result) {
+        val generation = ++focusDesktopRequestGeneration
+        val expectedSessionId = lastRequestedFocusSessionId
+        val handler = Handler(Looper.getMainLooper())
+        fun attempt(remaining: Int) {
+            if (generation != focusDesktopRequestGeneration || isFinishing || isDestroyed || !activityResumed) {
+                result.success(false)
+                return
+            }
+            val state = FocusTimerService.desktopState()
+            if (state != null && (expectedSessionId == null || state.sessionId == expectedSessionId)) {
+                try {
+                    startActivity(FocusDesktopActivity.intent(this, state.sessionId))
+                    result.success(true)
+                } catch (_: Exception) {
+                    result.error("focus_desktop_unavailable", PactickStrings.text(this, R.string.focus_desktop_unavailable), null)
+                }
+            } else if (remaining > 0) {
+                // Starting a foreground service is asynchronous. Do not restore or
+                // launch from background; wait briefly for this explicit request.
+                handler.postDelayed({ attempt(remaining - 1) }, 40L)
+            } else result.success(false)
+        }
+        attempt(25)
     }
 
     private fun hasUsageAccess(): Boolean {
@@ -474,6 +558,7 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (systemCalendarBridge?.onRequestPermissionsResult(requestCode) == true) return
         if (requestCode != NOTIFICATION_PERMISSION_REQUEST) return
         finishNotificationPermissionRequests()
     }

@@ -68,7 +68,9 @@ func validateEntity(entityType string, existing, body map[string]any, isCreate b
 			return &ValidationError{Message: entityType + " records are immutable; delete and create a new record instead"}
 		case "focus_session":
 			if status, _ := stringValue(existing, "status"); isTerminalFocusStatus(status) {
-				return &ValidationError{Field: "status", Message: "a terminal focus session is immutable"}
+				if err := validateTerminalFocusTaskAssociation(existing, body); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -111,6 +113,18 @@ func validateEntity(entityType string, existing, body map[string]any, isCreate b
 	default:
 		return nil
 	}
+}
+
+func validateTerminalFocusTaskAssociation(existing, body map[string]any) error {
+	if existing["task_id"] != nil || body["task_id"] == nil {
+		return fieldError("task_id", "a terminal focus session may only associate a previously unassigned task")
+	}
+	for field := range allowedFields["focus_session"] {
+		if field != "task_id" && !reflect.DeepEqual(existing[field], body[field]) {
+			return fieldError(field, "cannot be changed after the focus session has ended")
+		}
+	}
+	return nil
 }
 
 func validateProject(body map[string]any) error {

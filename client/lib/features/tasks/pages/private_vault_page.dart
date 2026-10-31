@@ -1,3 +1,5 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -11,6 +13,7 @@ import '../../../core/state/app_controller.dart';
 import '../../../core/state/app_scope.dart';
 import '../../../core/state/private_vault_controller.dart';
 import '../../../data/platform/backup_file_gateway.dart';
+import '../../focus/widgets/focus_desktop_controls.dart';
 
 const _privacyChannel = MethodChannel('pactick/private_vault');
 
@@ -25,7 +28,7 @@ Future<void> showPrivateVault(
     } catch (_) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('无法启用私密页面内容保护，请重新启动应用后重试。')),
+          SnackBar(content: Text(context.tr('无法启用私密页面内容保护，请重新启动应用后重试。'))),
         );
       }
       return;
@@ -183,9 +186,9 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
         _failed = true;
         _message = switch (error) {
           PrivateVaultException() => error.message,
-          FormatException() => '数据或日期格式无效，原数据未改变。',
+          FormatException() => context.tr('数据或日期格式无效，原数据未改变。'),
           StateError() => error.message.toString(),
-          _ => '操作未完成，原数据保留。请重试或从密文备份恢复。',
+          _ => context.tr('操作未完成，原数据保留。请重试或从密文备份恢复。'),
         };
       });
     } finally {
@@ -250,11 +253,11 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text('私密任务箱'),
+          title: Text(context.tr('私密任务箱')),
           actions: [
             if (vault.isUnlocked)
               IconButton(
-                tooltip: '锁定私密任务箱',
+                tooltip: context.tr('锁定私密任务箱'),
                 icon: const Icon(Icons.lock_outline),
                 onPressed: vault.lock,
               ),
@@ -279,7 +282,7 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
                               vault.retryNativeFocus,
                               returnToList: false,
                             ),
-                      child: const Text('重试通知'),
+                      child: Text(context.tr('重试通知')),
                     ),
                   ),
                 if (_message != null)
@@ -298,19 +301,19 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
                     ),
                   ),
                 if (!vault.supported)
-                  const Text('当前存储后端不支持私密任务箱。')
+                  Text(context.tr('当前存储后端不支持私密任务箱。'))
                 else if (_view == _PrivateView.restore)
                   ..._restoreView()
                 else if (!vault.isUnlocked) ...[
                   Text(
                     vault.configured
-                        ? '输入此工作区的私密任务箱密码。'
-                        : '设置独立密码，至少 8 个字符。密码遗失后无法恢复内容。',
+                        ? context.tr('输入此工作区的私密任务箱密码。')
+                        : context.tr('设置独立密码，至少 8 个字符。密码遗失后无法恢复内容。'),
                   ),
                   const SizedBox(height: 16),
-                  _field('私密任务箱密码', _password, secret: true),
+                  _field(context.tr('私密任务箱密码'), _password, secret: true),
                   if (!vault.configured)
-                    _field('再次输入密码', _confirmation, secret: true),
+                    _field(context.tr('再次输入密码'), _confirmation, secret: true),
                   FilledButton(
                     onPressed: _working || vault.isBusy || retry > 0
                         ? null
@@ -324,35 +327,50 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
                               );
                             }
                             if (_importTaskId != null) {
-                              await vault.importLocalTask(_importTaskId!);
+                              await widget.app.systemCalendar
+                                  .protectLocalMutation(
+                                    () => vault.importLocalTask(_importTaskId!),
+                                  );
                               _importTaskId = null;
                               await widget.app.refreshAfterPrivateTransfer();
                             }
                           }),
                     child: Text(
                       retry > 0
-                          ? '${retry + 1} 秒后重试'
+                          ? context.tr('{arg0} 秒后重试', args: {'arg0': retry + 1})
                           : vault.configured
-                          ? '解锁'
-                          : '设置密码',
+                          ? context.tr('解锁')
+                          : context.tr('设置密码'),
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    '私密任务、分类、计划和专注记录仅保存在本机密文中，不参与账户同步。应用进入后台、切换工作区或退出私密箱后重新锁定。',
+                  Text(
+                    context.tr(
+                      '私密任务、分类、计划和专注记录仅保存在本机密文中，不参与账户同步。应用进入后台、切换工作区或退出私密箱后重新锁定。',
+                    ),
                   ),
                   if (widget.importTaskId != null)
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.only(top: 16),
                       child: Text(
-                        '解锁后转入选定任务及其专属关联记录，仅支持原始本地工作区中从未尝试同步的任务。历史备份可能仍保存转入前的正文。',
+                        context.tr(
+                          '解锁后转入选定任务及其专属关联记录，仅支持原始本地工作区中从未尝试同步的任务。历史备份可能仍保存转入前的正文。',
+                        ),
                       ),
                     ),
                   const SizedBox(height: 16),
-                  _button('恢复私密密文备份', _openRestore),
-                  if (vault.configured) _button('导出私密密文备份', _saveBackup),
+                  _button(context.tr('恢复私密密文备份'), _openRestore),
+                  if (vault.configured)
+                    _button(context.tr('导出私密密文备份'), _saveBackup),
                   if (vault.hasActiveFocus)
-                    Text('私密任务专注剩余 ${_remaining()}；解锁后可查看或结束。'),
+                    Text(
+                      context.tr(
+                        '私密任务专注剩余 {arg0}；解锁后可查看或结束。',
+                        args: {'arg0': _remaining()},
+                      ),
+                    ),
+                  if (vault.hasActiveFocus)
+                    OpenFocusDesktopButton(controller: widget.app),
                 ] else
                   ...switch (_view) {
                     _PrivateView.editTask => _taskEditor(),
@@ -374,7 +392,7 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
       '${vault.remainingFocusSeconds ~/ 60}:${(vault.remainingFocusSeconds % 60).toString().padLeft(2, '0')}';
 
   List<Widget> _tasksView() => [
-    const Text('此处的内容仅在解锁期间显示。普通任务列表、搜索、日历和统计不读取私密数据。'),
+    Text(context.tr('此处的内容仅在解锁期间显示。普通任务列表、搜索、日历和统计不读取私密数据。')),
     const SizedBox(height: 12),
     Wrap(
       spacing: 8,
@@ -383,42 +401,46 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
         FilledButton.icon(
           onPressed: _working ? null : () => _editTask(null),
           icon: const Icon(Icons.add),
-          label: const Text('新建私密任务'),
+          label: Text(context.tr('新建私密任务')),
         ),
         OutlinedButton(
           onPressed: _working
               ? null
               : () => setState(() => _view = _PrivateView.import),
-          child: const Text('转入本地任务'),
+          child: Text(context.tr('转入本地任务')),
         ),
         OutlinedButton(
           onPressed: _working
               ? null
               : () => setState(() => _view = _PrivateView.password),
-          child: const Text('修改密码'),
+          child: Text(context.tr('修改密码')),
         ),
         OutlinedButton(
           onPressed: _working
               ? null
               : () => setState(() => _view = _PrivateView.backup),
-          child: const Text('密文备份'),
+          child: Text(context.tr('密文备份')),
         ),
       ],
     ),
-    if (vault.hasActiveFocus)
+    if (vault.hasActiveFocus) ...[
       Card(
         child: ListTile(
           leading: const Icon(Icons.timer_outlined),
-          title: Text('私密任务专注 · ${_remaining()}'),
-          subtitle: const Text('锁定后继续计时；系统通知仅显示“私密任务”。'),
+          title: Text(
+            context.tr('私密任务专注 · {arg0}', args: {'arg0': _remaining()}),
+          ),
+          subtitle: Text(context.tr('锁定后继续计时；系统通知仅显示“私密任务”。')),
           trailing: TextButton(
             onPressed: _working ? null : () => _run(vault.stopFocus),
-            child: const Text('结束'),
+            child: Text(context.tr('结束')),
           ),
         ),
       ),
+      OpenFocusDesktopButton(controller: widget.app),
+    ],
     const SizedBox(height: 16),
-    if (vault.tasks.isEmpty) const Text('还没有私密任务。'),
+    if (vault.tasks.isEmpty) Text(context.tr('还没有私密任务。')),
     for (final task in vault.tasks)
       Card(
         child: Padding(
@@ -446,20 +468,52 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
               ),
               if (task.note?.isNotEmpty == true) Text(task.note!),
               Text(
-                '优先级：${task.priority.label}${task.dueAt == null ? '' : ' · 截止：${_dateFormat.format(task.dueAt!.toLocal())}'}',
+                context.tr(
+                  '优先级：{arg0}{arg1}',
+                  args: {
+                    'arg0': task.priority.label,
+                    'arg1': task.dueAt == null
+                        ? ''
+                        : tr(
+                            ' · 截止：{arg0}',
+                            args: {
+                              'arg0': _dateFormat.format(task.dueAt!.toLocal()),
+                            },
+                          ),
+                  },
+                ),
               ),
               if (task.projectId != null)
                 Text(
-                  '分类：${vault.projects.where((p) => p.id == task.projectId).firstOrNull?.name ?? ''}',
+                  context.tr(
+                    '分类：{arg0}',
+                    args: {
+                      'arg0':
+                          vault.projects
+                              .where((p) => p.id == task.projectId)
+                              .firstOrNull
+                              ?.name ??
+                          '',
+                    },
+                  ),
                 ),
-              if (task.tags.isNotEmpty) Text('标签：${task.tags.join('、')}'),
+              if (task.tags.isNotEmpty)
+                Text(
+                  context.tr('标签：{arg0}', args: {'arg0': task.tags.join('、')}),
+                ),
               for (final block in vault.planBlocks.where(
                 (p) => p.taskId == task.id,
               ))
                 TextButton(
                   onPressed: _working ? null : () => _editPlan(task, block),
                   child: Text(
-                    '计划 ${_dateFormat.format(block.startsAt)} — ${_dateFormat.format(block.endsAt)} · 修改',
+                    context.tr(
+                      '计划 {arg0} — {arg1} · 修改',
+                      args: {
+                        'arg0': _dateFormat.format(block.startsAt),
+                        'arg1': _dateFormat.format(block.endsAt),
+                      },
+                    ),
                   ),
                 ),
               Wrap(
@@ -467,11 +521,11 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
                 children: [
                   TextButton(
                     onPressed: _working ? null : () => _editTask(task),
-                    child: const Text('编辑'),
+                    child: Text(context.tr('编辑')),
                   ),
                   TextButton(
                     onPressed: _working ? null : () => _editPlan(task, null),
-                    child: const Text('安排时间'),
+                    child: Text(context.tr('安排时间')),
                   ),
                   if (task.status == TaskStatus.open)
                     TextButton(
@@ -483,7 +537,7 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
                                 int.tryParse(_duration.text) ?? 25,
                               ),
                             ),
-                      child: const Text('开始专注'),
+                      child: Text(context.tr('开始专注')),
                     ),
                   TextButton(
                     onPressed: _working
@@ -492,20 +546,26 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
                             _exportTaskId = task.id;
                             _confirmPublicExport = true;
                           }),
-                    child: const Text('移出私密箱'),
+                    child: Text(context.tr('移出私密箱')),
                   ),
                   TextButton(
                     onPressed: _working
                         ? null
                         : () => _run(() => vault.removeTask(task.id)),
-                    child: const Text('删除'),
+                    child: Text(context.tr('删除')),
                   ),
                 ],
               ),
               if (_confirmPublicExport && _exportTaskId == task.id) ...[
-                const Text('移出后，任务及关联记录将作为普通数据显示并进入普通备份；当前为同步工作区时会允许上传。'),
-                _button('确认移出并允许普通存储', () async {
-                  await vault.exportTaskToOrdinary(task.id);
+                Text(
+                  context.tr(
+                    '移出后，任务及关联记录将作为普通数据显示并进入普通备份；启用账户或系统日历同步时，也会允许上传或写入系统日历。',
+                  ),
+                ),
+                _button(context.tr('确认移出并允许普通存储'), () async {
+                  await widget.app.systemCalendar.protectLocalMutation(
+                    () => vault.exportTaskToOrdinary(task.id),
+                  );
                   await widget.app.refreshAfterPrivateTransfer();
                   _confirmPublicExport = false;
                   _exportTaskId = null;
@@ -516,14 +576,17 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
         ),
       ),
     const SizedBox(height: 16),
-    _field('新建私密分类', _category),
-    _button('保存私密分类', () async {
+    _field(context.tr('新建私密分类'), _category),
+    _button(context.tr('保存私密分类'), () async {
       await vault.saveProject(_category.text);
       _category.clear();
     }),
-    _field('专注时长（分钟）', _duration, keyboard: TextInputType.number),
+    _field(context.tr('专注时长（分钟）'), _duration, keyboard: TextInputType.number),
     if (vault.focusSessions.isNotEmpty) ...[
-      Text('私密专注记录', style: Theme.of(context).textTheme.titleMedium),
+      Text(
+        context.tr('私密专注记录'),
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
       for (final session in vault.focusSessions)
         ListTile(
           contentPadding: EdgeInsets.zero,
@@ -532,16 +595,23 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
                     .where((task) => task.id == session.taskId)
                     .firstOrNull
                     ?.title ??
-                '私密任务',
+                context.tr('私密任务'),
           ),
           subtitle: Text(
-            '${_dateFormat.format(session.startedAt)} · ${session.actualDurationSeconds ~/ 60} 分钟 · ${switch (session.status) {
-              FocusSessionStatus.running => '进行中',
-              FocusSessionStatus.paused => '暂停',
-              FocusSessionStatus.completed => '完成',
-              FocusSessionStatus.abandoned => '提前结束',
-              FocusSessionStatus.interrupted => '中断',
-            }}',
+            context.tr(
+              '{arg0} · {arg1} 分钟 · {arg2}',
+              args: {
+                'arg0': _dateFormat.format(session.startedAt),
+                'arg1': session.actualDurationSeconds ~/ 60,
+                'arg2': switch (session.status) {
+                  FocusSessionStatus.running => tr('进行中'),
+                  FocusSessionStatus.paused => tr('暂停'),
+                  FocusSessionStatus.completed => tr('完成'),
+                  FocusSessionStatus.abandoned => tr('提前结束'),
+                  FocusSessionStatus.interrupted => tr('中断'),
+                },
+              },
+            ),
           ),
         ),
     ],
@@ -564,13 +634,13 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
   });
 
   List<Widget> _taskEditor() => [
-    _field('任务标题', _title),
-    _field('备注', _note, lines: 4),
+    _field(context.tr('任务标题'), _title),
+    _field(context.tr('备注'), _note, lines: 4),
     DropdownButtonFormField<String?>(
       initialValue: _selectedProject,
-      decoration: const InputDecoration(labelText: '私密分类'),
+      decoration: InputDecoration(labelText: context.tr('私密分类')),
       items: [
-        const DropdownMenuItem<String?>(value: null, child: Text('无分类')),
+        DropdownMenuItem<String?>(value: null, child: Text(context.tr('无分类'))),
         for (final project in vault.projects)
           DropdownMenuItem(value: project.id, child: Text(project.name)),
       ],
@@ -581,7 +651,7 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
     const SizedBox(height: 16),
     DropdownButtonFormField<TaskPriority>(
       initialValue: _priority,
-      decoration: const InputDecoration(labelText: '优先级'),
+      decoration: InputDecoration(labelText: context.tr('优先级')),
       items: [
         for (final priority in TaskPriority.values)
           DropdownMenuItem(value: priority, child: Text(priority.label)),
@@ -591,16 +661,16 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
           : (value) => setState(() => _priority = value!),
     ),
     const SizedBox(height: 16),
-    _field('标签', _tags, hint: '多个标签使用逗号分隔'),
-    _field('截止时间（可留空）', _due, hint: '2026-10-17 20:00'),
-    _field('预计分钟数（可留空）', _estimate, keyboard: TextInputType.number),
-    _button('保存私密任务', () async {
+    _field(context.tr('标签'), _tags, hint: context.tr('多个标签使用逗号分隔')),
+    _field(context.tr('截止时间（可留空）'), _due, hint: '2026-10-17 20:00'),
+    _field(context.tr('预计分钟数（可留空）'), _estimate, keyboard: TextInputType.number),
+    _button(context.tr('保存私密任务'), () async {
       final minutes = _estimate.text.trim().isEmpty
           ? null
           : int.tryParse(_estimate.text.trim());
       if (_estimate.text.trim().isNotEmpty &&
           (minutes == null || minutes < 1)) {
-        throw const PrivateVaultException('预计时长须为正整数。');
+        throw PrivateVaultException(context.tr('预计时长须为正整数。'));
       }
       final task = TaskItem(
         id: _editingTask?.id ?? const Uuid().v4(),
@@ -645,11 +715,11 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
   List<Widget> _planEditor() => [
     Text(_editingTask!.title, style: Theme.of(context).textTheme.titleLarge),
     const SizedBox(height: 16),
-    _field('开始时间', _planStart, hint: '2026-10-17 20:00'),
-    _field('结束时间', _planEnd, hint: '2026-10-17 20:30'),
-    const Text('私密计划保存在密文中，仅在私密箱显示，不生成含任务正文的系统提醒。'),
+    _field(context.tr('开始时间'), _planStart, hint: '2026-10-17 20:00'),
+    _field(context.tr('结束时间'), _planEnd, hint: '2026-10-17 20:30'),
+    Text(context.tr('私密计划保存在密文中，仅在私密箱显示，不生成含任务正文的系统提醒。')),
     _button(
-      '保存私密计划',
+      context.tr('保存私密计划'),
       () => vault.savePlanBlock(
         PlanBlockItem(
           id: _editingPlan?.id ?? const Uuid().v4(),
@@ -664,13 +734,13 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
     ),
   ];
   List<Widget> _passwordView() => [
-    const Text('修改密码需要验证旧密码，并重新加密当前内容。旧备份仍使用导出时的密码；不提供绕过密码的重置。'),
+    Text(context.tr('修改密码需要验证旧密码，并重新加密当前内容。旧备份仍使用导出时的密码；不提供绕过密码的重置。')),
     const SizedBox(height: 16),
-    _field('旧密码', _oldPassword, secret: true),
-    _field('新密码', _password, secret: true),
-    _field('再次输入新密码', _confirmation, secret: true),
+    _field(context.tr('旧密码'), _oldPassword, secret: true),
+    _field(context.tr('新密码'), _password, secret: true),
+    _field(context.tr('再次输入新密码'), _confirmation, secret: true),
     _button(
-      '修改密码',
+      context.tr('修改密码'),
       () => vault.changePassword(
         _oldPassword.text,
         _password.text,
@@ -680,13 +750,15 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
     ),
   ];
   List<Widget> _backupView() => [
-    const Text(
-      '私密备份包含密文、随机盐和算法参数。新设备使用备份与导出时的原密码即可恢复；恢复创建新的本地工作区并保持锁定。密码遗失后无法恢复。',
+    Text(
+      context.tr(
+        '私密备份包含密文、随机盐和算法参数。新设备使用备份与导出时的原密码即可恢复；恢复创建新的本地工作区并保持锁定。密码遗失后无法恢复。',
+      ),
     ),
     const SizedBox(height: 16),
-    _button('保存私密密文备份文件', _saveBackup, primary: true),
-    _button('打开私密密文备份文件', _openRestore),
-    const Text('完整本地备份 v2 也包含私密箱密文。普通正文与私密密文使用不同存储；导出不会把私密内容解密为 JSON。'),
+    _button(context.tr('保存私密密文备份文件'), _saveBackup, primary: true),
+    _button(context.tr('打开私密密文备份文件'), _openRestore),
+    Text(context.tr('完整本地备份 v2 也包含私密箱密文。普通正文与私密密文使用不同存储；导出不会把私密内容解密为 JSON。')),
   ];
   Future<void> _saveBackup() async {
     final encoded = await vault.exportEncryptedBackup();
@@ -696,7 +768,7 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
     )) {
       if (mounted) {
         setState(() {
-          _message = '私密密文备份已保存。';
+          _message = context.tr('私密密文备份已保存。');
           _failed = false;
         });
       }
@@ -715,24 +787,32 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
   }
 
   List<Widget> _restoreView() => [
-    const Text(
-      '输入此备份导出时使用的密码。通过认证后新建本地工作区；当前工作区保留，恢复后请在“设置 → 数据备份与工作区”中打开恢复的工作区。',
+    Text(
+      context.tr(
+        '输入此备份导出时使用的密码。通过认证后新建本地工作区；当前工作区保留，恢复后请在“设置 → 数据备份与工作区”中打开恢复的工作区。',
+      ),
     ),
     const SizedBox(height: 16),
-    _field('备份密码', _password, secret: true),
-    _button('验证并恢复到新的本地工作区', () async {
+    _field(context.tr('备份密码'), _password, secret: true),
+    _button(context.tr('验证并恢复到新的本地工作区'), () async {
       if (_restoreEncoded == null) {
-        throw const PrivateVaultException('请先选择备份文件。');
+        throw PrivateVaultException(context.tr('请先选择备份文件。'));
       }
       await vault.restoreEncryptedBackup(_restoreEncoded!, _password.text);
       _restoreEncoded = null;
       vault.lock();
-      if (mounted) setState(() => _message = '已创建恢复工作区，原工作区保留。请从设置打开恢复工作区后解锁。');
+      if (mounted) {
+        setState(
+          () => _message = context.tr('已创建恢复工作区，原工作区保留。请从设置打开恢复工作区后解锁。'),
+        );
+      }
     }, primary: true),
   ];
   List<Widget> _importView() => [
-    const Text(
-      '仅原始本地工作区中从未尝试同步的任务可以转入。任务及专属计划、专注和待发送修改在同一事务中迁移；关联其他任务或正在专注时拒绝操作。历史备份和系统快照可能仍保留原正文。',
+    Text(
+      context.tr(
+        '仅原始本地工作区中从未尝试同步的任务可以转入。任务及专属计划、专注和待发送修改在同一事务中迁移；关联其他任务或正在专注时拒绝操作。历史备份和系统快照可能仍保留原正文。',
+      ),
     ),
     const SizedBox(height: 16),
     for (final task in widget.app.tasks)
@@ -742,10 +822,12 @@ class _PrivateVaultPageState extends State<PrivateVaultPage> {
         onTap: _working
             ? null
             : () => _run(() async {
-                await vault.importLocalTask(task.id);
+                await widget.app.systemCalendar.protectLocalMutation(
+                  () => vault.importLocalTask(task.id),
+                );
                 await widget.app.refreshAfterPrivateTransfer();
               }),
       ),
-    if (widget.app.tasks.isEmpty) const Text('普通工作区中没有可选择的任务。'),
+    if (widget.app.tasks.isEmpty) Text(context.tr('普通工作区中没有可选择的任务。')),
   ];
 }

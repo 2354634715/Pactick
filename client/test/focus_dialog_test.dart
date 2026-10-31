@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -39,6 +40,10 @@ void main() {
       AppScope(
         controller: controller,
         child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          supportedLocales: const [Locale('zh', 'CN')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
           home: FocusPage(onOpenSettings: () {}, onFocusEnded: () {}),
         ),
       ),
@@ -77,6 +82,10 @@ void main() {
       AppScope(
         controller: controller,
         child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          supportedLocales: const [Locale('zh', 'CN')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
           home: FocusPage(onOpenSettings: () {}, onFocusEnded: () {}),
         ),
       ),
@@ -126,6 +135,10 @@ void main() {
       AppScope(
         controller: controller,
         child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          supportedLocales: const [Locale('zh', 'CN')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
           home: FocusPage(onOpenSettings: () {}, onFocusEnded: () {}),
         ),
       ),
@@ -173,6 +186,10 @@ void main() {
         AppScope(
           controller: controller,
           child: MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
             home: FocusPage(
               onOpenSettings: () {},
               onFocusEnded: () => focusEndedCount++,
@@ -234,6 +251,10 @@ void main() {
       AppScope(
         controller: controller,
         child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          supportedLocales: const [Locale('zh', 'CN')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
           home: FocusPage(
             onOpenSettings: () {},
             onFocusEnded: () => focusEndedCount++,
@@ -255,8 +276,9 @@ void main() {
     expect(controller.taskById(task.id)!.isCompleted, isTrue);
     expect(controller.activeFocusSession, isNull);
     expect(focusEndedCount, 1);
-    expect(find.text('先添加一个任务'), findsOneWidget);
-    expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    expect(find.text('先添加一个任务'), findsNothing);
+    expect(find.text('自由专注（暂不关联任务）'), findsOneWidget);
+    expect(find.byType(DropdownButtonFormField<String>), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump();

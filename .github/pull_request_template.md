@@ -1,5 +1,7 @@
 ## 问题与修改后的行为
 
+[English](pull_request_template.en.md)
+
 ## 验证
 
 - [ ] 已运行适用的 Go 或 Flutter 检查，并列出结果

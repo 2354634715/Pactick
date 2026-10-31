@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 
 import '../../core/models/domain_models.dart';
@@ -49,14 +51,14 @@ class WorkspaceArchive {
   String encode() {
     final encoded = const JsonEncoder.withIndent('  ').convert(toJson());
     if (utf8.encode(encoded).length > maxBytes) {
-      throw const FormatException('备份超过 50 MiB 限制。');
+      throw FormatException(tr('备份超过 50 MiB 限制。'));
     }
     return encoded;
   }
 
   factory WorkspaceArchive.decode(String encoded) {
     if (encoded.length > maxBytes || utf8.encode(encoded).length > maxBytes) {
-      throw const FormatException('备份超过 50 MiB 限制。');
+      throw FormatException(tr('备份超过 50 MiB 限制。'));
     }
     return WorkspaceArchive.fromJson(_map(jsonDecode(encoded), 'backup'));
   }
@@ -73,13 +75,13 @@ class WorkspaceArchive {
       if (archiveVersion == version) 'private_vault',
     });
     if (json['format'] != format || !{1, version}.contains(archiveVersion)) {
-      throw const FormatException('不支持的备份格式或版本。');
+      throw FormatException(tr('不支持的备份格式或版本。'));
     }
     final createdAt = _date(json['created_at'], 'created_at');
     final privateVault = json['private_vault'];
     if (privateVault != null) {
       if (privateVault is! String) {
-        throw const FormatException('私密任务箱密文无效。');
+        throw FormatException(tr('私密任务箱密文无效。'));
       }
       PrivateVaultEnvelope.decode(privateVault);
     }
@@ -89,7 +91,7 @@ class WorkspaceArchive {
     final byKey = <String, ArchiveDocument>{};
     for (final document in documents) {
       if (byKey.containsKey(document.key)) {
-        throw const FormatException('备份含有重复记录。');
+        throw FormatException(tr('备份含有重复记录。'));
       }
       byKey[document.key] = document;
     }
@@ -100,7 +102,9 @@ class WorkspaceArchive {
     final settings = <String, String>{};
     for (final entry in rawSettings.entries) {
       if (!portableSettings.contains(entry.key) || entry.value is! String) {
-        throw FormatException('不允许恢复的设置：${entry.key}。');
+        throw FormatException(
+          tr('不允许恢复的设置：{arg0}。', args: {'arg0': entry.key}),
+        );
       }
       final value = entry.value! as String;
       _validateSetting(entry.key, value);
@@ -111,7 +115,7 @@ class WorkspaceArchive {
         .toList(growable: false);
     for (final change in changes) {
       if (!byKey.containsKey('${change.entityType}\u0000${change.entityId}')) {
-        throw const FormatException('未同步修改引用了缺失记录。');
+        throw FormatException(tr('未同步修改引用了缺失记录。'));
       }
       if (change.patch != null) {
         _validateReferences(
@@ -256,7 +260,7 @@ List<Object?> _list(Object? value, String field) {
 void _keys(Map<String, Object?> value, Set<String> keys) {
   if (value.keys.any((key) => !keys.contains(key)) ||
       keys.any((key) => !value.containsKey(key))) {
-    throw const FormatException('备份字段不完整或包含未知字段。');
+    throw FormatException(tr('备份字段不完整或包含未知字段。'));
   }
 }
 
@@ -423,7 +427,10 @@ void _validateReferences(
   for (final key in document.referenceKeys) {
     if (!documents.containsKey(key)) {
       throw FormatException(
-        '记录 ${document.id} 引用了缺失的 ${key.split('\u0000').first}。',
+        tr(
+          '记录 {arg0} 引用了缺失的 {arg1}。',
+          args: {'arg0': document.id, 'arg1': key.split('\u0000').first},
+        ),
       );
     }
   }

@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 import 'dart:isolate';
 import 'dart:math';
@@ -47,7 +49,7 @@ class PrivateVaultEnvelope {
 
   factory PrivateVaultEnvelope.decode(String encoded) {
     if (encoded.length > maxBytes || utf8.encode(encoded).length > maxBytes) {
-      throw const FormatException('私密备份超过 50 MiB 限制。');
+      throw FormatException(tr('私密备份超过 50 MiB 限制。'));
     }
     final raw = jsonDecode(encoded);
     if (raw is! Map<String, dynamic> ||
@@ -58,15 +60,15 @@ class PrivateVaultEnvelope {
         raw['iterations'] != iterations ||
         raw['cipher'] != 'aes-256-gcm' ||
         !raw.containsKey('runtime')) {
-      throw const FormatException('不支持的私密备份格式或参数。');
+      throw FormatException(tr('不支持的私密备份格式或参数。'));
     }
     List<int> bytes(String key, [int? length]) {
       if (raw[key] is! String) {
-        throw const FormatException('私密备份字段无效。');
+        throw FormatException(tr('私密备份字段无效。'));
       }
       final value = base64Decode(raw[key] as String);
       if ((length != null && value.length != length) || value.isEmpty) {
-        throw const FormatException('私密备份密文长度无效。');
+        throw FormatException(tr('私密备份密文长度无效。'));
       }
       return value;
     }
@@ -81,7 +83,7 @@ class PrivateVaultEnvelope {
               .hasMatch(timer['session_id'] as String) ||
           timer['started_at'] is! String ||
           timer['ends_at'] is! String) {
-        throw const FormatException('私密计时数据无效。');
+        throw FormatException(tr('私密计时数据无效。'));
       }
       final start = DateTime.tryParse(timer['started_at'] as String);
       final end = DateTime.tryParse(timer['ends_at'] as String);
@@ -89,7 +91,7 @@ class PrivateVaultEnvelope {
           end == null ||
           !end.isAfter(start) ||
           end.difference(start) > const Duration(hours: 24)) {
-        throw const FormatException('私密计时时间无效。');
+        throw FormatException(tr('私密计时时间无效。'));
       }
       runtime = {
         'session_id': timer['session_id'],
@@ -164,7 +166,7 @@ class PrivateVaultCrypto {
     Map<String, Object?>? runtime,
   }) async {
     if (utf8.encode(plaintext).length > 35 * 1024 * 1024) {
-      throw const FormatException('私密任务箱内容超过容量限制。');
+      throw FormatException(tr('私密任务箱内容超过容量限制。'));
     }
     final header = PrivateVaultEnvelope(
       salt: salt,

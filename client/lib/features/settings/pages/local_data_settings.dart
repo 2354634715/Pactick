@@ -1,3 +1,5 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -22,11 +24,11 @@ class SyncSettingsCard extends StatelessWidget {
       children: [
         ListTile(
           leading: const Icon(Icons.dns_outlined),
-          title: const Text('同步设置'),
+          title: Text(context.tr('同步设置')),
           subtitle: Text(
             session.hasServer
                 ? session.serverUri.toString()
-                : '仅本地使用 · 尚未配置服务器',
+                : context.tr('仅本地使用 · 尚未配置服务器'),
           ),
           trailing: const Icon(Icons.chevron_right),
           onTap: session.isBusy
@@ -48,24 +50,26 @@ class SyncSettingsCard extends StatelessWidget {
         if (session.isAuthenticated)
           ListTile(
             leading: const Icon(Icons.logout),
-            title: const Text('退出登录'),
-            subtitle: const Text('停止同步，保留本机数据'),
+            title: Text(context.tr('退出登录')),
+            subtitle: Text(context.tr('停止同步，保留本机数据')),
             onTap: session.isBusy
                 ? null
                 : () async {
                     final yes = await showDialog<bool>(
                       context: context,
                       builder: (c) => AlertDialog(
-                        title: const Text('退出同步账户'),
-                        content: const Text('退出后停止同步。本机任务、计划和专注记录保留，可继续编辑和导出。'),
+                        title: Text(context.tr('退出同步账户')),
+                        content: Text(
+                          context.tr('退出后停止同步。本机任务、计划和专注记录保留，可继续编辑和导出。'),
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(c, false),
-                            child: const Text('取消'),
+                            child: Text(context.tr('取消')),
                           ),
                           FilledButton(
                             onPressed: () => Navigator.pop(c, true),
-                            child: const Text('退出登录'),
+                            child: Text(context.tr('退出登录')),
                           ),
                         ],
                       ),
@@ -76,7 +80,14 @@ class SyncSettingsCard extends StatelessWidget {
                       } catch (error) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('退出未完成：$error。本机数据保留。')),
+                            SnackBar(
+                              content: Text(
+                                context.tr(
+                                  '退出未完成：{arg0}。本机数据保留。',
+                                  args: {'arg0': error},
+                                ),
+                              ),
+                            ),
                           );
                         }
                       }
@@ -112,8 +123,12 @@ class _LocalDataCardState extends State<LocalDataCard> {
     try {
       await action();
     } catch (e) {
-      if (mounted) setState(() => _operationError = '操作未完成：$e');
-      _message('操作未完成：$e');
+      if (mounted) {
+        setState(
+          () => _operationError = context.tr('操作未完成：{arg0}', args: {'arg0': e}),
+        );
+      }
+      _message(tr('操作未完成：{arg0}', args: {'arg0': e}));
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -133,7 +148,7 @@ class _LocalDataCardState extends State<LocalDataCard> {
     return Column(
       children: [
         if (_busy && _showProgress)
-          const LinearProgressIndicator(semanticsLabel: '正在执行数据操作'),
+          LinearProgressIndicator(semanticsLabel: context.tr('正在执行数据操作')),
         if (_operationError != null)
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
@@ -146,15 +161,17 @@ class _LocalDataCardState extends State<LocalDataCard> {
             ),
           ),
         if (app.activeFocusSession != null)
-          const Padding(
+          Padding(
             padding: EdgeInsets.symmetric(vertical: AppSpacing.sm),
-            child: Text('请先结束本机专注，再恢复、复制或切换工作区。当前专注期间仍可导出本地备份。'),
+            child: Text(context.tr('请先结束本机专注，再恢复、复制或切换工作区。当前专注期间仍可导出本地备份。')),
           ),
         ListTile(
           leading: const Icon(Icons.save_alt),
-          title: const Text('导出本地备份'),
-          subtitle: const Text(
-            '导出当前工作区、未同步修改及可携带设置（含本机白名单包名），无需联网。私密任务箱仅导出密文；不含密码、令牌、服务器配置、专注控制所有权或旧同步游标。',
+          title: Text(context.tr('导出本地备份')),
+          subtitle: Text(
+            context.tr(
+              '导出当前工作区、未同步修改及可携带设置（含本机白名单包名），无需联网。私密任务箱仅导出密文；不含密码、令牌、服务器配置、专注控制所有权或旧同步游标。',
+            ),
           ),
           onTap: _busy
               ? null
@@ -162,70 +179,76 @@ class _LocalDataCardState extends State<LocalDataCard> {
                   final encoded = await app.repository.backups.exportJson(
                     app.repository.selectedAccountId,
                   );
-                  if (await _files.saveJson(encoded)) _message('本地备份已保存');
+                  if (await _files.saveJson(encoded)) _message(tr('本地备份已保存'));
                 }),
         ),
         ListTile(
           leading: const Icon(Icons.file_open_outlined),
-          title: const Text('从本地备份恢复'),
-          subtitle: const Text(
-            '支持 v1、v2 备份，最大 50 MiB / 100000 普通文档。校验后创建新的本地工作区，原工作区保留；停止当前同步，不自动上传。v2 的私密箱保持密文，解锁时再认证。',
+          title: Text(context.tr('从本地备份恢复')),
+          subtitle: Text(
+            context.tr(
+              '支持 v1、v2 备份，最大 50 MiB / 100000 普通文档。校验后创建新的本地工作区，原工作区保留；停止当前同步，不自动上传。v2 的私密箱保持密文，解锁时再认证。',
+            ),
           ),
           onTap: _busy || session.isBusy || app.activeFocusSession != null
               ? null
               : () => _run(() async {
                   if (app.activeFocusSession != null) {
-                    throw StateError('请先结束当前专注');
+                    throw StateError(context.tr('请先结束当前专注'));
                   }
                   final encoded = await _files.openJson();
                   if (encoded == null) return;
                   final id = await app.repository.backups.restoreJson(encoded);
                   await session.useLocalWorkspace();
                   await app.openOfflineWorkspace(id);
-                  _message('备份已恢复到新的本地工作区，原工作区保留');
+                  _message(tr('备份已恢复到新的本地工作区，原工作区保留'));
                 }),
         ),
         ListTile(
           leading: const Icon(Icons.copy_all_outlined),
-          title: const Text('复制为本地工作区'),
-          subtitle: const Text('创建并打开本地副本，停止同步，原工作区保留。清除本机会话不代表服务器已撤销此次登录。'),
+          title: Text(context.tr('复制为本地工作区')),
+          subtitle: Text(
+            context.tr('创建并打开本地副本，停止同步，原工作区保留。清除本机会话不代表服务器已撤销此次登录。'),
+          ),
           onTap: _busy || session.isBusy || app.activeFocusSession != null
               ? null
               : () => _run(() async {
                   if (app.activeFocusSession != null) {
-                    throw StateError('请先结束当前专注');
+                    throw StateError(context.tr('请先结束当前专注'));
                   }
                   final id = await app.repository.backups.copyToLocal(
                     app.repository.selectedAccountId,
                   );
                   await session.useLocalWorkspace();
                   await app.openOfflineWorkspace(id);
-                  _message('已打开本地副本，原工作区保留');
+                  _message(tr('已打开本地副本，原工作区保留'));
                 }),
         ),
         ListTile(
           leading: const Icon(Icons.folder_open),
-          title: const Text('打开保留的工作区'),
-          subtitle: const Text('离线打开选定的本机工作区并停止当前同步；清除本机会话不代表服务器已撤销此次登录。'),
+          title: Text(context.tr('打开保留的工作区')),
+          subtitle: Text(
+            context.tr('离线打开选定的本机工作区并停止当前同步；清除本机会话不代表服务器已撤销此次登录。'),
+          ),
           onTap: _busy || session.isBusy || app.activeFocusSession != null
               ? null
               : () => _run(() async {
                   if (app.activeFocusSession != null) {
-                    throw StateError('请先结束当前专注');
+                    throw StateError(context.tr('请先结束当前专注'));
                   }
                   final ids = await app.repository.store.listWorkspaceIds();
                   final alternatives = ids
                       .where((id) => id != app.repository.selectedAccountId)
                       .toList();
                   if (alternatives.isEmpty) {
-                    _message('没有其他可打开的本机工作区');
+                    _message(tr('没有其他可打开的本机工作区'));
                     return;
                   }
                   if (!context.mounted) return;
                   final id = await showDialog<String>(
                     context: context,
                     builder: (c) => SimpleDialog(
-                      title: const Text('选择本机工作区'),
+                      title: Text(context.tr('选择本机工作区')),
                       children: [
                         for (final id in alternatives)
                           SimpleDialogOption(
@@ -237,7 +260,7 @@ class _LocalDataCardState extends State<LocalDataCard> {
                               child: Align(
                                 alignment: AlignmentDirectional.centerStart,
                                 child: Text(
-                                  '${id == app.repository.selectedAccountId ? '当前 · ' : ''}${_workspaceLabel(id)}',
+                                  '${id == app.repository.selectedAccountId ? context.tr("当前 · ") : ''}${_workspaceLabel(id)}',
                                 ),
                               ),
                             ),
@@ -254,13 +277,13 @@ class _LocalDataCardState extends State<LocalDataCard> {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.cloud_download_outlined),
-            title: const Text('导出服务器账户数据'),
-            subtitle: const Text('需要联网，不含本机未同步修改；请同时保存本地备份'),
+            title: Text(context.tr('导出服务器账户数据')),
+            subtitle: Text(context.tr('需要联网，不含本机未同步修改；请同时保存本地备份')),
             onTap: _busy
                 ? null
                 : () => _run(() async {
                     if (!await session.ensureFreshSession()) {
-                      throw StateError('请重新登录服务器');
+                      throw StateError(tr('请重新登录服务器'));
                     }
                     final data = await session.repository.apiClient.get(
                       '/v1/account/export',
@@ -269,7 +292,7 @@ class _LocalDataCardState extends State<LocalDataCard> {
                       const JsonEncoder.withIndent('  ').convert(data),
                       suggestedName: 'pactick-server-export.json',
                     )) {
-                      _message('服务器账户数据已保存');
+                      _message(tr('服务器账户数据已保存'));
                     }
                   }),
           ),
@@ -278,8 +301,8 @@ class _LocalDataCardState extends State<LocalDataCard> {
               Icons.delete_forever,
               color: Theme.of(context).colorScheme.error,
             ),
-            title: const Text('删除服务器账户'),
-            subtitle: const Text('永久删除服务器账户和数据，保留本机副本'),
+            title: Text(context.tr('删除服务器账户')),
+            subtitle: Text(context.tr('永久删除服务器账户和数据，保留本机副本')),
             onTap: _busy
                 ? null
                 : () => _run(_deleteAccount, showProgress: false),
@@ -290,19 +313,22 @@ class _LocalDataCardState extends State<LocalDataCard> {
   }
 
   String _workspaceLabel(String id) {
-    if (id == '__local__') return '初始本地工作区';
+    if (id == '__local__') return context.tr('初始本地工作区');
     if (id.startsWith('__local__:')) {
       final suffix = id.substring(10);
-      return '本地副本 · ${suffix.length > 8 ? suffix.substring(0, 8) : suffix}';
+      return context.tr(
+        '本地副本 · {arg0}',
+        args: {'arg0': suffix.length > 8 ? suffix.substring(0, 8) : suffix},
+      );
     }
     if (id.startsWith('server:')) return Uri.decodeComponent(id.substring(7));
-    return '旧版工作区 · $id';
+    return context.tr('旧版工作区 · {arg0}', args: {'arg0': id});
   }
 
   Future<void> _deleteAccount() async {
     final session = SessionScope.read(context);
     final user = session.user;
-    if (user == null) throw StateError('请重新登录后操作');
+    if (user == null) throw StateError(context.tr('请重新登录后操作'));
     final deleted = await showGuardedEditor<bool>(
       context,
       builder: (dismissal) => _DeleteServerAccountDialog(
@@ -313,7 +339,7 @@ class _LocalDataCardState extends State<LocalDataCard> {
         dismissal: dismissal,
       ),
     );
-    if (deleted == true) _message('服务器账户已删除，本机数据保留');
+    if (deleted == true) _message(tr('服务器账户已删除，本机数据保留'));
   }
 }
 
@@ -352,9 +378,15 @@ class _ReleasesAboutCardState extends State<ReleasesAboutCard> {
     children: [
       ListTile(
         leading: const Icon(Icons.info_outline),
-        title: const Text('关于 Pactick'),
+        title: Text(context.tr('关于 Pactick')),
         subtitle: Text(
-          '${_version ?? (_loadingVersion ? '正在读取版本' : '版本信息未取得')} · 数据保存在本机，可通过自部署服务器同步；源码公开。查看许可证。',
+          context.tr(
+            '{arg0} · 数据保存在本机，可通过自部署服务器同步；源码公开。查看许可证。',
+            args: {
+              'arg0':
+                  _version ?? (_loadingVersion ? tr('正在读取版本') : tr('版本信息未取得')),
+            },
+          ),
         ),
         onTap: () => showLicensePage(
           context: context,
@@ -365,8 +397,10 @@ class _ReleasesAboutCardState extends State<ReleasesAboutCard> {
       ListTile(
         key: const ValueKey('check-client-update-settings'),
         leading: const Icon(Icons.open_in_new),
-        title: const Text('查看发布版本'),
-        subtitle: Text(releases.isEmpty ? '尚未配置发布页，请查阅分发者的发布说明' : releases),
+        title: Text(context.tr('查看发布版本')),
+        subtitle: Text(
+          releases.isEmpty ? context.tr('尚未配置发布页，请查阅分发者的发布说明') : releases,
+        ),
         onTap: releases.isEmpty
             ? null
             : () async {
@@ -379,11 +413,11 @@ class _ReleasesAboutCardState extends State<ReleasesAboutCard> {
                         uri,
                         mode: LaunchMode.externalApplication,
                       )) {
-                    throw StateError('无法打开发布页');
+                    throw StateError(tr('无法打开发布页'));
                   }
                 } catch (_) {
                   messenger.showSnackBar(
-                    const SnackBar(content: Text('无法打开发布页，请检查发布地址与浏览器')),
+                    SnackBar(content: Text(tr('无法打开发布页，请检查发布地址与浏览器'))),
                   );
                 }
               },
@@ -460,7 +494,12 @@ class _DeleteServerAccountDialogState
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (mounted) {
-        setState(() => _error = '删除未完成：$error。本机数据保留，可检查连接或重新登录后再试。');
+        setState(
+          () => _error = context.tr(
+            '删除未完成：{arg0}。本机数据保留，可检查连接或重新登录后再试。',
+            args: {'arg0': error},
+          ),
+        );
       }
     } finally {
       if (mounted) setState(() => _busy = false);
@@ -493,12 +532,12 @@ class _DeleteServerAccountDialogState
               children: [
                 Expanded(
                   child: Text(
-                    '永久删除服务器账户',
+                    context.tr('永久删除服务器账户'),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
                 IconButton(
-                  tooltip: '关闭删除确认',
+                  tooltip: context.tr('关闭删除确认'),
                   onPressed: _busy
                       ? null
                       : () => _guard.currentState?.requestClose(),
@@ -516,7 +555,10 @@ class _DeleteServerAccountDialogState
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     Text(
-                      '服务器：${widget.server}\n账户：${widget.email}\n永久删除此服务器账户及全部服务器数据。本机副本保留；此操作不会删除本机数据。',
+                      context.tr(
+                        '服务器：{arg0}\n账户：{arg1}\n永久删除此服务器账户及全部服务器数据。本机副本保留；此操作不会删除本机数据。',
+                        args: {'arg0': widget.server, 'arg1': widget.email},
+                      ),
                     ),
                     const SizedBox(height: AppSpacing.lg),
                     TextFormField(
@@ -524,18 +566,24 @@ class _DeleteServerAccountDialogState
                       focusNode: _passwordFocus,
                       enabled: !_busy,
                       obscureText: true,
-                      decoration: const InputDecoration(labelText: '当前密码'),
-                      validator: (value) =>
-                          value == null || value.isEmpty ? '请输入密码' : null,
+                      decoration: InputDecoration(
+                        labelText: context.tr('当前密码'),
+                      ),
+                      validator: (value) => value == null || value.isEmpty
+                          ? context.tr('请输入密码')
+                          : null,
                     ),
                     const SizedBox(height: AppSpacing.md),
                     TextFormField(
                       controller: _confirmation,
                       focusNode: _confirmationFocus,
                       enabled: !_busy,
-                      decoration: const InputDecoration(labelText: '输入 DELETE'),
-                      validator: (value) =>
-                          value != 'DELETE' ? '请输入 DELETE 确认' : null,
+                      decoration: InputDecoration(
+                        labelText: context.tr('输入 DELETE'),
+                      ),
+                      validator: (value) => value != 'DELETE'
+                          ? context.tr('请输入 DELETE 确认')
+                          : null,
                     ),
                     if (_error != null)
                       Padding(
@@ -561,7 +609,7 @@ class _DeleteServerAccountDialogState
                 onPressed: _busy
                     ? null
                     : () => _guard.currentState?.requestClose(),
-                child: const Text('取消'),
+                child: Text(context.tr('取消')),
               ),
               FilledButton(
                 onPressed: _busy ? null : _delete,
@@ -569,7 +617,7 @@ class _DeleteServerAccountDialogState
                   backgroundColor: Theme.of(context).colorScheme.error,
                   foregroundColor: Theme.of(context).colorScheme.onError,
                 ),
-                child: Text(_busy ? '正在删除…' : '永久删除'),
+                child: Text(_busy ? context.tr('正在删除…') : context.tr('永久删除')),
               ),
             ],
           ),

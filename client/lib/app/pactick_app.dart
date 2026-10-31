@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 
 import '../core/models/domain_models.dart';
+import '../core/localization/app_localizations.dart';
+import '../core/localization/language_preference.dart';
 import '../core/state/app_scope.dart';
 import '../core/state/app_controller.dart';
 import '../core/state/session_scope.dart';
@@ -35,6 +37,7 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
 
   Object _snapshot(AppController app) => (
     app.themePreference,
+    app.languagePreference,
     app.useDynamicColor,
     app.isReady,
     app.initializationError,
@@ -47,6 +50,10 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
     if (_controller == controller) return;
     _controller?.removeListener(_onPresentationChanged);
     _controller = controller;
+    controller.systemCalendar.setForeground(
+      WidgetsBinding.instance.lifecycleState == null ||
+          WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed,
+    );
     _presentation = _snapshot(controller);
     controller.addListener(_onPresentationChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -76,16 +83,29 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state != AppLifecycleState.resumed) {
+      _controller?.systemCalendar.setForeground(false);
       _controller?.privateVault.lock();
       return;
     }
     final app = AppScope.read(context);
+    app.systemCalendar.setForeground(true);
+    unawaited(app.refreshNativeLanguage());
     unawaited(app.reconcileNativeFocus());
     unawaited(app.refreshGuardPermissions());
     unawaited(app.refreshGuardActivityStats());
     unawaited(app.refreshTaskReminders());
     unawaited(_handleReminderLaunch());
     unawaited(_resumeSync());
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    final app = _controller;
+    if (app == null || app.languagePreference != LanguagePreference.system) {
+      return;
+    }
+    unawaited(app.refreshNativeLanguage());
+    setState(() {});
   }
 
   Future<void> _handleReminderLaunch() async {
@@ -133,7 +153,16 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
           ThemePreference.light => ThemeMode.light,
           ThemePreference.dark => ThemeMode.dark,
         },
-        locale: const Locale('zh', 'CN'),
+        locale: app.languagePreference.locale,
+        localeResolutionCallback: (locale, supported) =>
+            resolveAppLocale(locale),
+        builder: (context, child) {
+          // Resolver callbacks also run for system events while an explicit
+          // locale is selected. Publish only the locale actually being rendered.
+          AppLocalizations.languageCode = Localizations.localeOf(context)
+              .languageCode;
+          return child ?? const SizedBox.shrink();
+        },
         supportedLocales: const [Locale('zh', 'CN'), Locale('en')],
         localizationsDelegates: const [
           GlobalMaterialLocalizations.delegate,
@@ -143,12 +172,14 @@ class _PactickAppState extends State<PactickApp> with WidgetsBindingObserver {
         home: !app.isReady
             ? const Scaffold(body: Center(child: CircularProgressIndicator()))
             : app.initializationError != null
-            ? Scaffold(
-                body: StatePane.error(
-                  title: '无法打开本地工作区',
-                  message: '本机数据初始化未完成，请重试。',
-                  actionLabel: '重试',
-                  onAction: app.retryInitialization,
+            ? Builder(
+                builder: (context) => Scaffold(
+                  body: StatePane.error(
+                    title: context.tr('无法打开本地工作区'),
+                    message: context.tr('本机数据初始化未完成，请重试。'),
+                    actionLabel: context.tr('重试'),
+                    onAction: app.retryInitialization,
+                  ),
                 ),
               )
             : AppDataBoundary(controller: app, child: const AdaptiveAppShell()),

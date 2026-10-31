@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_tokens.dart';
@@ -76,48 +78,51 @@ class TaskDetailsPanel extends StatelessWidget {
         Text(task.title, style: text.titleLarge),
         const SizedBox(height: AppSpacing.sm),
         Text(switch (task.status) {
-          TaskStatus.open => '待办',
-          TaskStatus.completed => '已完成',
-          TaskStatus.cancelled => '已取消',
+          TaskStatus.open => context.tr('待办'),
+          TaskStatus.completed => context.tr('已完成'),
+          TaskStatus.cancelled => context.tr('已取消'),
         }, style: text.bodySmall?.copyWith(color: scheme.onSurfaceVariant)),
         const SizedBox(height: AppSpacing.lg),
-        Text('备注', style: text.titleMedium),
+        Text(context.tr('备注'), style: text.titleMedium),
         const SizedBox(height: AppSpacing.xs),
-        SelectableText(task.note?.isNotEmpty == true ? task.note! : '没有备注'),
+        SelectableText(
+          task.note?.isNotEmpty == true ? task.note! : context.tr('没有备注'),
+        ),
         const SizedBox(height: AppSpacing.xl),
         _DetailField(
-          label: '项目',
-          value: controller.projectById(task.projectId)?.name ?? '收集箱',
+          label: context.tr('项目'),
+          value:
+              controller.projectById(task.projectId)?.name ?? context.tr('收集箱'),
         ),
-        _DetailField(label: '优先级', value: task.priority.label),
+        _DetailField(label: context.tr('优先级'), value: task.priority.label),
         _DetailField(
-          label: '截止日期',
+          label: context.tr('截止日期'),
           value: task.dueAt == null
-              ? '未设置'
+              ? context.tr('未设置')
               : '${formatFullDate(task.dueAt!.toLocal())} '
                     '${formatClock(task.dueAt!.toLocal())}',
         ),
         _DetailField(
-          label: '预计用时',
+          label: context.tr('预计用时'),
           value: task.estimatedDurationSeconds == null
-              ? '未设置'
+              ? context.tr('未设置')
               : formatDuration(task.estimatedDurationSeconds!, compact: true),
         ),
         _DetailField(
-          label: '已记录实际专注',
+          label: context.tr('已记录实际专注'),
           value: formatDuration(
             controller.actualSecondsForTask(task.id),
             compact: true,
           ),
         ),
         _DetailField(
-          label: '标签',
-          value: task.tags.isEmpty ? '没有标签' : task.tags.join('、'),
+          label: context.tr('标签'),
+          value: task.tags.isEmpty ? context.tr('没有标签') : task.tags.join('、'),
         ),
-        Text('计划时段', style: text.titleMedium),
+        Text(context.tr('计划时段'), style: text.titleMedium),
         const SizedBox(height: AppSpacing.xs),
         if (!controller.planBlocks.any((block) => block.taskId == task.id))
-          const Text('尚未安排时间'),
+          Text(context.tr('尚未安排时间')),
         for (final block in controller.planBlocks.where(
           (block) => block.taskId == task.id,
         ))
@@ -129,9 +134,9 @@ class TaskDetailsPanel extends StatelessWidget {
             ),
             subtitle: Text(
               '${formatDuration(block.durationSeconds, compact: true)} · ${switch (block.status) {
-                PlanBlockStatus.scheduled => '已安排',
-                PlanBlockStatus.completed => '已完成',
-                PlanBlockStatus.cancelled => '已取消',
+                PlanBlockStatus.scheduled => context.tr("已安排"),
+                PlanBlockStatus.completed => context.tr("已完成"),
+                PlanBlockStatus.cancelled => context.tr("已取消"),
               }}',
             ),
             trailing: const Icon(Icons.edit_outlined),
@@ -152,7 +157,7 @@ class TaskDetailsPanel extends StatelessWidget {
                   )
                 : null,
             icon: const Icon(Icons.add),
-            label: const Text('安排时间'),
+            label: Text(context.tr('安排时间')),
           ),
         ),
         const SizedBox(height: AppSpacing.lg),
@@ -161,7 +166,7 @@ class TaskDetailsPanel extends StatelessWidget {
           child: FilledButton.tonalIcon(
             onPressed: onEdit,
             icon: const Icon(Icons.edit_outlined),
-            label: const Text('编辑任务'),
+            label: Text(context.tr('编辑任务')),
           ),
         ),
       ],
@@ -266,12 +271,12 @@ class _TaskDetailsRouteState extends State<_TaskDetailsRoute> {
             children: [
               Expanded(
                 child: Text(
-                  '任务详情',
+                  context.tr('任务详情'),
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
               IconButton(
-                tooltip: '关闭任务详情',
+                tooltip: context.tr('关闭任务详情'),
                 onPressed: () => Navigator.pop(context),
                 icon: const Icon(Icons.close),
               ),
@@ -283,8 +288,8 @@ class _TaskDetailsRouteState extends State<_TaskDetailsRoute> {
             padding: const EdgeInsets.all(AppSpacing.lg),
             child: _task == null
                 ? StatePane.empty(
-                    title: '当前工作区中没有这项任务',
-                    message: '关闭详情后查看当前工作区的任务。',
+                    title: context.tr('当前工作区中没有这项任务'),
+                    message: context.tr('关闭详情后查看当前工作区的任务。'),
                   )
                 : TaskDetailsPanel(
                     task: _task!,

@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -123,11 +125,13 @@ class _ProjectEditorState extends State<ProjectEditor> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.project == null ? '新建项目' : '编辑项目',
+                            widget.project == null
+                                ? context.tr('新建项目')
+                                : context.tr('编辑项目'),
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           Text(
-                            '将相关任务归入同一项目',
+                            context.tr('将相关任务归入同一项目'),
                             style: Theme.of(context).textTheme.bodySmall
                                 ?.copyWith(color: scheme.onSurfaceVariant),
                           ),
@@ -135,7 +139,7 @@ class _ProjectEditorState extends State<ProjectEditor> {
                       ),
                     ),
                     IconButton(
-                      tooltip: '关闭',
+                      tooltip: context.tr('关闭'),
                       onPressed: _saving
                           ? null
                           : () => _guardKey.currentState?.requestClose(),
@@ -164,19 +168,19 @@ class _ProjectEditorState extends State<ProjectEditor> {
                         textInputAction: TextInputAction.done,
                         onFieldSubmitted: (_) => _save(),
                         onChanged: (_) => setState(() {}),
-                        decoration: const InputDecoration(
-                          labelText: '项目名称',
-                          hintText: '例如：产品发布',
+                        decoration: InputDecoration(
+                          labelText: context.tr('项目名称'),
+                          hintText: context.tr('例如：产品发布'),
                           prefixIcon: Icon(Icons.drive_file_rename_outline),
                         ),
                         validator: (value) =>
                             value == null || value.trim().isEmpty
-                            ? '请输入项目名称'
+                            ? context.tr('请输入项目名称')
                             : null,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       Text(
-                        '项目颜色',
+                        context.tr('项目颜色'),
                         style: Theme.of(context).textTheme.titleSmall,
                       ),
                       const SizedBox(height: AppSpacing.sm),
@@ -188,7 +192,10 @@ class _ProjectEditorState extends State<ProjectEditor> {
                             Semantics(
                               button: true,
                               selected: _color == color,
-                              label: '项目颜色 ${_colorName(color)}',
+                              label: context.tr(
+                                '项目颜色 {arg0}',
+                                args: {'arg0': _colorName(color)},
+                              ),
                               enabled: !_saving,
                               excludeSemantics: true,
                               onTap: _saving
@@ -247,13 +254,25 @@ class _ProjectEditorState extends State<ProjectEditor> {
                             Expanded(
                               child: Text(
                                 _nameController.text.trim().isEmpty
-                                    ? '项目预览'
+                                    ? context.tr('项目预览')
                                     : _nameController.text.trim(),
                                 style: Theme.of(context).textTheme.titleMedium,
                               ),
                             ),
                             Text(
-                              '${widget.controller.tasks.where((task) => widget.project != null && task.projectId == widget.project!.id).length} 项任务',
+                              context.tr(
+                                '{arg0} 项任务',
+                                args: {
+                                  'arg0': widget.controller.tasks
+                                      .where(
+                                        (task) =>
+                                            widget.project != null &&
+                                            task.projectId ==
+                                                widget.project!.id,
+                                      )
+                                      .length,
+                                },
+                              ),
                               style: Theme.of(context).textTheme.labelMedium
                                   ?.copyWith(color: scheme.onSurfaceVariant),
                             ),
@@ -285,7 +304,7 @@ class _ProjectEditorState extends State<ProjectEditor> {
                     onPressed: _saving
                         ? null
                         : () => _guardKey.currentState?.requestClose(),
-                    child: const Text('取消'),
+                    child: Text(context.tr('取消')),
                   ),
 
                   FilledButton.icon(
@@ -296,7 +315,11 @@ class _ProjectEditorState extends State<ProjectEditor> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.check),
-                    label: Text(widget.project == null ? '创建项目' : '保存'),
+                    label: Text(
+                      widget.project == null
+                          ? context.tr('创建项目')
+                          : context.tr('保存'),
+                    ),
                   ),
                 ],
               ),
@@ -352,14 +375,14 @@ Color _parseColor(String value) {
 }
 
 String _colorName(String value) =>
-    const {
-      '#5B67D8': '靛蓝',
-      '#8B5FC7': '紫色',
-      '#D15D83': '玫红',
-      '#D46A45': '橙红',
-      '#C28A2C': '赭黄',
-      '#3C9475': '绿色',
-      '#367FA1': '蓝色',
-      '#697386': '灰色',
+    {
+      '#5B67D8': tr('靛蓝'),
+      '#8B5FC7': tr('紫色'),
+      '#D15D83': tr('玫红'),
+      '#D46A45': tr('橙红'),
+      '#C28A2C': tr('赭黄'),
+      '#3C9475': tr('绿色'),
+      '#367FA1': tr('蓝色'),
+      '#697386': tr('灰色'),
     }[value] ??
     value;

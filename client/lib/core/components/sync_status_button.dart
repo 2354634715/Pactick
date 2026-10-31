@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -25,29 +27,37 @@ class SyncStatusButton extends StatelessWidget {
     final (icon, label, color) = switch (phase) {
       SyncPhase.localOnly => (
         Icons.cloud_off_outlined,
-        pendingCount == 0 ? '仅本地' : '仅本地 · $pendingCount 项更改',
+        pendingCount == 0
+            ? context.tr('仅本地')
+            : context.tr('仅本地 · {arg0} 项更改', args: {'arg0': pendingCount}),
         scheme.onSurfaceVariant,
       ),
-      SyncPhase.synced => (Icons.cloud_done_outlined, '已同步', scheme.primary),
+      SyncPhase.synced => (
+        Icons.cloud_done_outlined,
+        context.tr('已同步'),
+        scheme.primary,
+      ),
       SyncPhase.pending => (
         Icons.cloud_upload_outlined,
-        pendingCount == 0 ? '等待首次同步' : '$pendingCount 项待同步',
+        pendingCount == 0
+            ? context.tr('等待首次同步')
+            : context.tr('{arg0} 项待同步', args: {'arg0': pendingCount}),
         scheme.tertiary,
       ),
-      SyncPhase.syncing => (Icons.sync, '正在同步', scheme.primary),
+      SyncPhase.syncing => (Icons.sync, context.tr('正在同步'), scheme.primary),
       SyncPhase.offline => (
         Icons.cloud_off_outlined,
-        '离线可用',
+        context.tr('离线可用'),
         scheme.onSurfaceVariant,
       ),
       SyncPhase.attention => (
         Icons.sync_problem_outlined,
-        '同步异常',
+        context.tr('同步异常'),
         scheme.error,
       ),
     };
     return Semantics(
-      label: '同步状态：$label',
+      label: context.tr('同步状态：{arg0}', args: {'arg0': label}),
       button: true,
       child: IconButton(
         tooltip: label,
@@ -89,8 +99,11 @@ class OfflineBanner extends StatelessWidget {
           Expanded(
             child: Text(
               pendingCount == 0
-                  ? '当前无法连接服务器，仍可使用本机功能。'
-                  : '已保存到本机，恢复连接后将同步 $pendingCount 项更改。',
+                  ? context.tr('当前无法连接服务器，仍可使用本机功能。')
+                  : context.tr(
+                      '已保存到本机，恢复连接后将同步 {arg0} 项更改。',
+                      args: {'arg0': pendingCount},
+                    ),
               style: TextStyle(color: scheme.onWarningContainer),
             ),
           ),
@@ -186,7 +199,7 @@ class _SyncStatusPanel extends StatelessWidget {
                     ),
                   ),
                   IconButton(
-                    tooltip: '关闭',
+                    tooltip: context.tr('关闭'),
                     onPressed: () => Navigator.pop(context),
                     icon: const Icon(Icons.close),
                   ),
@@ -207,16 +220,19 @@ class _SyncStatusPanel extends StatelessWidget {
                   children: [
                     _SyncCheckpoint(
                       icon: Icons.offline_pin_outlined,
-                      title: '本机已保存',
+                      title: context.tr('本机已保存'),
                       description: controller.pendingOperations == 0
-                          ? '没有待同步的本机更改'
-                          : '${controller.pendingOperations} 项更改已保存在本机，等待同步',
+                          ? context.tr('没有待同步的本机更改')
+                          : context.tr(
+                              '{arg0} 项更改已保存在本机，等待同步',
+                              args: {'arg0': controller.pendingOperations},
+                            ),
                       state: _CheckpointState.complete,
                     ),
                     const Divider(),
                     _SyncCheckpoint(
                       icon: Icons.cloud_outlined,
-                      title: '云端副本',
+                      title: context.tr('云端副本'),
                       description: _cloudDescription(lastSync),
                       state: switch (controller.syncPhase) {
                         SyncPhase.synced => _CheckpointState.complete,
@@ -230,10 +246,13 @@ class _SyncStatusPanel extends StatelessWidget {
                     const Divider(),
                     _SyncCheckpoint(
                       icon: Icons.devices_outlined,
-                      title: '已登记设备',
+                      title: context.tr('已登记设备'),
                       description: controller.devices.isEmpty
-                          ? '服务器尚未登记设备'
-                          : '${controller.devices.length} 台设备已登记',
+                          ? context.tr('服务器尚未登记设备')
+                          : context.tr(
+                              '{arg0} 台设备已登记',
+                              args: {'arg0': controller.devices.length},
+                            ),
                       state: controller.devices.isEmpty
                           ? _CheckpointState.inactive
                           : _CheckpointState.complete,
@@ -258,7 +277,7 @@ class _SyncStatusPanel extends StatelessWidget {
                     const SizedBox(width: AppSpacing.sm),
                     Expanded(
                       child: Text(
-                        '离线时可编辑任务、调整计划和计时；连接服务器后可继续同步。',
+                        context.tr('离线时可编辑任务、调整计划和计时；连接服务器后可继续同步。'),
                         style: Theme.of(context).textTheme.bodyMedium
                             ?.copyWith(color: scheme.onPrimaryContainer),
                       ),
@@ -278,11 +297,11 @@ class _SyncStatusPanel extends StatelessWidget {
                           ? null
                           : () => unawaited(controller.syncNow()),
                       icon: const Icon(Icons.sync),
-                      label: const Text('立即同步'),
+                      label: Text(context.tr('立即同步')),
                     ),
                   OutlinedButton(
                     onPressed: () => Navigator.pop(context),
-                    child: const Text('关闭'),
+                    child: Text(context.tr('关闭')),
                   ),
                   if (onOpenSettings != null)
                     FilledButton.icon(
@@ -291,7 +310,7 @@ class _SyncStatusPanel extends StatelessWidget {
                         onOpenSettings!();
                       },
                       icon: const Icon(Icons.tune_rounded),
-                      label: const Text('同步与设备设置'),
+                      label: Text(context.tr('同步与设备设置')),
                     ),
                 ],
               ),
@@ -303,9 +322,12 @@ class _SyncStatusPanel extends StatelessWidget {
   }
 
   String _cloudDescription(DateTime? lastSync) {
-    if (controller.syncPhase == SyncPhase.localOnly) return '尚未连接同步账户';
-    if (lastSync == null) return '尚未完成首次同步';
-    return '上次同步：${formatMonthDay(lastSync)} ${formatClock(lastSync)}';
+    if (controller.syncPhase == SyncPhase.localOnly) return tr('尚未连接同步账户');
+    if (lastSync == null) return tr('尚未完成首次同步');
+    return tr(
+      '上次同步：{arg0} {arg1}',
+      args: {'arg0': formatMonthDay(lastSync), 'arg1': formatClock(lastSync)},
+    );
   }
 }
 

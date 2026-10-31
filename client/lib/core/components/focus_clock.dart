@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_tokens.dart';
@@ -80,35 +82,48 @@ class FocusClock extends StatelessWidget {
             spacing: AppSpacing.sm,
             runSpacing: AppSpacing.xs,
             children: [
-              if (hours > 0) unit(hours, '时'),
-              unit(minutes, '分'),
-              unit(seconds, '秒'),
+              if (hours > 0) unit(hours, context.tr('时')),
+              unit(minutes, context.tr('分')),
+              unit(seconds, context.tr('秒')),
             ],
           );
         },
       );
       final value = Semantics(
-        label: '${reached ? '已专注' : '剩余'} $hours 小时 $minutes 分钟 $seconds 秒',
+        label: context.tr(
+          '{arg0} {arg1} 小时 {arg2} 分钟 {arg3} 秒',
+          args: {
+            'arg0': reached ? tr('已专注') : tr('剩余'),
+            'arg1': hours,
+            'arg2': minutes,
+            'arg3': seconds,
+          },
+        ),
         excludeSemantics: true,
         child: time,
       );
       final clockWidget = !showRing
           ? value
-          : SizedBox.square(
-              dimension: 276,
-              child: Stack(
-                alignment: Alignment.center,
+          : ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 320),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  value,
+                  const SizedBox(height: AppSpacing.lg),
                   ExcludeSemantics(
-                    child: SizedBox.expand(
-                      child: CircularProgressIndicator(
+                    child: SizedBox(
+                      width: double.infinity,
+                      child: LinearProgressIndicator(
                         value: session.plannedDurationSeconds == 0
                             ? 0
                             : (elapsed / session.plannedDurationSeconds).clamp(
                                 0.0,
                                 1.0,
                               ),
-                        strokeWidth: 8,
+                        minHeight: 3,
+                        borderRadius: BorderRadius.circular(3),
+                        stopIndicatorRadius: 0,
                         backgroundColor: scheme.surfaceContainerHighest,
                         color: session.status == FocusSessionStatus.paused
                             ? scheme.secondary
@@ -116,7 +131,6 @@ class FocusClock extends StatelessWidget {
                       ),
                     ),
                   ),
-                  value,
                 ],
               ),
             );
@@ -129,18 +143,32 @@ class FocusClock extends StatelessWidget {
               liveRegion: true,
               child: Text(
                 session.status == FocusSessionStatus.paused
-                    ? '目标已到，已暂停'
-                    : '目标已到，仍在记录',
+                    ? context.tr('目标已到，已暂停')
+                    : context.tr('目标已到，仍在记录'),
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             )
           else
-            const Text('剩余时间'),
+            Text(context.tr('剩余时间')),
           const SizedBox(height: AppSpacing.sm),
           clockWidget,
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '${reached ? '已专注时间 · ' : '已专注 ${formatDuration(elapsed, compact: true)} · '}目标 ${formatDuration(session.plannedDurationSeconds, compact: true)}',
+            context.tr(
+              '{arg0}目标 {arg1}',
+              args: {
+                'arg0': reached
+                    ? tr('已专注时间 · ')
+                    : tr(
+                        '已专注 {arg0} · ',
+                        args: {'arg0': formatDuration(elapsed, compact: true)},
+                      ),
+                'arg1': formatDuration(
+                  session.plannedDurationSeconds,
+                  compact: true,
+                ),
+              },
+            ),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall,
           ),

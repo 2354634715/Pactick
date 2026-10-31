@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 enum ThemePreference { system, light, dark }
 
 enum SyncPhase { localOnly, synced, pending, syncing, offline, attention }
@@ -6,11 +8,11 @@ enum TaskPriority { none, low, medium, high, urgent }
 
 extension TaskPriorityLabel on TaskPriority {
   String get label => switch (this) {
-    TaskPriority.none => '无',
-    TaskPriority.low => '低',
-    TaskPriority.medium => '中',
-    TaskPriority.high => '高',
-    TaskPriority.urgent => '紧急',
+    TaskPriority.none => tr('无'),
+    TaskPriority.low => tr('低'),
+    TaskPriority.medium => tr('中'),
+    TaskPriority.high => tr('高'),
+    TaskPriority.urgent => tr('紧急'),
   };
 }
 
@@ -22,9 +24,9 @@ enum FocusPolicyMode { normal, guard, strict }
 
 extension FocusPolicyModeLabel on FocusPolicyMode {
   String get label => switch (this) {
-    FocusPolicyMode.normal => '普通模式',
-    FocusPolicyMode.guard => '守护模式',
-    FocusPolicyMode.strict => '严格模式',
+    FocusPolicyMode.normal => tr('普通模式'),
+    FocusPolicyMode.guard => tr('守护模式'),
+    FocusPolicyMode.strict => tr('严格模式'),
   };
 }
 
@@ -268,6 +270,14 @@ class FocusPolicyItem {
   final List<String> emergencyAppCategories;
   final String notificationMode;
 
+  /// Only untouched built-in names are translated. User names stay unchanged.
+  String get displayName => switch ((id, name)) {
+    ('51111111-1111-4111-8111-111111111111', '灵活专注') => tr('灵活专注'),
+    ('52222222-2222-4222-8222-222222222222', '深度守护') => tr('深度守护'),
+    ('53333333-3333-4333-8333-333333333333', '严格专注') => tr('严格专注'),
+    _ => name,
+  };
+
   factory FocusPolicyItem.fromDocument(String id, Map<String, Object?> body) {
     return FocusPolicyItem(
       id: id,
@@ -303,6 +313,8 @@ class FocusPolicyItem {
 }
 
 class FocusSessionItem {
+  static String get defaultTitle => tr('自由专注');
+
   const FocusSessionItem({
     required this.id,
     required this.plannedDurationSeconds,
@@ -384,6 +396,7 @@ class FocusSessionItem {
   };
 
   FocusSessionItem copyWith({
+    String? taskId,
     DateTime? endedAt,
     DateTime? pauseStartedAt,
     int? pausedDurationSeconds,
@@ -397,7 +410,7 @@ class FocusSessionItem {
   }) {
     return FocusSessionItem(
       id: id,
-      taskId: taskId,
+      taskId: taskId ?? this.taskId,
       planBlockId: planBlockId,
       focusPolicyId: focusPolicyId,
       plannedDurationSeconds: plannedDurationSeconds,

@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -130,12 +132,14 @@ class _TaskEditorState extends State<TaskEditor> {
                 children: [
                   Expanded(
                     child: Text(
-                      widget.task == null ? '新建任务' : '编辑任务',
+                      widget.task == null
+                          ? context.tr('新建任务')
+                          : context.tr('编辑任务'),
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                   ),
                   IconButton(
-                    tooltip: '关闭',
+                    tooltip: context.tr('关闭'),
                     onPressed: _saving
                         ? null
                         : () => _guardKey.currentState?.requestClose(),
@@ -164,13 +168,13 @@ class _TaskEditorState extends State<TaskEditor> {
                         autofocus: widget.task == null,
                         textInputAction: TextInputAction.next,
                         maxLength: 500,
-                        decoration: const InputDecoration(
-                          labelText: '任务标题',
+                        decoration: InputDecoration(
+                          labelText: context.tr('任务标题'),
                           prefixIcon: Icon(Icons.check_circle_outline),
                         ),
                         validator: (value) =>
                             value == null || value.trim().isEmpty
-                            ? '请输入任务标题'
+                            ? context.tr('请输入任务标题')
                             : null,
                       ),
                       const SizedBox(height: AppSpacing.md),
@@ -180,8 +184,8 @@ class _TaskEditorState extends State<TaskEditor> {
                         minLines: 3,
                         maxLines: 6,
                         maxLength: 50000,
-                        decoration: const InputDecoration(
-                          labelText: '备注',
+                        decoration: InputDecoration(
+                          labelText: context.tr('备注'),
                           alignLabelWithHint: true,
                           prefixIcon: Icon(Icons.notes_outlined),
                         ),
@@ -191,15 +195,15 @@ class _TaskEditorState extends State<TaskEditor> {
                         key: ValueKey(_projectId),
                         isExpanded: true,
                         initialValue: _projectId,
-                        decoration: const InputDecoration(
-                          labelText: '项目或清单',
+                        decoration: InputDecoration(
+                          labelText: context.tr('项目或清单'),
                           prefixIcon: Icon(Icons.folder_outlined),
                         ),
                         items: [
-                          const DropdownMenuItem<String?>(
+                          DropdownMenuItem<String?>(
                             value: null,
                             child: Text(
-                              '收集箱',
+                              context.tr('收集箱'),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -233,22 +237,27 @@ class _TaskEditorState extends State<TaskEditor> {
                                   }
                                 },
                           icon: const Icon(Icons.create_new_folder_outlined),
-                          label: const Text('新建项目'),
+                          label: Text(context.tr('新建项目')),
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       DropdownButtonFormField<TaskPriority>(
                         isExpanded: true,
                         initialValue: _priority,
-                        decoration: const InputDecoration(
-                          labelText: '优先级',
+                        decoration: InputDecoration(
+                          labelText: context.tr('优先级'),
                           prefixIcon: Icon(Icons.flag_outlined),
                         ),
                         items: [
                           for (final priority in TaskPriority.values)
                             DropdownMenuItem(
                               value: priority,
-                              child: Text('${priority.label}优先级'),
+                              child: Text(
+                                context.tr(
+                                  '{arg0}优先级',
+                                  args: {'arg0': priority.label},
+                                ),
+                              ),
                             ),
                         ],
                         onChanged: _saving
@@ -282,7 +291,7 @@ class _TaskEditorState extends State<TaskEditor> {
                                     : (value) {
                                         setState(() => _hasEstimate = value);
                                       },
-                                title: const Text('设置预计用时'),
+                                title: Text(context.tr('设置预计用时')),
                                 subtitle: _hasEstimate
                                     ? Text(
                                         formatDuration(
@@ -290,7 +299,7 @@ class _TaskEditorState extends State<TaskEditor> {
                                           compact: true,
                                         ),
                                       )
-                                    : const Text('未设置预计用时；开始专注时可选择目标时长'),
+                                    : Text(context.tr('未设置预计用时；开始专注时可选择目标时长')),
                               ),
                               if (_hasEstimate)
                                 Slider(
@@ -298,7 +307,10 @@ class _TaskEditorState extends State<TaskEditor> {
                                   min: 15,
                                   max: 240,
                                   divisions: 15,
-                                  label: '${_estimateMinutes.round()} 分钟',
+                                  label: context.tr(
+                                    '{arg0} 分钟',
+                                    args: {'arg0': _estimateMinutes.round()},
+                                  ),
                                   onChanged: _saving
                                       ? null
                                       : (value) {
@@ -315,9 +327,9 @@ class _TaskEditorState extends State<TaskEditor> {
                       TextFormField(
                         enabled: !_saving,
                         controller: _tagsController,
-                        decoration: const InputDecoration(
-                          labelText: '标签',
-                          hintText: '用逗号或顿号分隔',
+                        decoration: InputDecoration(
+                          labelText: context.tr('标签'),
+                          hintText: context.tr('用逗号或顿号分隔'),
                           prefixIcon: Icon(Icons.label_outline),
                         ),
                       ),
@@ -345,7 +357,7 @@ class _TaskEditorState extends State<TaskEditor> {
                   onPressed: _saving
                       ? null
                       : () => _guardKey.currentState?.requestClose(),
-                  child: const Text('取消'),
+                  child: Text(context.tr('取消')),
                 ),
 
                 FilledButton.icon(
@@ -356,7 +368,7 @@ class _TaskEditorState extends State<TaskEditor> {
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
                       : const Icon(Icons.save_outlined),
-                  label: const Text('保存任务'),
+                  label: Text(context.tr('保存任务')),
                 ),
               ],
             ),
@@ -436,8 +448,8 @@ class _DateField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InputDecorator(
-      decoration: const InputDecoration(
-        labelText: '截止日期',
+      decoration: InputDecoration(
+        labelText: context.tr('截止日期'),
         prefixIcon: Icon(Icons.event_outlined),
       ),
       child: Column(
@@ -445,22 +457,22 @@ class _DateField extends StatelessWidget {
         children: [
           Text(
             value == null
-                ? '不设置截止日期'
+                ? context.tr('不设置截止日期')
                 : '${formatMonthDay(value!)} ${formatClock(value!)}',
           ),
-          if (value != null) const Text('定时提醒按这里的日期和时间触发；未选择时间时为 00:00。'),
+          if (value != null) Text(context.tr('定时提醒按这里的日期和时间触发；未选择时间时为 00:00。')),
           const SizedBox(height: AppSpacing.xxs),
           Wrap(
             alignment: WrapAlignment.end,
             children: [
               if (value != null)
                 IconButton(
-                  tooltip: '清除截止日期',
+                  tooltip: context.tr('清除截止日期'),
                   onPressed: enabled ? () => onChanged(null) : null,
                   icon: const Icon(Icons.clear),
                 ),
               IconButton(
-                tooltip: '选择截止日期',
+                tooltip: context.tr('选择截止日期'),
                 onPressed: !enabled
                     ? null
                     : () async {
@@ -487,7 +499,7 @@ class _DateField extends StatelessWidget {
               ),
               if (value != null)
                 IconButton(
-                  tooltip: '选择截止时间',
+                  tooltip: context.tr('选择截止时间'),
                   onPressed: !enabled
                       ? null
                       : () async {

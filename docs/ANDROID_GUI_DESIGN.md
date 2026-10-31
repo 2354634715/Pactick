@@ -517,7 +517,7 @@ SafeArea 与键盘 inset 由共享容器负责，禁止各页重复添加底部�
 
 ## 9. 设计预览与审阅方式
 
-独立[交互预览](../output/playwright/pactick-gui-design/preview.html)可在浏览器直接打开。它支持主要页面、浅深色、代表性宽度、文字放大及部分状态切换；所有按钮仅展示方案，不调用产品业务。它用于检查信息顺序、对齐线、操作层级和响应式结构，不是 Flutter 实现或 Android 验收。
+独立交互预览（维护目录 `output/playwright/pactick-gui-design/preview.html`）可在浏览器直接打开。它支持主要页面、浅深色、代表性宽度、文字放大及部分状态切换；所有按钮仅展示方案，不调用产品业务。它用于检查信息顺序、对齐线、操作层级和响应式结构，不是 Flutter 实现或 Android 验收。
 
 确认时以本文的功能约束和布局规则为准。预览只选取代表性数据和状态，未画出的现有入口仍按正文保留；颜色、系统组件细节与真实字体渲染在第二阶段由 Flutter 实现和第三阶段截图核对。
 
@@ -527,9 +527,9 @@ SafeArea 与键盘 inset 由共享容器负责，禁止各页重复添加底部�
 
 - 生成 32 个主要页面、窗口和状态截图，覆盖 320/390/768/1024/1440 宽度、420 低高度、六页 2× 文字，以及空数据、离线、保存失败、权限、本机/远端专注状态。最终 DOM 检查未发现页面水平溢出或矩阵页面内可见按钮小于 48×48；该检查不验证 Flutter 实际触控区域。
 - 修正预览中小操作宽度不足、大字号底导航、低高度计时环和远端倒计时等问题，并人工查看六页总览、宽屏日历/任务、深色专注、大字号、低高度及相关弹窗的代表性截图。
-- 另生成任务编辑失败、同步登录与提前结束三个弹窗截图，以及[六页总览](../output/playwright/pactick-gui-design/overview.png)。共有 36 个 PNG 文件；首屏截图不代表整页所有滚动位置均已检查。
+- 另生成任务编辑失败、同步登录与提前结束三个弹窗截图，以及六页总览（维护目录 `output/playwright/pactick-gui-design/overview.png`）。共有 36 个 PNG 文件；首屏截图不代表整页所有滚动位置均已检查。
 - 对预览的八组主要文字/辅助文字/主按钮/选中标签前景背景进行静态对比计算，范围为 4.99:1–15.49:1。这只覆盖这些固定示意组合，未核验 Flutter 动态取色、全部状态和渲染像素。
-- 最终预览页面控制台无错误或警告。矩阵结果见 [preview-checks.json](../output/playwright/pactick-gui-design/preview-checks.json)，复现脚本为同目录 `capture.js` 和 `capture_dialogs.js`；浏览器工具入口依赖本机缓存位置。
+- 最终预览页面控制台无错误或警告。矩阵结果见 维护记录 `output/playwright/pactick-gui-design/preview-checks.json`，复现脚本为同目录 `capture.js` 和 `capture_dialogs.js`；浏览器工具入口依赖本机缓存位置。
 
 Flutter analyze/test、真实 Android 布局/键盘/返回/通知/权限/TalkBack，以及动态配色全部保留为确认后验证项。本次没有安装工具、配置新 AVD、改动客户端代码或写入演示业务数据。
 

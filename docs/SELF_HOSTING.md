@@ -1,5 +1,7 @@
 # 自部署服务端
 
+[English](SELF_HOSTING.en.md)
+
 服务端提供可选的多设备同步，单机本地使用无需部署服务器。本文适用于使用 Ubuntu/Debian、systemd、Docker Engine 和 Compose v2 的单台主机。
 
 本文使用 Linux 命令行部署脚本。Windows/Linux 的本机浏览器管理器支持 API 启停、配置、日志、备份、隔离恢复检查与管理员建号，运行方式及 amd64/386 区分见[本机服务器管理界面](SERVER_MANAGEMENT.md)。Android 通知栏任务提醒由本机显示，不需要部署额外的提醒服务。

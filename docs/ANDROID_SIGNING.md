@@ -1,5 +1,7 @@
 # Windows 本机创建和备份 Android 签名密钥
 
+[English](ANDROID_SIGNING.en.md)
+
 本文用于首次创建 Pactick 预览 APK 的长期签名密钥。维护者在自己的 PowerShell 中执行，密码只在本机输入，不通过聊天或公开日志提供。前置条件为已安装 JDK；Android 构建另需 Flutter 和 Android SDK，版本要求见 [构建文档](BUILDING.md)。
 
 首轮从 Releases 直接分发 APK。这里创建的密钥用于实际 APK 签名，与以后采用 Google Play App Signing 时的上传密钥不同。直接分发的覆盖更新应保留兼容的签名；重新生成同名文件不能恢复旧密钥。原理见 [Android 应用签名说明](https://developer.android.com/studio/publish/app-signing)。

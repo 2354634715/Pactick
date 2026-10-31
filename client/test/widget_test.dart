@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pactick/app/pactick_app.dart';
@@ -77,7 +78,12 @@ void main() {
         controller: controller,
         child: SessionScope(
           controller: sessionController,
-          child: MaterialApp(home: SettingsPage(onClose: () {})),
+          child: MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: SettingsPage(onClose: () {}),
+          ),
         ),
       ),
     );
@@ -137,9 +143,12 @@ void main() {
     await tester.tap(find.text('暂不完成任务'));
     await tester.pumpAndSettle();
 
+    final navigation = tester.widget<NavigationBar>(find.byType(NavigationBar));
     expect(
-      tester.widget<NavigationBar>(find.byType(NavigationBar)).selectedIndex,
-      0,
+      (navigation.destinations[navigation.selectedIndex]
+              as NavigationDestination)
+          .label,
+      '今日',
     );
     expect(find.text('今日安排'), findsOneWidget);
     expect(tester.takeException(), isNull);

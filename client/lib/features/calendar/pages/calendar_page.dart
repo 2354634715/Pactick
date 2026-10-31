@@ -1,6 +1,9 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 import '../../../app/theme/app_tokens.dart';
 import '../../../core/components/feature_page_scaffold.dart';
@@ -12,6 +15,7 @@ import '../../../core/state/app_controller.dart';
 import '../../../core/state/app_scope.dart';
 import '../../../core/utilities/formatters.dart';
 import '../../../core/utilities/persistence_errors.dart';
+import '../../settings/pages/system_calendar_settings.dart';
 
 enum _CalendarMode { day, week, month }
 
@@ -48,8 +52,13 @@ class _CalendarPageState extends State<CalendarPage> {
         .toList(growable: false);
     final events = _eventsForDate(controller, _selectedDate);
     return FeaturePageScaffold(
-      title: '日历',
+      title: context.tr('日历'),
       actions: [
+        IconButton(
+          tooltip: context.tr('系统日历'),
+          onPressed: () => showSystemCalendarSettings(context, controller),
+          icon: const Icon(Icons.calendar_month_outlined),
+        ),
         SyncStatusButton(
           phase: controller.syncPhase,
           pendingCount: controller.pendingOperations,
@@ -60,7 +69,7 @@ class _CalendarPageState extends State<CalendarPage> {
           ),
         ),
         IconButton(
-          tooltip: '设置',
+          tooltip: context.tr('设置'),
           onPressed: widget.onOpenSettings,
           icon: const Icon(Icons.settings_outlined),
         ),
@@ -69,7 +78,7 @@ class _CalendarPageState extends State<CalendarPage> {
         heroTag: 'calendar-create-plan',
         onPressed: _scheduling ? null : () => _newPlan(controller),
         icon: const Icon(Icons.add),
-        label: const Text('新建时段'),
+        label: Text(context.tr('新建时段')),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -129,20 +138,22 @@ class _CalendarPageState extends State<CalendarPage> {
                     onPressed: _pickDate,
                     icon: const Icon(Icons.calendar_today_outlined),
                     label: Text(
-                      '${_selectedDate.year} 年 ${_selectedDate.month} 月',
+                      DateFormat.yMMMM(
+                        Localizations.localeOf(context).toString(),
+                      ).format(_selectedDate),
                     ),
                   ),
                   IconButton(
-                    tooltip: '上一周期',
+                    tooltip: context.tr('上一周期'),
                     onPressed: () => _move(-1),
                     icon: const Icon(Icons.chevron_left),
                   ),
                   TextButton(
                     onPressed: () => _selectDate(DateTime.now()),
-                    child: const Text('今天'),
+                    child: Text(context.tr('今天')),
                   ),
                   IconButton(
-                    tooltip: '下一周期',
+                    tooltip: context.tr('下一周期'),
                     onPressed: () => _move(1),
                     icon: const Icon(Icons.chevron_right),
                   ),
@@ -155,15 +166,18 @@ class _CalendarPageState extends State<CalendarPage> {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   SegmentedButton<_CalendarMode>(
-                    segments: const [
-                      ButtonSegment(value: _CalendarMode.day, label: Text('日')),
+                    segments: [
+                      ButtonSegment(
+                        value: _CalendarMode.day,
+                        label: Text(context.tr('日')),
+                      ),
                       ButtonSegment(
                         value: _CalendarMode.week,
-                        label: Text('周'),
+                        label: Text(context.tr('周')),
                       ),
                       ButtonSegment(
                         value: _CalendarMode.month,
-                        label: Text('月'),
+                        label: Text(context.tr('月')),
                       ),
                     ],
                     selected: {_mode},
@@ -173,7 +187,12 @@ class _CalendarPageState extends State<CalendarPage> {
                   OutlinedButton.icon(
                     onPressed: () => _showUnscheduled(controller),
                     icon: const Icon(Icons.inbox_outlined),
-                    label: Text('未排期 · ${unscheduled.length}'),
+                    label: Text(
+                      context.tr(
+                        '未排期 · {arg0}',
+                        args: {'arg0': unscheduled.length},
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -189,7 +208,7 @@ class _CalendarPageState extends State<CalendarPage> {
               ),
               if (_scheduling) ...[
                 const SizedBox(height: AppSpacing.md),
-                const LinearProgressIndicator(semanticsLabel: '正在保存计划时段'),
+                LinearProgressIndicator(semanticsLabel: context.tr('正在保存计划时段')),
               ],
               if (_scheduleError case final message?) ...[
                 const SizedBox(height: AppSpacing.md),
@@ -220,7 +239,7 @@ class _CalendarPageState extends State<CalendarPage> {
                                       failure.$1,
                                       failure.$2,
                                     ),
-                              child: const Text('重试排期'),
+                              child: Text(context.tr('重试排期')),
                             ),
                         ],
                       ),
@@ -318,7 +337,7 @@ class _CalendarPageState extends State<CalendarPage> {
     if (!mounted || saved == null) return;
     _selectDate(saved.startsAt);
     ScaffoldMessenger.of(context)
-        .showSnackBar(const SnackBar(content: Text('计划时段已保存')));
+        .showSnackBar(SnackBar(content: Text(context.tr('计划时段已保存'))));
   }
 
   Future<void> _scheduleAt(
@@ -341,12 +360,12 @@ class _CalendarPageState extends State<CalendarPage> {
       if (!mounted) return;
       _selectDate(start);
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('计划时段已保存')));
+          .showSnackBar(SnackBar(content: Text(context.tr('计划时段已保存'))));
     } catch (error) {
       if (mounted) {
         setState(() {
           _scheduleError = persistenceErrorMessage(error)
-              .replaceFirst('输入已保留', '任务已保留');
+              .replaceFirst(context.tr('输入已保留'), context.tr('任务已保留'));
           _failedSchedule = (task, start);
         });
       }
@@ -420,12 +439,12 @@ class _CalendarPageState extends State<CalendarPage> {
               children: [
                 Expanded(
                   child: Text(
-                    '日历记录详情',
+                    context.tr('日历记录详情'),
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                 ),
                 IconButton(
-                  tooltip: '关闭详情',
+                  tooltip: context.tr('关闭详情'),
                   onPressed: () => Navigator.pop(context),
                   icon: const Icon(Icons.close),
                 ),
@@ -447,26 +466,33 @@ class _CalendarPageState extends State<CalendarPage> {
             if (event.crossesDay) ...[
               const SizedBox(height: AppSpacing.sm),
               Text(
-                '议程仅显示与所选日期相交的时段，原始记录未拆分。',
+                context.tr('议程仅显示与所选日期相交的时段，原始记录未拆分。'),
                 style: TextStyle(color: scheme.onSurfaceVariant),
               ),
             ],
             if (event.task != null) ...[
               const SizedBox(height: AppSpacing.md),
-              Text('关联任务：${event.task!.title}'),
+              Text(
+                context.tr('关联任务：{arg0}', args: {'arg0': event.task!.title}),
+              ),
             ],
             if (event.planTitle != null) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text('关联计划：${event.planTitle}'),
+              Text(context.tr('关联计划：{arg0}', args: {'arg0': event.planTitle})),
             ],
             if (event.kind == _EventKind.focus) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text('已记录实际专注：${formatDuration(event.recordedSeconds)}'),
+              Text(
+                context.tr(
+                  '已记录实际专注：{arg0}',
+                  args: {'arg0': formatDuration(event.recordedSeconds)},
+                ),
+              ),
             ],
             if (event.kind == _EventKind.plan) ...[
               const SizedBox(height: AppSpacing.md),
               Text(
-                '可修改计划开始时间、时长和关联任务；实际专注记录单独保留。',
+                context.tr('可修改计划开始时间、时长和关联任务；实际专注记录单独保留。'),
                 style: TextStyle(color: scheme.onSurfaceVariant),
               ),
             ],
@@ -475,18 +501,18 @@ class _CalendarPageState extends State<CalendarPage> {
               FilledButton.icon(
                 onPressed: () => Navigator.pop(context, true),
                 icon: const Icon(Icons.edit_calendar_outlined),
-                label: const Text('编辑计划时段'),
+                label: Text(context.tr('编辑计划时段')),
               )
             else if (event.kind == _EventKind.deadline && event.task != null)
               FilledButton.icon(
                 onPressed: () => Navigator.pop(context, true),
                 icon: const Icon(Icons.edit_outlined),
-                label: const Text('编辑任务'),
+                label: Text(context.tr('编辑任务')),
               )
             else
               OutlinedButton(
                 onPressed: () => Navigator.pop(context),
-                child: const Text('关闭'),
+                child: Text(context.tr('关闭')),
               ),
           ],
         ),
@@ -543,7 +569,9 @@ class _CalendarEvent {
 
   String get visibleTime {
     if (kind == _EventKind.deadline) return formatClock(startsAt);
-    if (endsAt == null) return '${formatClock(visibleStart)} 起';
+    if (endsAt == null) {
+      return tr('{arg0} 起', args: {'arg0': formatClock(visibleStart)});
+    }
     final end =
         !_sameDay(visibleEnd, visibleStart) &&
             visibleEnd.hour == 0 &&
@@ -569,11 +597,11 @@ List<_CalendarEvent> _eventsForDate(AppController controller, DateTime date) {
         startsAt: dueAt,
         visibleStart: dueAt,
         visibleEnd: dueAt,
-        originalTime: '截止 ${_dateTime(dueAt)}',
+        originalTime: tr('截止 {arg0}', args: {'arg0': _dateTime(dueAt)}),
         status: switch (task.status) {
-          TaskStatus.open => '任务未完成',
-          TaskStatus.completed => '任务已完成',
-          TaskStatus.cancelled => '任务已取消',
+          TaskStatus.open => tr('任务未完成'),
+          TaskStatus.completed => tr('任务已完成'),
+          TaskStatus.cancelled => tr('任务已取消'),
         },
         task: task,
       ),
@@ -586,17 +614,22 @@ List<_CalendarEvent> _eventsForDate(AppController controller, DateTime date) {
       _CalendarEvent(
         id: 'plan-${block.id}',
         kind: _EventKind.plan,
-        title: task?.title ?? block.title ?? '未命名计划',
+        title: block.title ?? task?.title ?? tr('未命名计划'),
         startsAt: block.startsAt,
         endsAt: block.endsAt,
         visibleStart: block.startsAt.isBefore(start) ? start : block.startsAt,
         visibleEnd: block.endsAt.isAfter(end) ? end : block.endsAt,
-        originalTime:
-            '${_dateTime(block.startsAt)} 至 ${_dateTime(block.endsAt)}',
+        originalTime: tr(
+          '{arg0} 至 {arg1}',
+          args: {
+            'arg0': _dateTime(block.startsAt),
+            'arg1': _dateTime(block.endsAt),
+          },
+        ),
         status: switch (block.status) {
-          PlanBlockStatus.scheduled => '计划 · 已安排',
-          PlanBlockStatus.completed => '计划 · 已完成',
-          PlanBlockStatus.cancelled => '计划 · 已取消',
+          PlanBlockStatus.scheduled => tr('计划 · 已安排'),
+          PlanBlockStatus.completed => tr('计划 · 已完成'),
+          PlanBlockStatus.cancelled => tr('计划 · 已取消'),
         },
         task: task,
         crossesDay: !_sameDay(block.startsAt, block.endsAt),
@@ -625,17 +658,19 @@ List<_CalendarEvent> _eventsForDate(AppController controller, DateTime date) {
               .where((block) => block.id == session.planBlockId)
               .firstOrNull;
     final status = switch (session.status) {
-      FocusSessionStatus.running => local ? '专注 · 本机进行中' : '专注 · 最近同步状态：进行中',
-      FocusSessionStatus.paused => local ? '专注 · 本机已暂停' : '专注 · 最近同步状态：已暂停',
-      FocusSessionStatus.completed => '专注 · 已完成',
-      FocusSessionStatus.abandoned => '专注 · 提前结束',
-      FocusSessionStatus.interrupted => '专注 · 已中断',
+      FocusSessionStatus.running =>
+        local ? tr('专注 · 本机进行中') : tr('专注 · 最近同步状态：进行中'),
+      FocusSessionStatus.paused =>
+        local ? tr('专注 · 本机已暂停') : tr('专注 · 最近同步状态：已暂停'),
+      FocusSessionStatus.completed => tr('专注 · 已完成'),
+      FocusSessionStatus.abandoned => tr('专注 · 提前结束'),
+      FocusSessionStatus.interrupted => tr('专注 · 已中断'),
     };
     events.add(
       _CalendarEvent(
         id: 'focus-${session.id}',
         kind: _EventKind.focus,
-        title: task?.title ?? '无关联任务的专注',
+        title: controller.focusSessionTitle(session),
         startsAt: session.startedAt,
         endsAt: session.endedAt,
         visibleStart: session.startedAt.isBefore(start)
@@ -643,13 +678,21 @@ List<_CalendarEvent> _eventsForDate(AppController controller, DateTime date) {
             : session.startedAt,
         visibleEnd: cutoff.isAfter(end) ? end : cutoff,
         originalTime: session.endedAt == null
-            ? '${_dateTime(session.startedAt)} 起，尚未结束'
-            : '${_dateTime(session.startedAt)} 至 ${_dateTime(session.endedAt!)}',
+            ? tr('{arg0} 起，尚未结束', args: {'arg0': _dateTime(session.startedAt)})
+            : tr(
+                '{arg0} 至 {arg1}',
+                args: {
+                  'arg0': _dateTime(session.startedAt),
+                  'arg1': _dateTime(session.endedAt!),
+                },
+              ),
         status: status,
         task: task,
         planTitle: plan == null
             ? null
-            : controller.taskById(plan.taskId)?.title ?? plan.title ?? '未命名计划',
+            : controller.taskById(plan.taskId)?.title ??
+                  plan.title ??
+                  tr('未命名计划'),
         recordedSeconds: session.actualDurationSeconds,
         crossesDay: !_sameDay(session.startedAt, cutoff),
       ),
@@ -699,12 +742,14 @@ class _DayAgenda extends StatelessWidget {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Text(
-              '${events.length} 条记录',
+              context.tr('{arg0} 条记录', args: {'arg0': events.length}),
               style: Theme.of(context).textTheme.bodySmall,
             ),
             TextButton(
               onPressed: onShowAllHours,
-              child: Text(showAllHours ? '收起空时段' : '查看全天'),
+              child: Text(
+                showAllHours ? context.tr('收起空时段') : context.tr('查看全天'),
+              ),
             ),
           ],
         ),
@@ -712,7 +757,7 @@ class _DayAgenda extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.lg),
             child: Text(
-              '所选日期暂无截止、计划或专注记录。可新建时段，或为未排期任务安排时间。',
+              context.tr('所选日期暂无截止、计划或专注记录。可新建时段，或为未排期任务安排时间。'),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
@@ -773,7 +818,7 @@ class _HourSlot extends StatelessWidget {
                 onPressed: busy ? null : () => onCreate(start),
                 icon: const Icon(Icons.add, size: 18),
                 label: Text(
-                  '${hour.toString().padLeft(2, '0')}:00 · ${candidates.isEmpty ? '安排时间' : '放到此时段'}',
+                  '${hour.toString().padLeft(2, '0')}:00 · ${candidates.isEmpty ? context.tr("安排时间") : context.tr("放到此时段")}',
                 ),
               ),
             for (final event in events)
@@ -841,7 +886,7 @@ class _EventRow extends StatelessWidget {
                     vertical: AppSpacing.xxs,
                   ),
                   child: Text(
-                    '时间重叠',
+                    context.tr('时间重叠'),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onWarningContainer,
                     ),
@@ -859,7 +904,12 @@ class _EventRow extends StatelessWidget {
           ),
         if (event.kind == _EventKind.focus && event.recordedSeconds > 0)
           Text(
-            '已记录 ${formatDuration(event.recordedSeconds, compact: true)}',
+            context.tr(
+              '已记录 {arg0}',
+              args: {
+                'arg0': formatDuration(event.recordedSeconds, compact: true),
+              },
+            ),
             style: theme.textTheme.bodySmall,
           ),
       ],
@@ -867,8 +917,19 @@ class _EventRow extends StatelessWidget {
     return Semantics(
       button: true,
       excludeSemantics: true,
-      label:
-          '${_kindLabel(event.kind)}，${event.title}，${event.originalTime}，${event.status}${event.kind == _EventKind.focus ? '，已记录实际专注 ${event.recordedSeconds} 秒' : ''}${overlap ? '，时间重叠' : ''}，打开完整详情',
+      label: context.tr(
+        '{arg0}，{arg1}，{arg2}，{arg3}{arg4}{arg5}，打开完整详情',
+        args: {
+          'arg0': _kindLabel(event.kind),
+          'arg1': event.title,
+          'arg2': event.originalTime,
+          'arg3': event.status,
+          'arg4': event.kind == _EventKind.focus
+              ? tr('，已记录实际专注 {arg0} 秒', args: {'arg0': event.recordedSeconds})
+              : '',
+          'arg5': overlap ? tr('，时间重叠') : '',
+        },
+      ),
       onTap: onOpen,
       child: InkWell(
         onTap: onOpen,
@@ -1052,7 +1113,10 @@ class _MonthGrid extends StatelessWidget {
             children: [
               Row(
                 children: [
-                  for (final label in const ['一', '二', '三', '四', '五', '六', '日'])
+                  for (final label
+                      in (Localizations.localeOf(context).languageCode == 'en'
+                          ? const ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+                          : const ['一', '二', '三', '四', '五', '六', '日']))
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(
@@ -1135,7 +1199,14 @@ class _DateCell extends StatelessWidget {
       button: true,
       selected: selected,
       excludeSemantics: true,
-      label: '${_date(date)}${today ? '，今天' : ''}，$count 个计划时段，选择日期',
+      label: context.tr(
+        '{arg0}{arg1}，{arg2} 个计划时段，选择日期',
+        args: {
+          'arg0': _date(date),
+          'arg1': today ? tr('，今天') : '',
+          'arg2': count,
+        },
+      ),
       onTap: onSelected,
       child: Material(
         color: selected || highlighted
@@ -1182,7 +1253,10 @@ class _DateCell extends StatelessWidget {
                   ),
                 ),
                 if (today)
-                  Text('今天', style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    context.tr('今天'),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 if (count > 0)
                   Text(
                     '▰ $count',
@@ -1214,12 +1288,12 @@ class _UnscheduledPanel extends StatelessWidget {
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
       Text(
-        '未排期任务 · ${tasks.length}',
+        context.tr('未排期任务 · {arg0}', args: {'arg0': tasks.length}),
         style: Theme.of(context).textTheme.titleLarge,
       ),
       const SizedBox(height: AppSpacing.xs),
       Text(
-        '状态为待办且没有任何已保存计划关联的任务。点击“安排时间”设置时段。',
+        context.tr('状态为待办且没有任何已保存计划关联的任务。点击“安排时间”设置时段。'),
         style: Theme.of(context).textTheme.bodySmall
             ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
       ),
@@ -1227,15 +1301,15 @@ class _UnscheduledPanel extends StatelessWidget {
         Padding(
           padding: const EdgeInsets.only(top: AppSpacing.xs),
           child: Text(
-            '也可长按拖到周日期或已显示的时段。',
+            context.tr('也可长按拖到周日期或已显示的时段。'),
             style: Theme.of(context).textTheme.bodySmall,
           ),
         ),
       const SizedBox(height: AppSpacing.md),
       if (tasks.isEmpty)
-        const Padding(
+        Padding(
           padding: EdgeInsets.symmetric(vertical: AppSpacing.lg),
-          child: Text('没有未排期任务。'),
+          child: Text(context.tr('没有未排期任务。')),
         ),
       for (final task in tasks)
         Builder(
@@ -1254,7 +1328,7 @@ class _UnscheduledPanel extends StatelessWidget {
                     onPressed: () => showDialog<void>(
                       context: context,
                       builder: (context) => AlertDialog(
-                        title: const Text('任务详情'),
+                        title: Text(context.tr('任务详情')),
                         content: SingleChildScrollView(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -1271,7 +1345,7 @@ class _UnscheduledPanel extends StatelessWidget {
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context),
-                            child: const Text('关闭'),
+                            child: Text(context.tr('关闭')),
                           ),
                         ],
                       ),
@@ -1286,8 +1360,16 @@ class _UnscheduledPanel extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
                     task.estimatedDurationSeconds == null
-                        ? '未设置预计用时'
-                        : '预计 ${formatDuration(task.estimatedDurationSeconds!, compact: true)}',
+                        ? context.tr('未设置预计用时')
+                        : context.tr(
+                            '预计 {arg0}',
+                            args: {
+                              'arg0': formatDuration(
+                                task.estimatedDurationSeconds!,
+                                compact: true,
+                              ),
+                            },
+                          ),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   Align(
@@ -1295,7 +1377,7 @@ class _UnscheduledPanel extends StatelessWidget {
                     child: TextButton.icon(
                       onPressed: busy ? null : () => onSchedule(task),
                       icon: const Icon(Icons.event_available_outlined),
-                      label: const Text('安排时间'),
+                      label: Text(context.tr('安排时间')),
                     ),
                   ),
                   const Divider(),
@@ -1341,9 +1423,9 @@ String _date(DateTime date) =>
     '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
 String _dateTime(DateTime date) => '${_date(date)} ${formatClock(date)}';
 String _kindLabel(_EventKind kind) => switch (kind) {
-  _EventKind.deadline => '截止',
-  _EventKind.plan => '计划时段',
-  _EventKind.focus => '实际专注',
+  _EventKind.deadline => tr('截止'),
+  _EventKind.plan => tr('计划时段'),
+  _EventKind.focus => tr('实际专注'),
 };
 String _kindSymbol(_EventKind kind) => switch (kind) {
   _EventKind.deadline => '◇',

@@ -23,6 +23,7 @@ ROOT_FILES = {
     "third_party/metadata/distribution-notices.json",
     "client/assets/branding/pactick_icon.png",
     "client/assets/licenses/supplemental.json",
+    "client/assets/fonts/NotoSerifSC.ttf",
 }
 DOCS = {
     "BUILDING.md", "RELEASING.md", "SELF_HOSTING.md", "LICENSE_FAQ.md", "GETTING_STARTED.md",
@@ -30,10 +31,11 @@ DOCS = {
     "RELEASE_AND_PROMOTION_PLAN.md", "AGENT_RELEASE_SPEC.md",
     "ASSET_SOURCES.md", "ANDROID_SIGNING.md", "ANDROID_TASK_REMINDER_CHECKLIST.md",
     "FOCUS_MODES.md", "PRIVATE_TASK_VAULT.md", "SERVER_MANAGEMENT.md", "SERVER_MANAGER.md", "TASK_SCHEDULING_AND_REMINDERS.md",
+    "LOCALIZATION.md", "SYSTEM_CALENDAR.md", "PROJECT_STATUS.md",
 }
 CLIENT_FILES = {
     "README.md", "LICENSE", ".gitignore", ".metadata", "analysis_options.yaml",
-    "pubspec.yaml", "pubspec.lock",
+    "pubspec.yaml", "pubspec.lock", "flutter_test_config.dart",
 }
 TREES = ("cmd", "internal", "api", "scripts", ".github", "third_party/licenses",
          "client/lib", "client/test", "client/android/app/src")
@@ -41,6 +43,11 @@ ANDROID_FILES = {
     ".gitignore", "settings.gradle.kts", "build.gradle.kts", "gradle.properties",
     "gradlew", "gradlew.bat", "gradle/wrapper/gradle-wrapper.jar",
     "gradle/wrapper/gradle-wrapper.properties", "app/build.gradle.kts", "key.properties.example",
+}
+WEBSITE_FILES = {
+    "website/index.html", "website/index.en.html", "website/styles.css",
+    "website/app.js", "website/server.mjs", "website/GUIDE.md",
+    "website/GUIDE.en.md", "website/assets/pactick-icon.png",
 }
 BLOCKED_PARTS = {".git", ".cache", ".codex", ".agents", ".direnv", ".ssh", ".aws",
                  "secrets", "backups", "exports", "build", ".dart_tool", ".gradle",
@@ -95,7 +102,11 @@ def allowed(relative: Path) -> bool:
     if (any(fnmatch.fnmatchcase(relative.name, pattern) for pattern in ENV_PATTERNS)
             and not any(fnmatch.fnmatchcase(relative.name, pattern) for pattern in ENV_EXAMPLE_PATTERNS)):
         return False
-    if name in ROOT_FILES or name in {"docs/" + x for x in DOCS}:
+    # English companions inherit the exact source document's publication scope.
+    # Do not widen the allowlist to arbitrary translated notes or reports.
+    if relative.name.endswith(".en.md"):
+        return allowed(relative.with_name(relative.name[:-6] + ".md"))
+    if name in ROOT_FILES or name in {"docs/" + x for x in DOCS} or name in WEBSITE_FILES:
         return True
     if name in {"client/" + x for x in CLIENT_FILES}:
         return True
@@ -137,6 +148,10 @@ def private_terms(root: Path, additional: Path | None) -> set[str]:
 
 
 def findings(relative: Path, data: bytes, denied: set[str]) -> list[str]:
+    if relative.as_posix() == "client/assets/fonts/NotoSerifSC.ttf":
+        return [] if hashlib.sha256(data).hexdigest() == (
+            "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9"
+        ) else ["unreviewed-font-change"]
     try:
         text = data.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -185,10 +200,13 @@ def main() -> None:
     denied = private_terms(root, args.private_terms)
     selected: list[tuple[Path, bytes]] = []
     problems = []
-    candidates = {root / f for f in ROOT_FILES}
+    candidates = {root / f for f in ROOT_FILES | WEBSITE_FILES}
     candidates.update(root / "docs" / f for f in DOCS)
     candidates.update(root / "client" / f for f in CLIENT_FILES)
     candidates.update(root / "client/android" / f for f in ANDROID_FILES)
+    # These directories are enumerated explicitly rather than traversed below.
+    candidates.update(path.with_name(path.stem + ".en.md")
+                      for path in tuple(candidates) if path.suffix == ".md")
     for tree in (*TREES, "deploy"):
         directory = root / tree
         if directory.is_symlink():
@@ -222,7 +240,7 @@ def main() -> None:
     for relative, data in selected:
         target = destination / relative
         target.parent.mkdir(parents=True, exist_ok=True)
-        if (relative.suffix.lower() not in {".png", ".jar", ".bat"}
+        if (relative.suffix.lower() not in {".png", ".jar", ".bat", ".ttf"}
                 and relative.parts[0] != "third_party"):
             data = data.replace(b"\r\n", b"\n")
         target.write_bytes(data)

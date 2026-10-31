@@ -1,3 +1,5 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'dart:async';
 import 'dart:io';
 
@@ -196,6 +198,49 @@ void main() {
       },
     );
 
+    test(
+      'failed association preserves a finished free focus and its outbox',
+      () async {
+        final task = await controller.createTask(title: '稍后关联');
+        await controller.startFocus(
+          durationSeconds: 900,
+          policy: controller.focusPolicies.first,
+        );
+        final session = (await controller.finishFocus())!;
+        final beforeCount = controller.pendingOperations;
+        await database.execute('PRAGMA query_only = ON');
+
+        await expectLater(
+          controller.associateFocusSessionTask(
+            sessionId: session.id,
+            task: task,
+          ),
+          throwsA(isA<DatabaseException>()),
+        );
+        expect(controller.focusSessions.single.toBody(), session.toBody());
+        expect(
+          (await store.readDocuments('focus_session')).single.body['task_id'],
+          isNull,
+        );
+        expect(controller.pendingOperations, beforeCount);
+        expect(await store.pendingOperationCount(), beforeCount);
+        expect(controller.actualSecondsForTask(task.id), 0);
+        expect(gateway.starts, 1);
+        expect(gateway.stops, 1);
+
+        await database.execute('PRAGMA query_only = OFF');
+        await controller.associateFocusSessionTask(
+          sessionId: session.id,
+          task: task,
+        );
+        expect(controller.focusSessions.single.taskId, task.id);
+        expect(
+          (await store.readDocuments('focus_session')).single.body['task_id'],
+          task.id,
+        );
+      },
+    );
+
     for (final edit in [false, true]) {
       testWidgets(
         'task editor preserves inputs and retries a SQLite ${edit ? 'update' : 'create'}',
@@ -205,6 +250,10 @@ void main() {
               : null;
           await tester.pumpWidget(
             MaterialApp(
+              locale: const Locale('zh', 'CN'),
+              supportedLocales: const [Locale('zh', 'CN')],
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
               home: Scaffold(
                 body: Builder(
                   builder: (context) => FilledButton(
@@ -261,6 +310,10 @@ void main() {
         (tester) async {
           await tester.pumpWidget(
             MaterialApp(
+              locale: const Locale('zh', 'CN'),
+              supportedLocales: const [Locale('zh', 'CN')],
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
               home: Scaffold(
                 body: Builder(
                   builder: (context) => FilledButton(
@@ -385,9 +438,12 @@ class _RecordingFocus extends FocusPlatformGateway {
     required DateTime endsAt,
     required FocusPolicyMode mode,
     List<String> allowedPackageNames = const [],
-    String taskTypeName = '收集箱',
+    String? taskTypeName,
+    String? titleKey,
+    String? taskTypeKey,
     int? maxAppExits,
     bool paused = false,
+    bool focusDesktopEnabled = false,
     int appExitCount = 0,
     int interruptionCount = 0,
   }) async {

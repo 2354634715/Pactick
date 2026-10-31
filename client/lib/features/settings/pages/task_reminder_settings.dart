@@ -1,3 +1,5 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_tokens.dart';
@@ -48,8 +50,8 @@ class _TaskReminderSettingsCardState extends State<TaskReminderSettingsCard> {
           key: const ValueKey('task-reminders-toggle'),
           contentPadding: EdgeInsets.zero,
           secondary: const Icon(Icons.notifications_active_outlined),
-          title: const Text('任务温馨提醒'),
-          subtitle: const Text('默认开启。有未完成任务时，在通知栏显示一条静默提醒，完成后自动移除。'),
+          title: Text(context.tr('任务温馨提醒')),
+          subtitle: Text(context.tr('默认开启。有未完成任务时，在通知栏显示一条静默提醒，完成后自动移除。')),
           value: controller.taskRemindersEnabled,
           onChanged: !supported || _busy
               ? null
@@ -60,9 +62,9 @@ class _TaskReminderSettingsCardState extends State<TaskReminderSettingsCard> {
           key: const ValueKey('scheduled-task-reminders-toggle'),
           contentPadding: EdgeInsets.zero,
           secondary: const Icon(Icons.alarm_outlined),
-          title: const Text('截止与计划开始提醒'),
-          subtitle: const Text(
-            '默认开启。任务到期或计划开始时显示通用通知，不显示任务正文。系统节电或后台限制可能延迟提醒。',
+          title: Text(context.tr('截止与计划开始提醒')),
+          subtitle: Text(
+            context.tr('默认开启。任务到期或计划开始时显示通用通知，不显示任务正文。系统节电或后台限制可能延迟提醒。'),
           ),
           value: controller.scheduledTaskRemindersEnabled,
           onChanged: !supported || _busy
@@ -72,19 +74,19 @@ class _TaskReminderSettingsCardState extends State<TaskReminderSettingsCard> {
                 ),
         ),
         if (!supported)
-          const Text('任务提醒仅在安卓客户端展示。')
+          Text(context.tr('任务提醒仅在安卓客户端展示。'))
         else ...[
           if (controller.taskRemindersEnabled)
             Text(
               controller.taskReminderNotificationsAllowed
-                  ? '系统允许任务提醒；通知只显示待办数量，不显示任务标题。'
-                  : '提醒已开启，但系统尚未允许展示。请申请通知权限或检查系统提醒设置。',
+                  ? context.tr('系统允许任务提醒；通知只显示待办数量，不显示任务标题。')
+                  : context.tr('提醒已开启，但系统尚未允许展示。请申请通知权限或检查系统提醒设置。'),
             ),
           if (controller.scheduledTaskRemindersEnabled)
             Text(
               controller.scheduledTaskReminderNotificationsAllowed
-                  ? '系统允许定时提醒。仅依据本机已保存的数据安排通知；强行停止后需重新打开应用。'
-                  : '定时提醒已开启，但系统未允许通知或已关闭“截止与计划提醒”分类。',
+                  ? context.tr('系统允许定时提醒。仅依据本机已保存的数据安排通知；强行停止后需重新打开应用。')
+                  : context.tr('定时提醒已开启，但系统未允许通知或已关闭“截止与计划提醒”分类。'),
             ),
           const SizedBox(height: AppSpacing.xs),
           Wrap(
@@ -99,7 +101,7 @@ class _TaskReminderSettingsCardState extends State<TaskReminderSettingsCard> {
                           automatic: false,
                         ),
                       ),
-                child: const Text('检查 / 申请通知权限'),
+                child: Text(context.tr('检查 / 申请通知权限')),
               ),
               TextButton(
                 onPressed: _busy
@@ -109,7 +111,7 @@ class _TaskReminderSettingsCardState extends State<TaskReminderSettingsCard> {
                             .taskReminderPlatform
                             .openNotificationSettings,
                       ),
-                child: const Text('系统提醒设置'),
+                child: Text(context.tr('系统提醒设置')),
               ),
               TextButton(
                 onPressed: _busy
@@ -119,12 +121,13 @@ class _TaskReminderSettingsCardState extends State<TaskReminderSettingsCard> {
                             .taskReminderPlatform
                             .openScheduledNotificationSettings,
                       ),
-                child: const Text('定时提醒分类设置'),
+                child: Text(context.tr('定时提醒分类设置')),
               ),
             ],
           ),
         ],
-        if (_busy) const LinearProgressIndicator(semanticsLabel: '正在保存任务提醒设置'),
+        if (_busy)
+          LinearProgressIndicator(semanticsLabel: context.tr('正在保存任务提醒设置')),
         if (error != null) ...[
           Semantics(
             liveRegion: true,
@@ -137,7 +140,7 @@ class _TaskReminderSettingsCardState extends State<TaskReminderSettingsCard> {
             onPressed: _busy
                 ? null
                 : () => _run(_retry ?? controller.refreshTaskReminders),
-            child: const Text('重试'),
+            child: Text(context.tr('重试')),
           ),
         ],
       ],

@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -48,6 +50,7 @@ class PrivateVaultController extends ChangeNotifier {
     required DocumentStore store,
     this.canStartFocus,
     this.onFocusRuntimeChanged,
+    this.onFocusStarted,
     PrivateVaultCrypto crypto = const PrivateVaultCrypto(),
     Uuid uuid = const Uuid(),
   }) : _storage = store is PrivateVaultStorage
@@ -67,6 +70,7 @@ class PrivateVaultController extends ChangeNotifier {
   final bool Function()? canStartFocus;
   final Future<void> Function(PrivateFocusRuntime? runtime)?
   onFocusRuntimeChanged;
+  final Future<void> Function()? onFocusStarted;
   String? _accountId;
   PrivateVaultStoredState? _stored;
   PrivateVaultEnvelope? _envelope;
@@ -90,6 +94,7 @@ class PrivateVaultController extends ChangeNotifier {
   int get lockGeneration => _lockGeneration;
   DateTime? get retryAfter => _stored?.retryAfter;
   PrivateFocusRuntime? get activeFocusRuntime => _runtime;
+  String? get activeFocusAccountId => _runtimeAccountId;
   bool get hasActiveFocus => _runtime != null;
   int get remainingFocusSeconds => _runtime == null
       ? 0
@@ -205,28 +210,28 @@ class PrivateVaultController extends ChangeNotifier {
   }
 
   void _requireUnlocked() {
-    if (!isUnlocked) throw const PrivateVaultException('请先解锁私密任务箱。');
+    if (!isUnlocked) throw PrivateVaultException(tr('请先解锁私密任务箱。'));
   }
 
   void _checkEpoch(int epoch, String accountId) {
     if (_disposed || epoch != _epoch || accountId != _accountId) {
-      throw const PrivateVaultException('私密任务箱已锁定，操作已停止。');
+      throw PrivateVaultException(tr('私密任务箱已锁定，操作已停止。'));
     }
   }
 
   void _validatePassword(String password, String confirmation) {
     if (password != confirmation) {
-      throw const PrivateVaultException('两次输入的密码不一致。');
+      throw PrivateVaultException(tr('两次输入的密码不一致。'));
     }
     if (password.runes.length < 8 || password.runes.length > 1024) {
-      throw const PrivateVaultException('密码须为 8 至 1024 个字符。');
+      throw PrivateVaultException(tr('密码须为 8 至 1024 个字符。'));
     }
   }
 
   Future<T> _operation<T>(Future<T> Function() action) async {
-    if (_busy) throw const PrivateVaultException('操作正在进行，请稍候。');
+    if (_busy) throw PrivateVaultException(tr('操作正在进行，请稍候。'));
     if (_storage == null || _accountId == null) {
-      throw const PrivateVaultException('当前工作区无法使用私密任务箱。');
+      throw PrivateVaultException(tr('当前工作区无法使用私密任务箱。'));
     }
     _busy = true;
     _changed();
@@ -251,7 +256,7 @@ class PrivateVaultController extends ChangeNotifier {
   Future<void> configure(String password, String confirmation) =>
       _operation(() async {
         _validatePassword(password, confirmation);
-        if (configured) throw const PrivateVaultException('此工作区已设置私密任务箱密码。');
+        if (configured) throw PrivateVaultException(tr('此工作区已设置私密任务箱密码。'));
         final account = _accountId!;
         final epoch = _epoch;
         final salt = _crypto.newSalt();
@@ -292,11 +297,11 @@ class PrivateVaultController extends ChangeNotifier {
     final epoch = _epoch;
     final state = await _storage!.readPrivateVault(account);
     _checkEpoch(epoch, account);
-    if (state == null) throw const PrivateVaultException('请先设置私密任务箱密码。');
+    if (state == null) throw PrivateVaultException(tr('请先设置私密任务箱密码。'));
     _stored = state;
     if (state.retryAfter != null &&
         DateTime.now().isBefore(state.retryAfter!)) {
-      throw const PrivateVaultException('密码重试尚未开放，请等待倒计时结束。');
+      throw PrivateVaultException(tr('密码重试尚未开放，请等待倒计时结束。'));
     }
     SecretKeyData? key;
     var retained = false;
@@ -313,7 +318,7 @@ class PrivateVaultController extends ChangeNotifier {
       // A concurrent writer cannot cause us to publish stale decrypted content.
       if ((await _storage.readPrivateVault(account))?.envelope !=
           state.envelope) {
-        throw const PrivateVaultException('私密任务箱已变化，请重新解锁。');
+        throw PrivateVaultException(tr('私密任务箱已变化，请重新解锁。'));
       }
       _checkEpoch(epoch, account);
       await _storage.resetPrivateVaultFailures(account);
@@ -348,7 +353,7 @@ class PrivateVaultController extends ChangeNotifier {
             session.plannedDurationSeconds !=
                 runtime.endsAt.difference(runtime.startedAt).inSeconds) {
           lock();
-          throw const PrivateVaultException('私密计时记录不一致，数据保持锁定。');
+          throw PrivateVaultException(tr('私密计时记录不一致，数据保持锁定。'));
         }
         if (DateTime.now().isBefore(runtime.endsAt)) {
           _runtime = runtime;
@@ -361,11 +366,11 @@ class PrivateVaultController extends ChangeNotifier {
     } on SecretBoxAuthenticationError {
       _checkEpoch(epoch, account);
       _stored = await _storage.recordPrivateVaultFailure(account);
-      throw const PrivateVaultException('密码错误或私密数据已损坏，原数据未改变。');
+      throw PrivateVaultException(tr('密码错误或私密数据已损坏，原数据未改变。'));
     } on FormatException {
       _checkEpoch(epoch, account);
       _stored = await _storage.recordPrivateVaultFailure(account);
-      throw const PrivateVaultException('密码错误或私密数据已损坏，原数据未改变。');
+      throw PrivateVaultException(tr('密码错误或私密数据已损坏，原数据未改变。'));
     } finally {
       if (!retained) key?.destroy();
     }
@@ -424,7 +429,7 @@ class PrivateVaultController extends ChangeNotifier {
   Future<void> saveTask(TaskItem task) => _operation(() async {
     _requireUnlocked();
     if (task.title.trim().isEmpty) {
-      throw const PrivateVaultException('请输入任务标题。');
+      throw PrivateVaultException(tr('请输入任务标题。'));
     }
     final documents =
         _documents.where((doc) => doc.key != 'task\u0000${task.id}').toList()
@@ -434,7 +439,7 @@ class PrivateVaultController extends ChangeNotifier {
 
   Future<void> saveProject(String name) => _operation(() async {
     _requireUnlocked();
-    if (name.trim().isEmpty) throw const PrivateVaultException('请输入分类名称。');
+    if (name.trim().isEmpty) throw PrivateVaultException(tr('请输入分类名称。'));
     final project = ProjectItem(
       id: _uuid.v4(),
       name: name.trim(),
@@ -452,7 +457,7 @@ class PrivateVaultController extends ChangeNotifier {
   Future<void> savePlanBlock(PlanBlockItem block) => _operation(() async {
     _requireUnlocked();
     if (!block.endsAt.isAfter(block.startsAt)) {
-      throw const PrivateVaultException('计划结束时间必须晚于开始时间。');
+      throw PrivateVaultException(tr('计划结束时间必须晚于开始时间。'));
     }
     await _persist(
       _contentWith([
@@ -500,7 +505,7 @@ class PrivateVaultController extends ChangeNotifier {
     for (final doc in bundle.documents) {
       if (merged.containsKey(doc.key) &&
           jsonEncode(merged[doc.key]!.body) != jsonEncode(doc.body)) {
-        throw const PrivateVaultException('私密箱含有相同标识但内容不同的记录，转入已取消。');
+        throw PrivateVaultException(tr('私密箱含有相同标识但内容不同的记录，转入已取消。'));
       }
       merged[doc.key] = doc;
     }
@@ -552,7 +557,7 @@ class PrivateVaultController extends ChangeNotifier {
     } on SecretBoxAuthenticationError {
       _stored = await _storage!.recordPrivateVaultFailure(account);
       lock();
-      throw const PrivateVaultException('旧密码错误，私密任务箱已锁定。');
+      throw PrivateVaultException(tr('旧密码错误，私密任务箱已锁定。'));
     } finally {
       checkKey.destroy();
     }
@@ -587,7 +592,7 @@ class PrivateVaultController extends ChangeNotifier {
 
   Future<String> exportEncryptedBackup() => _operation(() async {
     final state = await _storage!.readPrivateVault(_accountId!);
-    if (state == null) throw const PrivateVaultException('此工作区没有私密任务箱。');
+    if (state == null) throw PrivateVaultException(tr('此工作区没有私密任务箱。'));
     PrivateVaultEnvelope.decode(state.envelope);
     return state.envelope;
   });
@@ -621,7 +626,7 @@ class PrivateVaultController extends ChangeNotifier {
       await _storage!.restorePrivateVault(id, sealed.encode());
       return id;
     } on SecretBoxAuthenticationError {
-      throw const PrivateVaultException('密码错误或私密备份已损坏，未恢复任何数据。');
+      throw PrivateVaultException(tr('密码错误或私密备份已损坏，未恢复任何数据。'));
     } finally {
       key.destroy();
     }
@@ -634,14 +639,14 @@ class PrivateVaultController extends ChangeNotifier {
       _operation(() async {
         _requireUnlocked();
         if (hasActiveFocus || !(canStartFocus?.call() ?? true)) {
-          throw const PrivateVaultException('已有专注正在进行，请先结束。');
+          throw PrivateVaultException(tr('已有专注正在进行，请先结束。'));
         }
         if (durationMinutes < 1 || durationMinutes > 1440) {
-          throw const PrivateVaultException('专注时长须为 1 至 1440 分钟。');
+          throw PrivateVaultException(tr('专注时长须为 1 至 1440 分钟。'));
         }
         final task = tasks.where((task) => task.id == taskId).firstOrNull;
         if (task == null || task.status != TaskStatus.open) {
-          throw const PrivateVaultException('请选择待办状态的私密任务。');
+          throw PrivateVaultException(tr('请选择待办状态的私密任务。'));
         }
         final now = DateTime.now();
         final session = FocusSessionItem(
@@ -675,7 +680,10 @@ class PrivateVaultController extends ChangeNotifier {
             },
           );
         } finally {
-          if (committed) await _notifyRuntime();
+          if (committed) {
+            await _notifyRuntime();
+            await onFocusStarted?.call();
+          }
         }
       });
 
@@ -687,7 +695,7 @@ class PrivateVaultController extends ChangeNotifier {
     final session = focusSessions
         .where((session) => session.id == runtime.sessionId)
         .firstOrNull;
-    if (session == null) throw const PrivateVaultException('专注记录缺失。');
+    if (session == null) throw PrivateVaultException(tr('专注记录缺失。'));
     final completed = !now.isBefore(runtime.endsAt);
     final updated = session.copyWith(
       endedAt: completed ? runtime.endsAt : now,
@@ -732,7 +740,7 @@ class PrivateVaultController extends ChangeNotifier {
         if (isUnlocked && !_busy && _runtimeAccountId == _accountId) {
           unawaited(
             stopFocus().catchError((Object _) {
-              timerWarning = '专注结果尚未保存，请重新解锁后重试。';
+              timerWarning = tr('专注结果尚未保存，请重新解锁后重试。');
               _changed();
             }),
           );
@@ -754,7 +762,7 @@ class PrivateVaultController extends ChangeNotifier {
       _runtime = null;
       _runtimeAccountId = null;
     } catch (_) {
-      timerWarning = '系统计时通知未更新，请重新打开应用后检查。';
+      timerWarning = tr('系统计时通知未更新，请重新打开应用后检查。');
       _runtime = null;
       _runtimeAccountId = null;
     } finally {
@@ -805,7 +813,7 @@ class PrivateVaultController extends ChangeNotifier {
       await onFocusRuntimeChanged?.call(_runtime);
       timerWarning = null;
     } catch (_) {
-      timerWarning = '系统计时通知未更新，应用内计时仍按结束时间计算。';
+      timerWarning = tr('系统计时通知未更新，应用内计时仍按结束时间计算。');
     }
     _changed();
   }

@@ -13,12 +13,103 @@ snapshot = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(snapshot)
 
 
+class ReviewedFontTest(unittest.TestCase):
+    def test_only_the_reviewed_font_path_and_bytes_can_be_exported(self):
+        name = Path("client/assets/fonts/NotoSerifSC.ttf")
+        font = SCRIPT.parent.parent / name
+        self.assertTrue(snapshot.allowed(name))
+        self.assertFalse(snapshot.allowed(Path("client/assets/fonts/local-font.ttf")))
+        self.assertEqual(snapshot.findings(name, font.read_bytes(), set()), [])
+        self.assertEqual(snapshot.findings(name, b"modified font", set()),
+                         ["unreviewed-font-change"])
+
+    def test_export_preserves_font_bytes_and_manifest(self):
+        name = Path("client/assets/fonts/NotoSerifSC.ttf")
+        original = (SCRIPT.parent.parent / name).read_bytes()
+        self.assertIn(b"\r\n", original)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "source"
+            for filename in ("LICENSE", "README.md", "go.mod", "go.sum",
+                             "client/pubspec.lock", "docs/SELF_HOSTING.md"):
+                path = root / filename
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text("reviewed source\n", encoding="utf-8")
+            font = root / name
+            font.parent.mkdir(parents=True, exist_ok=True)
+            font.write_bytes(original)
+            target = Path(directory) / "public"
+            result = subprocess.run(
+                [sys.executable, str(SCRIPT), "--source", str(root), str(target)],
+                capture_output=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual((target / name).read_bytes(), original)
+            records = json.loads((target / "SOURCE_MANIFEST.json").read_text())
+            record = next(entry for entry in records if entry["path"] == name.as_posix())
+            self.assertEqual(record["size"], len(original))
+
+
 class SnapshotTests(unittest.TestCase):
+    def test_english_documents_inherit_publication_scope(self):
+        for name in ("README.en.md", "CONTRIBUTING.en.md", "CHANGELOG.en.md",
+                     "client/README.en.md", "deploy/README.en.md",
+                     "docs/GETTING_STARTED.en.md", "docs/LOCALIZATION.en.md", "docs/SYSTEM_CALENDAR.en.md",
+                     "docs/AGENT_RELEASE_SPEC.en.md", ".github/pull_request_template.en.md"):
+            with self.subTest(name=name):
+                self.assertTrue(snapshot.allowed(Path(name)))
+        for name in ("docs/SERVER_DEPLOYMENT_private.en.md",
+                     "docs/FINAL_CHECK_20261004.en.md", "output/README.en.md",
+                     "AGENTS.en.md", "docs/private.en.en.md"):
+            with self.subTest(name=name):
+                self.assertFalse(snapshot.allowed(Path(name)))
+
     def fixture(self, root):
         for name in ("LICENSE", "README.md", "go.mod", "go.sum", "client/pubspec.lock", "docs/SELF_HOSTING.md"):
             path = root / name
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text("reviewed source\n", encoding="utf-8")
+
+    def test_snapshot_copies_english_companions_without_widening_scope(self):
+        public_names = (
+            "README.en.md", "PROJECT_PLAN.en.md", "CONTRIBUTING.en.md",
+            "docs/GETTING_STARTED.en.md", "docs/LOCALIZATION.en.md", "docs/SYSTEM_CALENDAR.en.md",
+            "client/README.en.md", "deploy/README.en.md",
+            ".github/pull_request_template.en.md", "api/openapi.en.yaml",
+            ".github/ISSUE_TEMPLATE/bug_report.en.yml",
+            ".github/ISSUE_TEMPLATE/feature_request.en.yml",
+        )
+        private_names = (
+            "docs/SERVER_DEPLOYMENT_private.en.md", "docs/FINAL_CHECK_20261004.en.md",
+            "output/README.en.md", "AGENTS.en.md", "client/build/README.en.md",
+            "internal/secrets/README.en.md",
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "source"
+            root.mkdir()
+            self.fixture(root)
+            for name in public_names + private_names:
+                path = root / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(f"translation fixture: {name}\r\n".encode("utf-8"))
+                if name in public_names and name.endswith(".en.md"):
+                    original = path.with_name(path.name[:-6] + ".md")
+                    original.write_bytes(f"source fixture: {original.name}\r\n".encode("utf-8"))
+            originals = {path.relative_to(root): path.read_bytes()
+                         for path in root.rglob("*") if path.is_file()}
+            target = Path(directory) / "public"
+            result = subprocess.run([sys.executable, str(SCRIPT), "--source", str(root), str(target)],
+                                    capture_output=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            manifest = {entry["path"] for entry in json.loads((target / "SOURCE_MANIFEST.json").read_text())}
+            self.assertTrue(set(public_names).issubset(manifest))
+            self.assertTrue(manifest.isdisjoint(private_names))
+            for name in public_names:
+                self.assertEqual((target / name).read_bytes(),
+                                 originals[Path(name)].replace(b"\r\n", b"\n"))
+            for name in private_names:
+                self.assertFalse((target / name).exists())
+            self.assertEqual({path.relative_to(root): path.read_bytes()
+                              for path in root.rglob("*") if path.is_file()}, originals)
 
     def test_excludes_private_and_generated_files(self):
         for name in (".env", "client/android/key.properties", "client/android/local.properties",
@@ -41,7 +132,7 @@ class SnapshotTests(unittest.TestCase):
     def test_current_feature_docs_and_desktop_compose_remain_exportable(self):
         public_names = (
             "docs/AGENT_RELEASE_SPEC.md", "docs/ANDROID_TASK_REMINDER_CHECKLIST.md",
-            "docs/FOCUS_MODES.md", "docs/PRIVATE_TASK_VAULT.md",
+            "docs/FOCUS_MODES.md", "docs/PRIVATE_TASK_VAULT.md", "docs/SYSTEM_CALENDAR.md",
             "docs/SERVER_MANAGEMENT.md", "docs/SERVER_MANAGER.md", "docs/TASK_SCHEDULING_AND_REMINDERS.md",
             "deploy/desktop/compose.yaml",
             "deploy/desktop/launch-manager.cmd", "deploy/desktop/launch-manager.sh",

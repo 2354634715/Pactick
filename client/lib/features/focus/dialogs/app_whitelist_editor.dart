@@ -1,3 +1,5 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 
@@ -110,12 +112,19 @@ class _AppWhitelistEditorState extends State<_AppWhitelistEditor> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            '${controller.whitelistName(widget.projectId)}白名单',
+                            context.tr(
+                              '{arg0}白名单',
+                              args: {
+                                'arg0': controller.whitelistName(
+                                  widget.projectId,
+                                ),
+                              },
+                            ),
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: AppSpacing.xxs),
                           Text(
-                            '仅用于本机守护；不发送到同步服务器。主动导出备份会携带包名与项目白名单。',
+                            context.tr('仅用于本机守护；不发送到同步服务器。主动导出备份会携带包名与项目白名单。'),
                             style: Theme.of(context).textTheme.bodyMedium
                                 ?.copyWith(color: scheme.onSurfaceVariant),
                           ),
@@ -123,7 +132,7 @@ class _AppWhitelistEditorState extends State<_AppWhitelistEditor> {
                       ),
                     ),
                     IconButton(
-                      tooltip: '关闭白名单编辑',
+                      tooltip: context.tr('关闭白名单编辑'),
                       onPressed: _saving
                           ? null
                           : () => _guardKey.currentState?.requestClose(),
@@ -149,12 +158,12 @@ class _AppWhitelistEditorState extends State<_AppWhitelistEditor> {
                 child: SearchBar(
                   controller: _searchController,
                   enabled: !_saving,
-                  hintText: '搜索应用名称或包名',
+                  hintText: context.tr('搜索应用名称或包名'),
                   leading: const Icon(Icons.search),
                   trailing: [
                     if (_searchController.text.isNotEmpty)
                       IconButton(
-                        tooltip: '清除搜索',
+                        tooltip: context.tr('清除搜索'),
                         onPressed: _saving
                             ? null
                             : () {
@@ -170,7 +179,10 @@ class _AppWhitelistEditorState extends State<_AppWhitelistEditor> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
                 child: Text(
-                  '已选择 ${_selectedPackages.length} 个应用',
+                  context.tr(
+                    '已选择 {arg0} 个应用',
+                    args: {'arg0': _selectedPackages.length},
+                  ),
                   style: Theme.of(context).textTheme.labelLarge,
                 ),
               ),
@@ -195,12 +207,12 @@ class _AppWhitelistEditorState extends State<_AppWhitelistEditor> {
                         onPressed: _saving
                             ? null
                             : () => _guardKey.currentState?.requestClose(),
-                        child: const Text('取消'),
+                        child: Text(context.tr('取消')),
                       ),
                       FilledButton.icon(
                         onPressed: _saving ? null : _save,
                         icon: const Icon(Icons.save_outlined),
-                        label: const Text('保存白名单'),
+                        label: Text(context.tr('保存白名单')),
                       ),
                     ],
                   ),
@@ -226,9 +238,9 @@ class _AppWhitelistEditorState extends State<_AppWhitelistEditor> {
     if (controller.installedApplicationsError != null) {
       return SingleChildScrollView(
         child: StatePane.error(
-          title: '无法读取应用列表',
-          message: '可重新读取应用列表，当前选择保持不变。',
-          actionLabel: '重试',
+          title: context.tr('无法读取应用列表'),
+          message: context.tr('可重新读取应用列表，当前选择保持不变。'),
+          actionLabel: context.tr('重试'),
           onAction: () => _loadApplications(force: true),
         ),
       );
@@ -236,16 +248,19 @@ class _AppWhitelistEditorState extends State<_AppWhitelistEditor> {
     if (controller.installedApplications.isEmpty) {
       return SingleChildScrollView(
         child: StatePane.empty(
-          title: '没有可选应用',
-          message: '白名单仅支持选择 Android 设备上可启动的应用。',
-          actionLabel: '重新读取',
+          title: context.tr('没有可选应用'),
+          message: context.tr('白名单仅支持选择 Android 设备上可启动的应用。'),
+          actionLabel: context.tr('重新读取'),
           onAction: () => _loadApplications(force: true),
         ),
       );
     }
     if (applications.isEmpty) {
       return SingleChildScrollView(
-        child: StatePane.empty(title: '未找到匹配应用', message: '更换应用名称或包名后重试。'),
+        child: StatePane.empty(
+          title: context.tr('未找到匹配应用'),
+          message: context.tr('更换应用名称或包名后重试。'),
+        ),
       );
     }
     return ListView.separated(

@@ -1,0 +1,1165 @@
+openapi: 3.1.0
+info:
+  title: Pactick API
+  version: 0.2.0
+  description: |
+    The first server version uses an offline-first synchronization protocol. Clients update their local database before uploading batches;
+    WebSocket only announces cursor updates; authoritative data is retrieved through incremental pull.
+    Guard-mode package names, installed apps, per-project whitelists, and permission state remain on the device;
+    the server receives only focus-session summaries and interruption categories without app identities.
+servers:
+  - url: http://localhost:8080
+    description: Local development
+security:
+  - bearerAuth: []
+tags:
+  - name: Health
+  - name: Client Updates
+  - name: Auth
+  - name: Sync
+  - name: Views
+  - name: Realtime
+
+paths:
+  /healthz:
+    get:
+      tags: [Health]
+      operationId: health
+      security: []
+      responses:
+        "200":
+          description: The service process is running
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    const: ok
+
+  /readyz:
+    get:
+      tags: [Health]
+      operationId: readiness
+      security: []
+      responses:
+        "200":
+          description: The service process and database are ready
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [status]
+                properties:
+                  status:
+                    const: ready
+        "503":
+          $ref: "#/components/responses/Error"
+
+  /v1/client-updates/check:
+    get:
+      tags: [Client Updates]
+      operationId: checkClientUpdate
+      security: []
+      description: |
+        Get the configured latest client version for a platform and release channel. No authentication is required, and account data is not accessed.
+        If no package is configured for the platform and channel, HTTP status remains 200, status is not_configured, and all release metadata fields are null.
+        Versions use SemVer without build metadata. Repackaged builds of the same version are compared through the separate build_number.
+      parameters:
+        - name: platform
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [android, windows, linux]
+        - name: channel
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [stable, beta]
+        - name: current_version
+          in: query
+          required: true
+          schema:
+            type: string
+            minLength: 1
+            maxLength: 64
+            pattern: '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*)(\.(0|[1-9][0-9]*|[0-9A-Za-z-]*[A-Za-z-][0-9A-Za-z-]*))*)?$'
+            example: 0.1.0
+        - name: build_number
+          in: query
+          required: true
+          schema:
+            type: integer
+            format: int64
+            minimum: 1
+            example: 2
+      responses:
+        "200":
+          description: Update-check result and configured latest release metadata
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ClientUpdateCheck"
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /v1/auth/register:
+    post:
+      tags: [Auth]
+      operationId: register
+      description: Available only when server registration is enabled; personal deployments typically close registration after account creation.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterRequest"
+      responses:
+        "201":
+          description: Registration succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "403":
+          $ref: "#/components/responses/Error"
+        "409":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/auth/login:
+    post:
+      tags: [Auth]
+      operationId: login
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginRequest"
+      responses:
+        "200":
+          description: Login succeeded
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/auth/refresh:
+    post:
+      tags: [Auth]
+      operationId: refreshSession
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "200":
+          description: Rotation succeeded; the old refresh token is invalidated immediately
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Session"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/auth/logout:
+    post:
+      tags: [Auth]
+      operationId: logout
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RefreshRequest"
+      responses:
+        "204":
+          description: Refresh token revoked
+        "400":
+          $ref: "#/components/responses/Error"
+
+  /v1/me:
+    get:
+      tags: [Auth]
+      operationId: getCurrentUser
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          $ref: "#/components/responses/Error"
+    patch:
+      tags: [Auth]
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              minProperties: 1
+              properties:
+                display_name:
+                  type: string
+                  minLength: 1
+                  maxLength: 80
+                time_zone:
+                  type: string
+                locale:
+                  type: string
+                  minLength: 1
+                  maxLength: 35
+                week_starts_on:
+                  type: integer
+                  minimum: 0
+                  maximum: 6
+      responses:
+        "200":
+          description: Updated user settings
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/devices:
+    get:
+      tags: [Auth]
+      operationId: listDevices
+      responses:
+        "200":
+          description: Devices registered for the current account
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [devices]
+                properties:
+                  devices:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/DeviceInfo"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/devices/{device_id}:
+    delete:
+      tags: [Auth]
+      operationId: revokeDevice
+      description: Revoke the specified device and all its refresh tokens. The current device may also be revoked.
+      parameters:
+        - name: device_id
+          in: path
+          required: true
+          schema:
+            $ref: "#/components/schemas/UUID"
+      responses:
+        "204":
+          description: Device revoked
+        "401":
+          $ref: "#/components/responses/Error"
+        "404":
+          $ref: "#/components/responses/Error"
+
+  /v1/account/export:
+    get:
+      tags: [Auth]
+      operationId: exportAccount
+      description: Export the user profile, devices, and current business entities; excludes passwords, access tokens, and refresh-token digests.
+      responses:
+        "200":
+          description: JSON account data package
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountExport"
+        "401":
+          $ref: "#/components/responses/Error"
+        "500":
+          $ref: "#/components/responses/Error"
+
+  /v1/account:
+    delete:
+      tags: [Auth]
+      operationId: deleteAccount
+      description: Immediately cascade-delete the account and its business data after password confirmation; this operation is irreversible.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [password, confirmation]
+              properties:
+                password:
+                  type: string
+                confirmation:
+                  const: DELETE
+      responses:
+        "204":
+          description: Account deleted
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/sync/push:
+    post:
+      tags: [Sync]
+      operationId: pushChanges
+      description: |
+        Process 1 to 200 operations in array order, committing each independently. Individual rejections are recorded in results
+        without failing the entire HTTP request. Resubmitting the same operation_id returns the first saved result.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [operations]
+              properties:
+                operations:
+                  type: array
+                  minItems: 1
+                  maxItems: 200
+                  items:
+                    $ref: "#/components/schemas/SyncOperation"
+      responses:
+        "200":
+          description: Batch processed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PushResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+        "422":
+          $ref: "#/components/responses/Error"
+
+  /v1/sync/pull:
+    get:
+      tags: [Sync]
+      operationId: pullChanges
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 1000
+            default: 500
+      responses:
+        "200":
+          description: Incremental change page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PullResponse"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/views/today:
+    get:
+      tags: [Views]
+      operationId: getToday
+      parameters:
+        - name: date
+          in: query
+          description: Local date; defaults to the current date
+          schema:
+            type: string
+            format: date
+        - name: time_zone
+          in: query
+          description: IANA time zone; defaults to the user setting
+          schema:
+            type: string
+            example: Asia/Shanghai
+      responses:
+        "200":
+          description: Persisted Today entries and plan slots not yet materialized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TodayView"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/views/calendar:
+    get:
+      tags: [Views]
+      operationId: getCalendar
+      parameters:
+        - name: starts_at
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date-time
+        - name: ends_at
+          in: query
+          required: true
+          description: At most 93 days after starts_at
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: Plans, actual focus, and associated tasks
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CalendarView"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/stats/summary:
+    get:
+      tags: [Views]
+      operationId: getStatisticsSummary
+      parameters:
+        - name: starts_on
+          in: query
+          description: Defaults to six days before ends_on
+          schema:
+            type: string
+            format: date
+        - name: ends_on
+          in: query
+          description: Defaults to the current local date; the range includes this date
+          schema:
+            type: string
+            format: date
+        - name: time_zone
+          in: query
+          schema:
+            type: string
+            example: Asia/Shanghai
+      responses:
+        "200":
+          description: Planned time, actual time, and completed-task count
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatisticsSummary"
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+  /v1/ws:
+    get:
+      tags: [Realtime]
+      operationId: subscribeToChanges
+      description: |
+        Connect using standard WebSocket Upgrade and the Authorization header.
+        Messages use {"type":"sync_available","cursor":123}; call sync/pull after receiving one.
+      parameters:
+        - $ref: "#/components/parameters/Cursor"
+      responses:
+        "101":
+          description: WebSocket established
+        "400":
+          $ref: "#/components/responses/Error"
+        "401":
+          $ref: "#/components/responses/Error"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Cursor:
+      name: cursor
+      in: query
+      description: Last server cursor successfully applied by the client
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+        default: 0
+
+  responses:
+    Error:
+      description: Request failed
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorEnvelope"
+
+  schemas:
+    ClientUpdateCheck:
+      type: object
+      additionalProperties: false
+      required:
+        - status
+        - update_available
+        - required
+        - version
+        - build_number
+        - download_url
+        - sha256
+        - size_bytes
+        - release_notes
+        - published_at
+      oneOf:
+        - title: Update available
+          properties:
+            status:
+              const: update_available
+            update_available:
+              const: true
+            required:
+              type: boolean
+            version:
+              type: string
+            build_number:
+              type: integer
+            download_url:
+              type: string
+            sha256:
+              type: string
+            size_bytes:
+              type: integer
+            release_notes:
+              type: string
+            published_at:
+              type: string
+        - title: Up to date
+          properties:
+            status:
+              const: up_to_date
+            update_available:
+              const: false
+            required:
+              const: false
+            version:
+              type: string
+            build_number:
+              type: integer
+            download_url:
+              type: string
+            sha256:
+              type: string
+            size_bytes:
+              type: integer
+            release_notes:
+              type: string
+            published_at:
+              type: string
+        - title: No release package configured
+          properties:
+            status:
+              const: not_configured
+            update_available:
+              const: false
+            required:
+              const: false
+            version:
+              type: "null"
+            build_number:
+              type: "null"
+            download_url:
+              type: "null"
+            sha256:
+              type: "null"
+            size_bytes:
+              type: "null"
+            release_notes:
+              type: "null"
+            published_at:
+              type: "null"
+      properties:
+        status:
+          type: string
+          enum: [update_available, up_to_date, not_configured]
+        update_available:
+          type: boolean
+          description: Whether the configured version, or build number for the same version, is newer than the caller
+        required:
+          type: boolean
+          description: True only when an update is available and the manifest marks it mandatory; retained for legacy-client compatibility and must not block local viewing, editing, focus, or data export
+        version:
+          type: [string, "null"]
+          maxLength: 64
+          description: Latest SemVer; null when not_configured
+        build_number:
+          type: [integer, "null"]
+          format: int64
+          minimum: 1
+          description: Latest build number; null when not_configured
+        download_url:
+          type: [string, "null"]
+          format: uri
+          pattern: '^https://'
+          maxLength: 2048
+          description: Validated absolute HTTPS address from the server manifest; null when not_configured
+        sha256:
+          type: [string, "null"]
+          pattern: '^[0-9a-f]{64}$'
+          description: Lowercase hexadecimal SHA-256 digest of the package; null when not_configured
+        size_bytes:
+          type: [integer, "null"]
+          format: int64
+          minimum: 1
+          description: Package size in bytes; null when not_configured
+        release_notes:
+          type: [string, "null"]
+          maxLength: 20000
+          description: Release notes; null when not_configured
+        published_at:
+          type: [string, "null"]
+          format: date-time
+          description: Publication time; null when not_configured
+
+    UUID:
+      type: string
+      format: uuid
+
+    Device:
+      type: object
+      additionalProperties: false
+      required: [id, name, platform, app_version]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 120
+        platform:
+          type: string
+          enum: [android, windows, linux]
+        app_version:
+          type: string
+          maxLength: 40
+
+    DeviceInfo:
+      allOf:
+        - $ref: "#/components/schemas/Device"
+        - type: object
+          required: [created_at, last_seen_at]
+          properties:
+            created_at:
+              type: string
+              format: date-time
+            last_seen_at:
+              type: string
+              format: date-time
+            revoked_at:
+              type: string
+              format: date-time
+
+    User:
+      type: object
+      required: [id, email, display_name, time_zone, locale, week_starts_on, created_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        email:
+          type: string
+          format: email
+        display_name:
+          type: string
+        time_zone:
+          type: string
+        locale:
+          type: string
+        week_starts_on:
+          type: integer
+          minimum: 0
+          maximum: 6
+        created_at:
+          type: string
+          format: date-time
+
+    RegisterRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, display_name, time_zone, device]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 10
+          maxLength: 1024
+        display_name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        time_zone:
+          type: string
+          example: Asia/Shanghai
+        locale:
+          type: string
+          default: zh-CN
+        week_starts_on:
+          type: integer
+          minimum: 0
+          maximum: 6
+          default: 1
+        device:
+          $ref: "#/components/schemas/Device"
+
+    LoginRequest:
+      type: object
+      additionalProperties: false
+      required: [email, password, device]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+        device:
+          $ref: "#/components/schemas/Device"
+
+    RefreshRequest:
+      type: object
+      additionalProperties: false
+      required: [refresh_token]
+      properties:
+        refresh_token:
+          type: string
+          minLength: 1
+
+    TokenPair:
+      type: object
+      required: [access_token, access_expires_at, refresh_token, refresh_expires_at, token_type]
+      properties:
+        access_token:
+          type: string
+        access_expires_at:
+          type: string
+          format: date-time
+        refresh_token:
+          type: string
+        refresh_expires_at:
+          type: string
+          format: date-time
+        token_type:
+          const: Bearer
+
+    Session:
+      type: object
+      required: [user, device, tokens]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        device:
+          $ref: "#/components/schemas/Device"
+        tokens:
+          $ref: "#/components/schemas/TokenPair"
+
+    AccountExport:
+      type: object
+      required: [format_version, exported_at, user, devices, entities]
+      properties:
+        format_version:
+          type: integer
+          const: 1
+        exported_at:
+          type: string
+          format: date-time
+        user:
+          $ref: "#/components/schemas/User"
+        devices:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        entities:
+          type: array
+          items:
+            type: object
+            required: [entity_type, id, version, body, deleted, created_at, updated_at]
+            properties:
+              entity_type:
+                $ref: "#/components/schemas/EntityType"
+              id:
+                $ref: "#/components/schemas/UUID"
+              version:
+                type: integer
+                format: int64
+              body:
+                type: object
+                additionalProperties: true
+              deleted:
+                type: boolean
+              created_at:
+                type: string
+                format: date-time
+              updated_at:
+                type: string
+                format: date-time
+
+    EntityType:
+      type: string
+      enum:
+        - project
+        - task
+        - task_recurrence_rule
+        - tag
+        - task_tag
+        - plan_block
+        - day_entry
+        - focus_policy
+        - focus_session
+        - focus_interruption
+        - reminder
+
+    SyncOperation:
+      type: object
+      additionalProperties: false
+      required: [operation_id, entity_type, entity_id, action, base_version, changed_fields]
+      properties:
+        operation_id:
+          $ref: "#/components/schemas/UUID"
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_id:
+          $ref: "#/components/schemas/UUID"
+        action:
+          type: string
+          enum: [upsert, delete]
+        base_version:
+          type: integer
+          format: int64
+          minimum: 0
+          description: 0 on creation; the last entity version known to the client on update or deletion
+        changed_fields:
+          type: array
+          uniqueItems: true
+          items:
+            type: string
+          description: Must exactly match the top-level patch keys for upsert; an empty array for delete
+        patch:
+          type: object
+          additionalProperties: true
+          description: >-
+            Contains only fields listed in changed_fields; null clears an optional field.
+            A focus_session may be created without a task. After it ends, only the
+            initiating device may set a previously empty task_id to an undeleted
+            task in the same account. All other terminal fields remain immutable;
+            an existing task association cannot be replaced or cleared.
+        client_changed_at:
+          type: string
+          format: date-time
+          description: Used only for auditing, not to determine conflict merge results
+      examples:
+        - operation_id: 0f33e630-d2ca-4c3c-aa67-d29e2aeb1b87
+          entity_type: task
+          entity_id: 31eafcf3-633e-4af0-a20e-1e575f1aa3b9
+          action: upsert
+          base_version: 0
+          changed_fields: [title, priority, status, estimated_duration_seconds]
+          patch:
+            title: 写项目报告
+            priority: high
+            status: open
+            estimated_duration_seconds: 5400
+          client_changed_at: 2026-08-30T02:00:00Z
+
+    EntitySnapshot:
+      type: object
+      required: [entity_type, entity_id, version, body, deleted, updated_at, cursor]
+      properties:
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_id:
+          $ref: "#/components/schemas/UUID"
+        version:
+          type: integer
+          format: int64
+        body:
+          type: object
+          additionalProperties: true
+        deleted:
+          type: boolean
+        updated_at:
+          type: string
+          format: date-time
+        cursor:
+          type: integer
+          format: int64
+
+    OperationResult:
+      type: object
+      required: [operation_id, status]
+      properties:
+        operation_id:
+          $ref: "#/components/schemas/UUID"
+        status:
+          type: string
+          enum: [applied, rejected]
+        snapshot:
+          $ref: "#/components/schemas/EntitySnapshot"
+        conflict_fields:
+          type: array
+          items:
+            type: string
+        resolution:
+          type: string
+        error:
+          $ref: "#/components/schemas/Error"
+
+    PushResponse:
+      type: object
+      required: [results, current_cursor]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/OperationResult"
+        current_cursor:
+          type: integer
+          format: int64
+
+    Change:
+      type: object
+      required:
+        [cursor, change_id, entity_type, entity_id, action, version, body, changed_fields, device_id, changed_at]
+      properties:
+        cursor:
+          type: integer
+          format: int64
+        change_id:
+          $ref: "#/components/schemas/UUID"
+        entity_type:
+          $ref: "#/components/schemas/EntityType"
+        entity_id:
+          $ref: "#/components/schemas/UUID"
+        action:
+          type: string
+          enum: [upsert, delete]
+        version:
+          type: integer
+          format: int64
+        body:
+          type: object
+          additionalProperties: true
+        changed_fields:
+          type: array
+          items:
+            type: string
+        device_id:
+          $ref: "#/components/schemas/UUID"
+        client_changed_at:
+          type: string
+          format: date-time
+        changed_at:
+          type: string
+          format: date-time
+
+    PullResponse:
+      type: object
+      required: [changes, next_cursor, current_cursor, has_more]
+      properties:
+        changes:
+          type: array
+          items:
+            $ref: "#/components/schemas/Change"
+        next_cursor:
+          type: integer
+          format: int64
+        current_cursor:
+          type: integer
+          format: int64
+        has_more:
+          type: boolean
+
+    Record:
+      type: object
+      required: [id, version, body, updated_at]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        version:
+          type: integer
+          format: int64
+        body:
+          type: object
+          additionalProperties: true
+        updated_at:
+          type: string
+          format: date-time
+
+    TodayItem:
+      type: object
+      required: [id, derived, origin, planned_duration_seconds, actual_duration_seconds]
+      properties:
+        id:
+          $ref: "#/components/schemas/UUID"
+        derived:
+          type: boolean
+        origin:
+          type: string
+          enum: [planned, manual]
+        day_entry:
+          $ref: "#/components/schemas/Record"
+        plan_block:
+          $ref: "#/components/schemas/Record"
+        task:
+          $ref: "#/components/schemas/Record"
+        planned_duration_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+        actual_duration_seconds:
+          type: integer
+          format: int64
+          minimum: 0
+
+    TodayView:
+      type: object
+      required: [date, time_zone, items]
+      properties:
+        date:
+          type: string
+          format: date
+        time_zone:
+          type: string
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/TodayItem"
+
+    CalendarView:
+      type: object
+      required: [starts_at, ends_at, plan_blocks, focus_sessions, tasks]
+      properties:
+        starts_at:
+          type: string
+          format: date-time
+        ends_at:
+          type: string
+          format: date-time
+        plan_blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+        focus_sessions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+        tasks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Record"
+
+    DailySummary:
+      type: object
+      required: [date, planned_duration_seconds, actual_duration_seconds, completed_tasks]
+      properties:
+        date:
+          type: string
+          format: date
+        planned_duration_seconds:
+          type: integer
+          format: int64
+        actual_duration_seconds:
+          type: integer
+          format: int64
+        completed_tasks:
+          type: integer
+          format: int64
+
+    StatisticsSummary:
+      type: object
+      required:
+        [starts_on, ends_on, time_zone, planned_duration_seconds, actual_duration_seconds, completed_tasks, days]
+      properties:
+        starts_on:
+          type: string
+          format: date
+        ends_on:
+          type: string
+          format: date
+        time_zone:
+          type: string
+        planned_duration_seconds:
+          type: integer
+          format: int64
+        actual_duration_seconds:
+          type: integer
+          format: int64
+        completed_tasks:
+          type: integer
+          format: int64
+        days:
+          type: array
+          items:
+            $ref: "#/components/schemas/DailySummary"
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+          additionalProperties: true
+        request_id:
+          type: string
+
+    ErrorEnvelope:
+      type: object
+      required: [error]
+      properties:
+        error:
+          $ref: "#/components/schemas/Error"

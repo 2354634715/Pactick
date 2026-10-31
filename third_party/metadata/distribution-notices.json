@@ -6,7 +6,7 @@
   "status": "source-reviewed-final-apk-check-required",
   "completed_legal_audit": false,
   "supplemental_asset": "client/assets/licenses/supplemental.json",
-  "supplemental_asset_sha256": "0e23f43213796acd48e66a7edd765c012d6a72c2b2e054e21a1952da48f71b13",
+  "supplemental_asset_sha256": "4f9c010cf02f20e99102a30b05c80400e583375d33afdee1abf5fe42382bd968",
   "go_mod_sha256": "c458c7990b62f14b7fb5862077ed8182002a84232dcae34344c97a98f47f1ee5",
   "pubspec_lock_sha256": "bf38939bb3ece199695615e037c7d20d6883756847304d1cdfdaff1174d71ffc",
   "runtime_coordinates": [
@@ -301,6 +301,12 @@
         "Google Material Design Icons / timer"
       ],
       "text_sha256": "bbba8098e8c03807c7f5999e2f094a7ee0315e5aa1163a506ea1b33e44f0b88e"
+    },
+    {
+      "packages": [
+        "Noto Serif SC (PactickDisplay)"
+      ],
+      "text_sha256": "0b42408cf5f1f6fd514d736ef1492536b76e89b8d47ba080d3cb622a8362aaac"
     }
   ],
   "attribution_sources": [
@@ -373,6 +379,10 @@
     {
       "file": "third_party/licenses/Android-runtime-025-androidx.exifinterface_exifinterface_1.4.1-000.txt",
       "sha256": "809fa1ed21450f59827d1e9aec720bbc4b687434fa22283c6cb5dd82a47ab9c0"
+    },
+    {
+      "file": "third_party/licenses/Font-NotoSerifSC-OFL-1.1.txt",
+      "sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6"
     }
   ],
   "required_acknowledgements": [
@@ -394,6 +404,10 @@
     {
       "file": "client/android/gradle/wrapper/gradle-wrapper.jar",
       "sha256": "16caeaf66d57a0d1d2087fef6a97efa62de8da69afa5b908f40db35afc4342da"
+    },
+    {
+      "file": "client/assets/fonts/NotoSerifSC.ttf",
+      "sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9"
     }
   ],
   "dependency_review_updates": [
@@ -405,6 +419,16 @@
       "verification": "Full package Apache-2.0 text and package name found in debug APK NOTICES.Z; no legal audit or signed release acceptance claimed.",
       "previous_pubspec_lock_sha256": "c143689cb9effc486a338575d1b327f85c61d2bea85c827bda1d80a958ad76f5",
       "pubspec_lock_sha256": "bf38939bb3ece199695615e037c7d20d6883756847304d1cdfdaff1174d71ffc"
+    },
+    {
+      "date": "2026-10-31",
+      "change": "Bundled the unmodified Noto Serif SC variable font for Chinese and English display headings.",
+      "upstream_commit": "8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5",
+      "source": "https://github.com/google/fonts/tree/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/notoserifsc",
+      "license_evidence": "third_party/licenses/Font-NotoSerifSC-OFL-1.1.txt",
+      "license_sha256": "5e0da210fb04058a8c0087985d2d456b931c2579811a49655721d3cf0c36b6d6",
+      "font_sha256": "050080d9255a86808f2945bffac582b31ef32bc36411ce29563b4961670c66f9",
+      "verification": "Original OFL copyright and full license retained in the source and in-app supplemental notices. Font bytes are unmodified. Final APK asset and notice checks remain required."
     }
   ]
 }

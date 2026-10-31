@@ -1,3 +1,5 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'dart:async';
 import 'dart:convert';
 
@@ -34,6 +36,10 @@ void main() {
         addTearDown(app.dispose);
         await tester.pumpWidget(
           MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
             home: Scaffold(
               body: Builder(
                 builder: (context) => FilledButton(
@@ -143,6 +149,10 @@ void main() {
           child: SessionScope(
             controller: session,
             child: const MaterialApp(
+              locale: Locale('zh', 'CN'),
+              supportedLocales: [Locale('zh', 'CN')],
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
               home: Scaffold(
                 body: SingleChildScrollView(child: LocalDataCard()),
               ),

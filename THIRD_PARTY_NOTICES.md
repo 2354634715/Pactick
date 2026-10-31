@@ -1,5 +1,7 @@
 # 第三方组件声明
 
+[English](THIRD_PARTY_NOTICES.en.md)
+
 此清单根据本机锁定的依赖和许可证文件生成。第三方组件适用各自的许可并保留原版权，项目专用许可不覆盖这些组件。
 
 当前已采集本地许可证据，尚未完成全部组件与项目许可的兼容性审阅。Android 记录是否来自实际运行时依赖图，以 JSON 中的 android_runtime_graph_complete 和 status 字段为准。
@@ -114,6 +116,7 @@
 | Build | [Gradle-wrapper](https://github.com/gradle/gradle) | 2.10 | [Apache-2.0 (text match; review notices)](third_party/licenses/Build-Gradle-wrapper-2.10-0-LICENSE); [Review original text](third_party/licenses/Build-Gradle-wrapper-2.10-1-NOTICE) |
 | Asset | [Material-timer-vector](https://github.com/google/material-design-icons) | 737e3324305806514d7909874fa1818ae1808232 | [Apache-2.0 (text match; review notices)](third_party/licenses/Asset-Material-timer-Apache-2.0.txt) |
 | Asset | [Unicode-CLDR-locale-data](https://github.com/unicode-org/cldr/blob/release-48/LICENSE) | 48 | [Unicode-3.0 (review copyright and data notices)](third_party/licenses/Asset-Unicode-CLDR-48-LICENSE) |
+| Asset | [Noto-Serif-SC](https://github.com/google/fonts/tree/8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5/ofl/notoserifsc) | 8b0a1d0f5983c89bc2b93f1b5fb55f9e252744b5 | [SIL Open Font License 1.1](third_party/licenses/Font-NotoSerifSC-OFL-1.1.txt) |
 
 JSON 清单包含 75 条 Android POM 元数据。记录是否属于本应用的实际依赖，以 status 字段为准。
 

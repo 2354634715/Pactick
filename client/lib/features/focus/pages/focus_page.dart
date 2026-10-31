@@ -1,3 +1,5 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -14,6 +16,7 @@ import '../../../core/state/app_scope.dart';
 import '../../../core/state_views/state_pane.dart';
 import '../../../core/utilities/formatters.dart';
 import '../dialogs/app_whitelist_editor.dart';
+import '../widgets/focus_desktop_controls.dart';
 
 enum _FocusSection { start, history, policies }
 
@@ -55,16 +58,16 @@ class _FocusPageState extends State<FocusPage> {
         .where((task) => task.status == TaskStatus.open)
         .toList(growable: false);
     if (!openTasks.any((task) => task.id == _selectedTaskId)) {
-      _selectedTaskId = openTasks.firstOrNull?.id;
+      _selectedTaskId = null;
     }
     _selectedPolicyId ??= controller.focusPolicies.firstOrNull?.id;
 
     return FeaturePageScaffold(
-      title: '专注',
-      subtitle: '选择任务和时长，记录实际专注时间',
+      title: context.tr('专注'),
+      subtitle: context.tr('可直接开始，结束后再关联任务'),
       actions: [
         IconButton(
-          tooltip: '专注权限',
+          tooltip: context.tr('专注权限'),
           onPressed: () => setState(() => _section = _FocusSection.policies),
           icon: Badge(
             isLabelVisible: !controller.guardPermissionsGranted,
@@ -81,7 +84,7 @@ class _FocusPageState extends State<FocusPage> {
           ),
         ),
         IconButton(
-          tooltip: '设置',
+          tooltip: context.tr('设置'),
           onPressed: widget.onOpenSettings,
           icon: const Icon(Icons.settings_outlined),
         ),
@@ -99,17 +102,19 @@ class _FocusPageState extends State<FocusPage> {
                   segments: [
                     ButtonSegment(
                       value: _FocusSection.start,
-                      label: Text(compact ? '开始' : '开始专注'),
+                      label: Text(
+                        compact ? context.tr('开始') : context.tr('开始专注'),
+                      ),
                       icon: const Icon(Icons.play_circle_outline),
                     ),
-                    const ButtonSegment(
+                    ButtonSegment(
                       value: _FocusSection.history,
-                      label: Text('历史'),
+                      label: Text(context.tr('历史')),
                       icon: Icon(Icons.history),
                     ),
-                    const ButtonSegment(
+                    ButtonSegment(
                       value: _FocusSection.policies,
-                      label: Text('规则'),
+                      label: Text(context.tr('规则')),
                       icon: Icon(Icons.tune),
                     ),
                   ],
@@ -134,7 +139,7 @@ class _FocusPageState extends State<FocusPage> {
 
   Future<void> _start(
     AppController controller,
-    TaskItem task,
+    TaskItem? task,
     FocusPolicyItem policy,
   ) async {
     if (_starting) return;
@@ -149,21 +154,20 @@ class _FocusPageState extends State<FocusPage> {
         policy: policy,
       );
     } catch (error) {
-      if (mounted) setState(() => _startError = '未能开始专注，请重试：$error');
+      if (mounted) {
+        setState(
+          () => _startError = context.tr(
+            '未能开始专注，请重试：{arg0}',
+            args: {'arg0': error},
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _starting = false);
     }
   }
 
   Widget _buildStart(AppController controller) {
-    if (!controller.tasks.any((task) => task.status == TaskStatus.open)) {
-      return StatePane.empty(
-        title: '先添加一个任务',
-        message: '专注会关联到未完成任务，记录实际投入的时间。',
-        actionLabel: '新建任务',
-        onAction: () => showTaskEditor(context, controller: controller),
-      );
-    }
     final openTasks = controller.tasks
         .where((task) => task.status == TaskStatus.open)
         .toList(growable: false);
@@ -185,17 +189,26 @@ class _FocusPageState extends State<FocusPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('本次专注', style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  context.tr('本次专注'),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: AppSpacing.lg),
                 DropdownButtonFormField<String>(
                   key: ValueKey(selectedTask?.id),
                   isExpanded: true,
-                  initialValue: selectedTask?.id,
-                  decoration: const InputDecoration(
-                    labelText: '选择任务',
+                  initialValue: selectedTask?.id ?? '',
+                  decoration: InputDecoration(
+                    labelText: context.tr('关联任务（可选）'),
+                    helperText: context.tr('未关联时记为“自由专注”，结束后可补充关联'),
+                    helperMaxLines: 2,
                     prefixIcon: Icon(Icons.task_alt_outlined),
                   ),
                   items: [
+                    DropdownMenuItem(
+                      value: '',
+                      child: Text(context.tr('自由专注（暂不关联任务）')),
+                    ),
                     for (final task in openTasks)
                       DropdownMenuItem(
                         value: task.id,
@@ -209,7 +222,7 @@ class _FocusPageState extends State<FocusPage> {
                   onChanged: _starting
                       ? null
                       : (value) => setState(() {
-                          _selectedTaskId = value;
+                          _selectedTaskId = value == '' ? null : value;
                           final task = controller.taskById(value);
                           if (task?.estimatedDurationSeconds
                               case final seconds?) {
@@ -221,7 +234,10 @@ class _FocusPageState extends State<FocusPage> {
                         }),
                 ),
                 const SizedBox(height: AppSpacing.lg),
-                Text('目标时长', style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  context.tr('目标时长'),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 Wrap(
                   spacing: AppSpacing.xs,
@@ -237,7 +253,9 @@ class _FocusPageState extends State<FocusPage> {
                                   () => _durationMinutes = minutes.toDouble(),
                                 );
                               },
-                        label: Text('$minutes 分钟'),
+                        label: Text(
+                          context.tr('{arg0} 分钟', args: {'arg0': minutes}),
+                        ),
                       ),
                   ],
                 ),
@@ -246,7 +264,10 @@ class _FocusPageState extends State<FocusPage> {
                   min: _minimumDurationMinutes,
                   max: _maximumDurationMinutes,
                   divisions: 15,
-                  label: '${_durationMinutes.round()} 分钟',
+                  label: context.tr(
+                    '{arg0} 分钟',
+                    args: {'arg0': _durationMinutes.round()},
+                  ),
                   onChanged: _starting
                       ? null
                       : (value) => setState(() => _durationMinutes = value),
@@ -269,7 +290,10 @@ class _FocusPageState extends State<FocusPage> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text('专注规则', style: Theme.of(context).textTheme.headlineSmall),
+                Text(
+                  context.tr('专注规则'),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
                 const SizedBox(height: AppSpacing.sm),
                 RadioGroup<String>(
                   groupValue: _selectedPolicyId,
@@ -282,7 +306,7 @@ class _FocusPageState extends State<FocusPage> {
                         RadioListTile<String>(
                           value: policy.id,
                           enabled: !_starting,
-                          title: Text(policy.name),
+                          title: Text(policy.displayName),
                           subtitle: Text(_policyDescription(policy)),
                           secondary: Icon(
                             policy.mode != FocusPolicyMode.normal
@@ -293,26 +317,39 @@ class _FocusPageState extends State<FocusPage> {
                     ],
                   ),
                 ),
-                if (guardSelected && selectedTask != null) ...[
+                if (guardSelected) ...[
                   const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.surfaceContainerLow,
-                      borderRadius: BorderRadius.circular(AppRadii.medium),
-                    ),
+                  Material(
+                    color: Theme.of(context).colorScheme.surfaceContainerLow,
+                    borderRadius: BorderRadius.circular(AppRadii.medium),
+                    clipBehavior: Clip.antiAlias,
                     child: ListTile(
                       leading: const Icon(Icons.apps_outlined),
                       title: Text(
-                        '${controller.whitelistName(selectedTask.projectId)}白名单',
+                        context.tr(
+                          '{arg0}白名单',
+                          args: {
+                            'arg0': controller.whitelistName(
+                              selectedTask?.projectId,
+                            ),
+                          },
+                        ),
                       ),
                       subtitle: Text(
-                        '${controller.appWhitelistForTask(selectedTask).length} 个应用可在本次专注中使用',
+                        context.tr(
+                          '{arg0} 个应用可在本次专注中使用',
+                          args: {
+                            'arg0': controller
+                                .appWhitelistForProject(selectedTask?.projectId)
+                                .length,
+                          },
+                        ),
                       ),
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => showAppWhitelistEditor(
                         context,
                         controller: controller,
-                        projectId: selectedTask.projectId,
+                        projectId: selectedTask?.projectId,
                       ),
                     ),
                   ),
@@ -320,24 +357,26 @@ class _FocusPageState extends State<FocusPage> {
                 if (guardNeedsUsageAccess) ...[
                   const SizedBox(height: AppSpacing.sm),
                   _PermissionCallout(
-                    title: '深度守护需要使用情况访问',
-                    message: '用于判断当前打开的应用是否在白名单中。',
-                    actionLabel: '前往授权',
+                    title: context.tr('深度守护需要使用情况访问'),
+                    message: context.tr('用于判断当前打开的应用是否在白名单中。'),
+                    actionLabel: context.tr('前往授权'),
                     onAction: controller.openUsageAccessSettings,
                   ),
                 ],
                 if (guardNeedsOverlayAccess) ...[
                   const SizedBox(height: AppSpacing.sm),
                   _PermissionCallout(
-                    title: '深度守护需要悬浮窗权限',
-                    message: '用于在非白名单应用上方显示「回到专注」提醒。',
-                    actionLabel: '前往授权',
+                    title: context.tr('深度守护需要悬浮窗权限'),
+                    message: context.tr('用于在非白名单应用上方显示「回到专注」提醒。'),
+                    actionLabel: context.tr('前往授权'),
                     onAction: controller.openOverlayPermissionSettings,
                   ),
                 ],
                 const SizedBox(height: AppSpacing.lg),
                 if (!controller.canStartFocus) ...[
-                  const Text('此工作区已有其他设备的活跃专注。请在发起设备结束后同步；本机只能在历史中查看该记录。'),
+                  Text(
+                    context.tr('此工作区已有其他设备的活跃专注。请在发起设备结束后同步；本机只能在历史中查看该记录。'),
+                  ),
                   const SizedBox(height: AppSpacing.sm),
                 ],
                 if (_startError != null) ...[
@@ -355,14 +394,15 @@ class _FocusPageState extends State<FocusPage> {
                 FilledButton.icon(
                   onPressed:
                       _starting ||
-                          selectedTask == null ||
                           selectedPolicy == null ||
                           guardNeedsAccess ||
                           !controller.canStartFocus
                       ? null
                       : () => _start(controller, selectedTask, selectedPolicy),
                   icon: const Icon(Icons.play_arrow_rounded),
-                  label: Text(_starting ? '正在开始…' : '开始专注'),
+                  label: Text(
+                    _starting ? context.tr('正在开始…') : context.tr('开始专注'),
+                  ),
                 ),
               ],
             ),
@@ -391,10 +431,14 @@ class _FocusPageState extends State<FocusPage> {
 
   String _policyDescription(FocusPolicyItem policy) {
     return switch (policy.mode) {
-      FocusPolicyMode.normal => '允许暂停和提前结束，记录实际专注时间',
-      FocusPolicyMode.guard =>
-        '打开非白名单应用时显示顶部提醒，离开超过 ${policy.maxAppExits ?? 0} 次计为中断',
-      FocusPolicyMode.strict => '禁止暂停和提前完成；非白名单应用计为中断；紧急结束需等待 30 秒并填写原因',
+      FocusPolicyMode.normal => context.tr('允许暂停和提前结束，记录实际专注时间'),
+      FocusPolicyMode.guard => context.tr(
+        '打开非白名单应用时显示顶部提醒，离开超过 {arg0} 次计为中断',
+        args: {'arg0': policy.maxAppExits ?? 0},
+      ),
+      FocusPolicyMode.strict => context.tr(
+        '禁止暂停和提前完成；非白名单应用计为中断；紧急结束需等待 30 秒并填写原因',
+      ),
     };
   }
 }
@@ -428,7 +472,12 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
         await controller.pauseFocus();
       }
     } catch (error) {
-      if (mounted) setState(() => _error = '专注状态未保存，请重试：$error');
+      if (mounted) {
+        setState(
+          () =>
+              _error = context.tr('专注状态未保存，请重试：{arg0}', args: {'arg0': error}),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -449,7 +498,7 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
             MediaQuery.textScalerOf(context).scale(16) <= 20 &&
             constraints.maxWidth >= 360;
         return FeaturePageScaffold(
-          title: paused ? '专注已暂停' : '专注进行中',
+          title: paused ? context.tr('专注已暂停') : context.tr('专注进行中'),
           maxWidth: AppSizes.compactContentMax,
           body: Column(
             children: [
@@ -459,14 +508,14 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                     : () => showDialog<void>(
                         context: context,
                         builder: (context) => AlertDialog(
-                          title: const Text('当前任务'),
+                          title: Text(context.tr('当前任务')),
                           content: SingleChildScrollView(
                             child: SelectableText(task.title),
                           ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.pop(context),
-                              child: const Text('关闭'),
+                              child: Text(context.tr('关闭')),
                             ),
                           ],
                         ),
@@ -474,7 +523,7 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
                   child: Text(
-                    task?.title ?? '未命名任务',
+                    controller.focusSessionTitle(session),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     textAlign: TextAlign.center,
@@ -486,7 +535,7 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
               Semantics(
                 liveRegion: true,
                 child: Text(
-                  '${policy?.name ?? '专注'} · ${paused ? '已暂停' : '正在记录'}',
+                  '${policy?.displayName ?? context.tr("专注")} · ${paused ? context.tr("已暂停") : context.tr("正在记录")}',
                 ),
               ),
               SizedBox(height: low ? AppSpacing.md : AppSpacing.xl),
@@ -515,7 +564,9 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                           ? null
                           : _pause,
                       icon: const Icon(Icons.play_arrow),
-                      label: Text(_busy ? '正在保存…' : '继续'),
+                      label: Text(
+                        _busy ? context.tr('正在保存…') : context.tr('继续'),
+                      ),
                     ),
                     OutlinedButton.icon(
                       onPressed:
@@ -525,7 +576,7 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                           ? null
                           : () => _complete(task, policy),
                       icon: const Icon(Icons.done),
-                      label: const Text('完成专注'),
+                      label: Text(context.tr('完成专注')),
                     ),
                   ] else ...[
                     FilledButton.icon(
@@ -536,34 +587,50 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                           ? null
                           : () => _complete(task, policy),
                       icon: const Icon(Icons.done),
-                      label: Text(_busy ? '正在保存…' : '完成专注'),
+                      label: Text(
+                        _busy ? context.tr('正在保存…') : context.tr('完成专注'),
+                      ),
                     ),
                     OutlinedButton.icon(
                       onPressed: _busy || !canPauseActiveFocus(controller)
                           ? null
                           : _pause,
                       icon: const Icon(Icons.pause),
-                      label: const Text('暂停'),
+                      label: Text(context.tr('暂停')),
                     ),
                   ],
                   TextButton.icon(
                     onPressed: _busy ? null : () => _abandon(policy),
                     icon: const Icon(Icons.stop_circle_outlined),
-                    label: const Text('提前结束'),
+                    label: Text(context.tr('提前结束')),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.lg),
+              OpenFocusDesktopButton(controller: controller),
+              const SizedBox(height: AppSpacing.sm),
               Text(
-                '目标时长结束后继续记录，点击“完成专注”保存本次时间。',
+                context.tr('目标时长结束后继续记录，点击“完成专注”保存本次时间。'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: AppSpacing.lg),
               Text(
                 policy?.mode != FocusPolicyMode.normal
-                    ? '${policy?.mode == FocusPolicyMode.strict ? '严格' : '守护'}模式不允许暂停。${controller.whitelistName(task?.projectId)}白名单 ${controller.appWhitelistForProject(task?.projectId).length} 个应用 · 已离开 ${session.appExitCount} 次'
-                    : '切到后台后继续计时，暂停期间不计入实际专注时间。',
+                    ? context.tr(
+                        '{arg0}模式不允许暂停。{arg1}白名单 {arg2} 个应用 · 已离开 {arg3} 次',
+                        args: {
+                          'arg0': policy?.mode == FocusPolicyMode.strict
+                              ? tr('严格')
+                              : tr('守护'),
+                          'arg1': controller.whitelistName(task?.projectId),
+                          'arg2': controller
+                              .appWhitelistForProject(task?.projectId)
+                              .length,
+                          'arg3': session.appExitCount,
+                        },
+                      )
+                    : context.tr('切到后台后继续计时，暂停期间不计入实际专注时间。'),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -586,7 +653,12 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
       final result = await _showReview(navigator, session, task, policy);
       if (result) widget.onFocusEnded();
     } catch (error) {
-      if (mounted) setState(() => _error = '专注记录未保存，请重试：$error');
+      if (mounted) {
+        setState(
+          () =>
+              _error = context.tr('专注记录未保存，请重试：{arg0}', args: {'arg0': error}),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -608,6 +680,7 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
     TaskItem? task,
     FocusPolicyItem? policy,
   ) async {
+    final accountId = controller.repository.selectedAccountId;
     var saving = false;
     String? error;
     final result = await navigator.push<String>(
@@ -619,29 +692,60 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
             canPop: !saving,
             child: AlertDialog(
               scrollable: true,
-              title: const Text('本次专注已记录'),
+              title: Text(context.tr('本次专注已记录')),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Text('专注结束，任务状态尚未改变。'),
+                  Text(context.tr('专注结束，任务状态尚未改变。')),
                   _ReviewRow(
-                    label: '计划时长',
+                    label: context.tr('关联任务'),
+                    value: controller.focusSessionTitle(session),
+                  ),
+                  if (controller.canAssociateFocusSessionTask(session))
+                    OutlinedButton.icon(
+                      onPressed: saving
+                          ? null
+                          : () async {
+                              final associated =
+                                  await _showFocusTaskAssociation(
+                                    context,
+                                    controller: controller,
+                                    session: session,
+                                    expectedAccountId: accountId,
+                                  );
+                              if (associated != null && dialogContext.mounted) {
+                                update(() {
+                                  task = associated;
+                                  session = controller.focusSessions.firstWhere(
+                                    (item) => item.id == session.id,
+                                  );
+                                });
+                              }
+                            },
+                      icon: const Icon(Icons.link),
+                      label: Text(context.tr('关联任务')),
+                    ),
+                  _ReviewRow(
+                    label: context.tr('计划时长'),
                     value: formatDuration(
                       session.plannedDurationSeconds,
                       compact: true,
                     ),
                   ),
                   _ReviewRow(
-                    label: '实际专注',
+                    label: context.tr('实际专注'),
                     value: formatDuration(
                       session.actualDurationSeconds,
                       compact: true,
                     ),
                   ),
                   _ReviewRow(
-                    label: '中断次数',
-                    value: '${session.interruptionCount} 次',
+                    label: context.tr('中断次数'),
+                    value: context.tr(
+                      '{arg0} 次',
+                      args: {'arg0': session.interruptionCount},
+                    ),
                   ),
                   if (error != null)
                     Semantics(
@@ -660,10 +764,12 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                   onPressed: saving
                       ? null
                       : () => Navigator.pop(dialogContext, 'keep'),
-                  child: const Text('暂不完成任务'),
+                  child: Text(
+                    task == null ? context.tr('暂不关联') : context.tr('暂不完成任务'),
+                  ),
                 ),
                 OutlinedButton(
-                  onPressed: saving || task == null || policy == null
+                  onPressed: saving || policy == null
                       ? null
                       : () async {
                           update(() {
@@ -671,10 +777,11 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                             error = null;
                           });
                           try {
-                            final currentTask = controller.taskById(task.id);
-                            if (currentTask == null ||
-                                currentTask.isCompleted) {
-                              throw StateError('任务已完成或不可用');
+                            final currentTask = controller.taskById(task?.id);
+                            if (task != null &&
+                                (currentTask == null ||
+                                    currentTask.status != TaskStatus.open)) {
+                              throw StateError(context.tr('任务已完成或不可用'));
                             }
                             await controller.startFocus(
                               task: currentTask,
@@ -686,7 +793,12 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                             }
                           } catch (failure) {
                             if (dialogContext.mounted) {
-                              update(() => error = '未能开始，请重试：$failure');
+                              update(
+                                () => error = context.tr(
+                                  '未能开始，请重试：{arg0}',
+                                  args: {'arg0': failure},
+                                ),
+                              );
                             }
                           } finally {
                             if (dialogContext.mounted) {
@@ -694,7 +806,7 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                             }
                           }
                         },
-                  child: const Text('再专注一次'),
+                  child: Text(context.tr('再专注一次')),
                 ),
                 FilledButton(
                   onPressed: saving || task == null
@@ -705,7 +817,7 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                             error = null;
                           });
                           try {
-                            final currentTask = controller.taskById(task.id);
+                            final currentTask = controller.taskById(task?.id);
                             if (currentTask != null &&
                                 !currentTask.isCompleted) {
                               await controller.toggleTask(currentTask);
@@ -715,7 +827,12 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                             }
                           } catch (failure) {
                             if (dialogContext.mounted) {
-                              update(() => error = '任务未保存，请重试：$failure');
+                              update(
+                                () => error = context.tr(
+                                  '任务未保存，请重试：{arg0}',
+                                  args: {'arg0': failure},
+                                ),
+                              );
                             }
                           } finally {
                             if (dialogContext.mounted) {
@@ -723,7 +840,9 @@ class _ActiveFocusViewState extends State<_ActiveFocusView> {
                             }
                           }
                         },
-                  child: Text(saving ? '正在保存…' : '完成任务'),
+                  child: Text(
+                    saving ? context.tr('正在保存…') : context.tr('完成任务'),
+                  ),
                 ),
               ],
             ),
@@ -779,12 +898,16 @@ class _EarlyFocusExitDialogState extends State<_EarlyFocusExitDialog> {
         reason:
             _reason.text.trim().isEmpty &&
                 widget.policy?.mode != FocusPolicyMode.strict
-            ? '用户提前结束'
+            ? context.tr('用户提前结束')
             : _reason.text.trim(),
       );
       if (mounted && session != null) Navigator.pop(context, true);
     } catch (failure) {
-      if (mounted) setState(() => _error = '未保存，请重试：$failure');
+      if (mounted) {
+        setState(
+          () => _error = context.tr('未保存，请重试：{arg0}', args: {'arg0': failure}),
+        );
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -800,15 +923,20 @@ class _EarlyFocusExitDialogState extends State<_EarlyFocusExitDialog> {
       canPop: !_saving,
       child: AlertDialog(
         scrollable: true,
-        title: const Text('提前结束专注？'),
+        title: Text(context.tr('提前结束专注？')),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const Text('保留本次实际专注时间，不会完成任务。'),
+            Text(context.tr('保留本次实际专注时间，不会完成任务。')),
             if (remaining > 0) ...[
               const SizedBox(height: AppSpacing.sm),
-              Text('还需等待 $remaining 秒，可随时返回继续专注。'),
+              Text(
+                context.tr(
+                  '还需等待 {arg0} 秒，可随时返回继续专注。',
+                  args: {'arg0': remaining},
+                ),
+              ),
             ],
             const SizedBox(height: AppSpacing.md),
             TextFormField(
@@ -817,8 +945,10 @@ class _EarlyFocusExitDialogState extends State<_EarlyFocusExitDialog> {
               maxLength: 1000,
               onChanged: (_) => setState(() {}),
               decoration: InputDecoration(
-                labelText: requiresReason ? '原因（必填）' : '原因',
-                hintText: '例如：需要处理紧急电话',
+                labelText: requiresReason
+                    ? context.tr('原因（必填）')
+                    : context.tr('原因'),
+                hintText: context.tr('例如：需要处理紧急电话'),
               ),
             ),
             if (_error != null)
@@ -834,7 +964,7 @@ class _EarlyFocusExitDialogState extends State<_EarlyFocusExitDialog> {
         actions: [
           TextButton(
             onPressed: _saving ? null : () => Navigator.pop(context, false),
-            child: const Text('继续专注'),
+            child: Text(context.tr('继续专注')),
           ),
           FilledButton(
             onPressed:
@@ -845,10 +975,10 @@ class _EarlyFocusExitDialogState extends State<_EarlyFocusExitDialog> {
                 : _finish,
             child: Text(
               _saving
-                  ? '正在保存…'
+                  ? context.tr('正在保存…')
                   : remaining > 0
-                  ? '等待 $remaining 秒'
-                  : '结束',
+                  ? context.tr('等待 {arg0} 秒', args: {'arg0': remaining})
+                  : context.tr('结束'),
             ),
           ),
         ],
@@ -861,11 +991,11 @@ class _FocusHistory extends StatelessWidget {
   const _FocusHistory({required this.controller});
   final AppController controller;
   String _status(FocusSessionItem session) => switch (session.status) {
-    FocusSessionStatus.running => '其他设备专注中 · 只读',
-    FocusSessionStatus.paused => '其他设备已暂停 · 只读',
-    FocusSessionStatus.completed => '已完成专注',
-    FocusSessionStatus.abandoned => '提前结束',
-    FocusSessionStatus.interrupted => '已中断',
+    FocusSessionStatus.running => tr('其他设备专注中 · 只读'),
+    FocusSessionStatus.paused => tr('其他设备已暂停 · 只读'),
+    FocusSessionStatus.completed => tr('已完成专注'),
+    FocusSessionStatus.abandoned => tr('提前结束'),
+    FocusSessionStatus.interrupted => tr('已中断'),
   };
   @override
   Widget build(BuildContext context) {
@@ -877,8 +1007,8 @@ class _FocusHistory extends StatelessWidget {
         .toList();
     if (sessions.isEmpty) {
       return StatePane.empty(
-        title: '还没有专注记录',
-        message: '专注结束后，计划时长和实际专注时间会显示在这里。',
+        title: context.tr('还没有专注记录'),
+        message: context.tr('专注结束后，计划时长和实际专注时间会显示在这里。'),
       );
     }
     return Column(
@@ -892,37 +1022,250 @@ class _FocusHistory extends StatelessWidget {
                   : Icons.history,
             ),
             title: Text(
-              controller.taskById(session.taskId)?.title ?? '未命名任务',
+              controller.focusSessionTitle(session),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),
             subtitle: Text(
-              '${_status(session)}\n${formatMonthDay(session.startedAt)} ${formatClock(session.startedAt)} · 计划 ${formatDuration(session.plannedDurationSeconds, compact: true)} · 已记录 ${formatDuration(session.actualDurationSeconds, compact: true)}\n设备 ${session.startedDeviceId}',
-            ),
-            onTap: () => showDialog<void>(
-              context: context,
-              builder: (context) => AlertDialog(
-                scrollable: true,
-                title: Text(
-                  controller.taskById(session.taskId)?.title ?? '未命名任务',
-                ),
-                content: Text(
-                  '${_status(session)}\n开始 ${session.startedAt}\n设备 ${session.startedDeviceId}\n计划 ${formatDuration(session.plannedDurationSeconds)}\n已记录 ${formatDuration(session.actualDurationSeconds)}\n中断 ${session.interruptionCount} 次${session.terminationReason == null ? '' : '\n原因 ${session.terminationReason}'}',
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('关闭'),
+              context.tr(
+                '{arg0}\n{arg1} {arg2} · 计划 {arg3} · 已记录 {arg4}\n设备 {arg5}',
+                args: {
+                  'arg0': _status(session),
+                  'arg1': formatMonthDay(session.startedAt),
+                  'arg2': formatClock(session.startedAt),
+                  'arg3': formatDuration(
+                    session.plannedDurationSeconds,
+                    compact: true,
                   ),
-                ],
+                  'arg4': formatDuration(
+                    session.actualDurationSeconds,
+                    compact: true,
+                  ),
+                  'arg5': session.startedDeviceId,
+                },
               ),
             ),
+            trailing: controller.canAssociateFocusSessionTask(session)
+                ? const Icon(Icons.link)
+                : null,
+            onTap: () async {
+              final accountId = controller.repository.selectedAccountId;
+              final associate = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  scrollable: true,
+                  title: Text(controller.focusSessionTitle(session)),
+                  content: Text(
+                    context.tr(
+                      '{arg0}\n开始 {arg1}\n设备 {arg2}\n计划 {arg3}\n已记录 {arg4}\n中断 {arg5} 次{arg6}',
+                      args: {
+                        'arg0': _status(session),
+                        'arg1': session.startedAt,
+                        'arg2': session.startedDeviceId,
+                        'arg3': formatDuration(session.plannedDurationSeconds),
+                        'arg4': formatDuration(session.actualDurationSeconds),
+                        'arg5': session.interruptionCount,
+                        'arg6': session.terminationReason == null
+                            ? ''
+                            : tr(
+                                '\n原因 {arg0}',
+                                args: {'arg0': session.terminationReason},
+                              ),
+                      },
+                    ),
+                  ),
+                  actions: [
+                    if (controller.canAssociateFocusSessionTask(session))
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: Text(context.tr('关联任务')),
+                      ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(context.tr('关闭')),
+                    ),
+                  ],
+                ),
+              );
+              if (associate == true && context.mounted) {
+                await _showFocusTaskAssociation(
+                  context,
+                  controller: controller,
+                  session: session,
+                  expectedAccountId: accountId,
+                );
+              }
+            },
           ),
           const Divider(),
         ],
       ],
     );
   }
+}
+
+Future<TaskItem?> _showFocusTaskAssociation(
+  BuildContext context, {
+  required AppController controller,
+  required FocusSessionItem session,
+  String? expectedAccountId,
+}) {
+  final accountId =
+      expectedAccountId ?? controller.repository.selectedAccountId;
+  void checkWorkspace() {
+    if (accountId != controller.repository.selectedAccountId ||
+        controller.isSwitchingSyncAccount) {
+      throw StateError(tr('工作区已切换，请关闭弹窗后重新选择记录。'));
+    }
+  }
+
+  String? selectedTaskId;
+  var saving = false;
+  String? error;
+  return showDialog<TaskItem>(
+    context: context,
+    barrierDismissible: false,
+    builder: (dialogContext) => StatefulBuilder(
+      builder: (context, update) {
+        final tasks = controller.tasks;
+        if (!tasks.any((task) => task.id == selectedTaskId)) {
+          selectedTaskId = null;
+        }
+        return PopScope(
+          canPop: !saving,
+          child: AlertDialog(
+            scrollable: true,
+            title: Text(context.tr('关联任务')),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(context.tr('关联后，本次专注时长计入所选任务；任务完成状态不变，关联后不能更换任务。')),
+                const SizedBox(height: AppSpacing.md),
+                if (tasks.isEmpty)
+                  Text(context.tr('还没有任务，可先新建任务。暂不关联时保留“自由专注”名称。'))
+                else
+                  DropdownButtonFormField<String>(
+                    key: ValueKey(selectedTaskId),
+                    initialValue: selectedTaskId,
+                    isExpanded: true,
+                    decoration: InputDecoration(labelText: context.tr('选择任务')),
+                    items: [
+                      for (final task in tasks)
+                        DropdownMenuItem(
+                          value: task.id,
+                          child: Text(
+                            task.isCompleted
+                                ? context.tr(
+                                    '{arg0}（已完成）',
+                                    args: {'arg0': task.title},
+                                  )
+                                : task.title,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                    ],
+                    onChanged: saving
+                        ? null
+                        : (value) => update(() => selectedTaskId = value),
+                  ),
+                TextButton.icon(
+                  onPressed: saving
+                      ? null
+                      : () async {
+                          update(() {
+                            saving = true;
+                            error = null;
+                          });
+                          try {
+                            checkWorkspace();
+                            final task = await showTaskEditor(
+                              context,
+                              controller: controller,
+                            );
+                            checkWorkspace();
+                            if (dialogContext.mounted && task != null) {
+                              update(() => selectedTaskId = task.id);
+                            }
+                          } catch (failure) {
+                            if (dialogContext.mounted) {
+                              update(
+                                () => error = context.tr(
+                                  '未能选择新任务：{arg0}',
+                                  args: {'arg0': failure},
+                                ),
+                              );
+                            }
+                          } finally {
+                            if (dialogContext.mounted) {
+                              update(() => saving = false);
+                            }
+                          }
+                        },
+                  icon: const Icon(Icons.add),
+                  label: Text(context.tr('新建任务')),
+                ),
+                if (error != null)
+                  Semantics(
+                    liveRegion: true,
+                    child: Text(
+                      error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: saving ? null : () => Navigator.pop(dialogContext),
+                child: Text(context.tr('暂不关联')),
+              ),
+              FilledButton(
+                onPressed: saving || selectedTaskId == null
+                    ? null
+                    : () async {
+                        update(() {
+                          saving = true;
+                          error = null;
+                        });
+                        try {
+                          checkWorkspace();
+                          final task = controller.taskById(selectedTaskId);
+                          if (task == null) throw StateError(tr('任务已不可用'));
+                          await controller.associateFocusSessionTask(
+                            sessionId: session.id,
+                            task: task,
+                          );
+                          checkWorkspace();
+                          if (dialogContext.mounted) {
+                            Navigator.pop(dialogContext, task);
+                          }
+                        } catch (failure) {
+                          if (dialogContext.mounted) {
+                            update(
+                              () => error = context.tr(
+                                '关联未保存，请重试：{arg0}',
+                                args: {'arg0': failure},
+                              ),
+                            );
+                          }
+                        } finally {
+                          if (dialogContext.mounted) {
+                            update(() => saving = false);
+                          }
+                        }
+                      },
+                child: Text(saving ? context.tr('正在保存…') : context.tr('保存关联')),
+              ),
+            ],
+          ),
+        );
+      },
+    ),
+  );
 }
 
 class _FocusPolicies extends StatelessWidget {
@@ -936,29 +1279,37 @@ class _FocusPolicies extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _PermissionCallout(
-          title: controller.usageAccessGranted ? '使用情况访问已授权' : '需要使用情况访问',
+          title: controller.usageAccessGranted
+              ? context.tr('使用情况访问已授权')
+              : context.tr('需要使用情况访问'),
           message: controller.usageAccessGranted
-              ? '深度守护可以判断当前打开的应用。'
-              : '只用于在专注进行时识别前台应用。',
-          actionLabel: controller.usageAccessGranted ? '重新检查' : '前往授权',
+              ? context.tr('深度守护可以判断当前打开的应用。')
+              : context.tr('只用于在专注进行时识别前台应用。'),
+          actionLabel: controller.usageAccessGranted
+              ? context.tr('重新检查')
+              : context.tr('前往授权'),
           onAction: controller.usageAccessGranted
               ? controller.refreshGuardPermissions
               : controller.openUsageAccessSettings,
         ),
         const SizedBox(height: AppSpacing.sm),
         _PermissionCallout(
-          title: controller.overlayPermissionGranted ? '悬浮窗权限已授权' : '需要悬浮窗权限',
+          title: controller.overlayPermissionGranted
+              ? context.tr('悬浮窗权限已授权')
+              : context.tr('需要悬浮窗权限'),
           message: controller.overlayPermissionGranted
-              ? '非白名单应用打开后，屏幕顶部会显示返回提醒。'
-              : '只显示顶部提醒卡片，不会遮挡整个屏幕。',
-          actionLabel: controller.overlayPermissionGranted ? '重新检查' : '前往授权',
+              ? context.tr('非白名单应用打开后，屏幕顶部会显示返回提醒。')
+              : context.tr('只显示顶部提醒卡片，不会遮挡整个屏幕。'),
+          actionLabel: controller.overlayPermissionGranted
+              ? context.tr('重新检查')
+              : context.tr('前往授权'),
           onAction: controller.overlayPermissionGranted
               ? controller.refreshGuardPermissions
               : controller.openOverlayPermissionSettings,
         ),
-        const SectionHeader(
-          title: '应用白名单',
-          subtitle: '按收集箱或项目分别配置；可随本地备份迁移，不上传同步服务器',
+        SectionHeader(
+          title: context.tr('应用白名单'),
+          subtitle: context.tr('按收集箱或项目分别配置；可随本地备份迁移，不上传同步服务器'),
         ),
         for (final projectId in <String?>[
           null,
@@ -979,7 +1330,12 @@ class _FocusPolicies extends StatelessWidget {
               ),
               title: Text(controller.whitelistName(projectId)),
               subtitle: Text(
-                '${controller.appWhitelistForProject(projectId).length} 个白名单应用',
+                context.tr(
+                  '{arg0} 个白名单应用',
+                  args: {
+                    'arg0': controller.appWhitelistForProject(projectId).length,
+                  },
+                ),
               ),
               trailing: const Icon(Icons.chevron_right),
               onTap: () => showAppWhitelistEditor(
@@ -991,7 +1347,7 @@ class _FocusPolicies extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
-        const SectionHeader(title: '专注规则'),
+        SectionHeader(title: context.tr('专注规则')),
         for (final policy in controller.focusPolicies) ...[
           Card(
             child: Padding(
@@ -1012,16 +1368,21 @@ class _FocusPolicies extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          policy.name,
+                          policy.displayName,
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: AppSpacing.xs),
                         Text(
                           policy.mode == FocusPolicyMode.guard
-                              ? '顶部提醒 · 分类白名单 · 离开超过 ${policy.maxAppExits ?? 0} 次计为中断'
+                              ? context.tr(
+                                  '顶部提醒 · 分类白名单 · 离开超过 {arg0} 次计为中断',
+                                  args: {'arg0': policy.maxAppExits ?? 0},
+                                )
                               : policy.mode == FocusPolicyMode.strict
-                              ? '禁止暂停和提前完成；非白名单应用计为中断；紧急结束需等待 30 秒并填写原因'
-                              : '允许暂停 · 允许提前结束',
+                              ? context.tr(
+                                  '禁止暂停和提前完成；非白名单应用计为中断；紧急结束需等待 30 秒并填写原因',
+                                )
+                              : context.tr('允许暂停 · 允许提前结束'),
                         ),
                         const SizedBox(height: AppSpacing.sm),
                         Chip(label: Text(policy.mode.label)),
@@ -1066,7 +1427,14 @@ class _PermissionCalloutState extends State<_PermissionCallout> {
     try {
       await widget.onAction();
     } catch (error) {
-      if (mounted) setState(() => _error = '权限操作未完成，普通专注仍可使用。请重试：$error');
+      if (mounted) {
+        setState(
+          () => _error = context.tr(
+            '权限操作未完成，普通专注仍可使用。请重试：{arg0}',
+            args: {'arg0': error},
+          ),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1086,7 +1454,7 @@ class _PermissionCalloutState extends State<_PermissionCallout> {
           alignment: AlignmentDirectional.centerStart,
           child: OutlinedButton(
             onPressed: _busy ? null : _run,
-            child: Text(_busy ? '正在检查…' : widget.actionLabel),
+            child: Text(_busy ? context.tr('正在检查…') : widget.actionLabel),
           ),
         ),
         if (_error != null)

@@ -1,5 +1,7 @@
 # 许可说明与场景 FAQ
 
+[English](LICENSE_FAQ.en.md)
+
 当前许可正文为 [Pactick Community Source License 1.0](../LICENSE)，项目所有者于 2026-10-02 确认保留其条款，版权署名为“王辰昊 Wang Chenhao”。贡献者保留其贡献的版权，仅授予其有权提供的许可。所有者确认不代表第三方许可兼容性、素材权利或专业法律审查已经完成。
 
 ## 使用与分发场景

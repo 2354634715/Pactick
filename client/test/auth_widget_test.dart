@@ -90,6 +90,7 @@ void main() {
       find.byKey(const Key('login_password')),
       'correct horse battery staple',
     );
+    await tester.ensureVisible(find.byKey(const Key('login_submit')));
     await tester.tap(find.byKey(const Key('login_submit')));
     await tester.pumpAndSettle();
 

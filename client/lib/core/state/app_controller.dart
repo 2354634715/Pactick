@@ -1,22 +1,30 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 
+import '../localization/language_preference.dart';
+import '../../data/platform/language_platform_gateway.dart';
 import '../models/domain_models.dart';
 import '../sync/sync_models.dart';
 import '../../data/platform/focus_platform_gateway.dart';
 import '../../data/platform/task_reminder_platform_gateway.dart';
+import '../../data/platform/system_calendar_gateway.dart';
 import '../../data/remote/api_client.dart';
 import '../../data/repositories/workspace_repository.dart';
 import 'private_vault_controller.dart';
+import 'system_calendar_controller.dart';
 
 class AppController extends ChangeNotifier {
   AppController({
     required this.repository,
     required this.focusPlatform,
     this.taskReminderPlatform = const TaskReminderPlatformGateway(),
+    this.languagePlatform = const LanguagePlatformGateway(),
+    this.systemCalendarGateway = const SystemCalendarGateway(),
     this.apiClient,
     this.syncInterval = const Duration(minutes: 1),
   }) {
@@ -27,17 +35,33 @@ class AppController extends ChangeNotifier {
           !_ordinaryFocusStarting &&
           !isSwitchingSyncAccount,
       onFocusRuntimeChanged: _restorePrivateFocusRuntime,
+      onFocusStarted: openFocusDesktop,
     );
     privateVault.addListener(notifyListeners);
+    systemCalendar = SystemCalendarController(
+      repository: repository,
+      gateway: systemCalendarGateway,
+      canRun: () =>
+          isReady &&
+          initializationError == null &&
+          !_disposed &&
+          !isSwitchingSyncAccount &&
+          _syncPhase != SyncPhase.syncing,
+      onLocalChanged: _refreshAfterCalendarSync,
+    );
     addListener(_onTaskReminderDataChanged);
+    addListener(_onSystemCalendarDataChanged);
   }
 
   final WorkspaceRepository repository;
   final FocusPlatformGateway focusPlatform;
   final TaskReminderPlatformGateway taskReminderPlatform;
+  final LanguagePlatformGateway languagePlatform;
+  final SystemCalendarGateway systemCalendarGateway;
   final ApiClient? apiClient;
   final Duration syncInterval;
   late final PrivateVaultController privateVault;
+  late final SystemCalendarController systemCalendar;
   Timer? _focusTicker;
   Future<void> _focusMutation = Future<void>.value();
   bool _ordinaryFocusStarting = false;
@@ -61,9 +85,13 @@ class AppController extends ChangeNotifier {
   bool isReady = false;
   Object? initializationError;
   ThemePreference themePreference = ThemePreference.system;
+  LanguagePreference languagePreference = LanguagePreference.system;
   bool useDynamicColor = false;
   bool notificationsEnabled = true;
   bool focusVibrationEnabled = true;
+  bool focusDesktopEnabled = false;
+  bool get focusDesktopSupported => focusPlatform.supportsFocusDesktop;
+  String? focusDesktopErrorMessage;
   String? focusPlatformErrorMessage;
   bool taskRemindersEnabled = true;
   bool scheduledTaskRemindersEnabled = true;
@@ -105,30 +133,33 @@ class AppController extends ChangeNotifier {
       accountConnectionError == null;
 
   String get syncStatusTitle => switch (_syncPhase) {
-    SyncPhase.localOnly => '未连接同步账户',
-    SyncPhase.synced => '同步完成',
-    SyncPhase.pending => pendingOperations == 0 ? '等待首次同步' : '本地更改等待同步',
-    SyncPhase.syncing => '正在同步',
-    SyncPhase.offline => '无法连接服务器',
-    SyncPhase.attention => '同步异常',
+    SyncPhase.localOnly => tr('未连接同步账户'),
+    SyncPhase.synced => tr('同步完成'),
+    SyncPhase.pending => pendingOperations == 0 ? tr('等待首次同步') : tr('本地更改等待同步'),
+    SyncPhase.syncing => tr('正在同步'),
+    SyncPhase.offline => tr('无法连接服务器'),
+    SyncPhase.attention => tr('同步异常'),
   };
 
   String get syncStatusDescription => switch (_syncPhase) {
     SyncPhase.localOnly =>
       pendingOperations == 0
-          ? '数据仅保存在本机，尚未连接同步账户'
-          : '$pendingOperations 项本地更改仅保存在此设备',
-    SyncPhase.synced => '当前更改已同步到服务器',
+          ? tr('数据仅保存在本机，尚未连接同步账户')
+          : tr('{arg0} 项本地更改仅保存在此设备', args: {'arg0': pendingOperations}),
+    SyncPhase.synced => tr('当前更改已同步到服务器'),
     SyncPhase.pending =>
       pendingOperations == 0
-          ? '已连接账户，等待首次同步'
-          : '$pendingOperations 项更改已保存在本机，等待发送到服务器',
-    SyncPhase.syncing => '正在同步本机与服务器的更改',
+          ? tr('已连接账户，等待首次同步')
+          : tr('{arg0} 项更改已保存在本机，等待发送到服务器', args: {'arg0': pendingOperations}),
+    SyncPhase.syncing => tr('正在同步本机与服务器的更改'),
     SyncPhase.offline =>
       pendingOperations == 0
-          ? '暂时无法连接服务器，本机功能仍可使用'
-          : '$pendingOperations 项更改保存在本机，服务器恢复后可继续同步',
-    SyncPhase.attention => syncErrorMessage ?? '同步失败，请查看错误信息',
+          ? tr('暂时无法连接服务器，本机功能仍可使用')
+          : tr(
+              '{arg0} 项更改保存在本机，服务器恢复后可继续同步',
+              args: {'arg0': pendingOperations},
+            ),
+    SyncPhase.attention => syncErrorMessage ?? tr('同步失败，请查看错误信息'),
   };
 
   Future<void> initialize() async {
@@ -140,6 +171,10 @@ class AppController extends ChangeNotifier {
           : Map<String, String>.from(jsonDecode(owned) as Map);
       await _applyWorkspaceSnapshot(snapshot);
       _syncPhase = SyncPhase.localOnly;
+      languagePreference = LanguagePreference.parse(
+        await repository.readGlobalSetting('language_preference'),
+      );
+      await refreshNativeLanguage();
       final savedTheme = await repository.readGlobalSetting('theme_preference');
       if (savedTheme != null) {
         themePreference = ThemePreference.values.byName(savedTheme);
@@ -152,6 +187,8 @@ class AppController extends ChangeNotifier {
       focusVibrationEnabled =
           await repository.readGlobalSetting('focus_vibration_enabled') !=
           'false';
+      focusDesktopEnabled =
+          await repository.readGlobalSetting('focus_desktop_enabled') == 'true';
       taskRemindersEnabled =
           await repository.readGlobalSetting('task_reminders_enabled') !=
           'false';
@@ -220,6 +257,20 @@ class AppController extends ChangeNotifier {
       (repository.selectedAccountId == '__local__' &&
           session.startedDeviceId == 'android-local');
 
+  String focusSessionTitle(FocusSessionItem session) => session.taskId == null
+      ? FocusSessionItem.defaultTitle
+      : taskById(session.taskId)?.title ?? tr('任务已删除');
+
+  bool canAssociateFocusSessionTask(FocusSessionItem session) =>
+      !session.isActive &&
+      session.taskId == null &&
+      _canEditFocusTaskAssociation(session);
+
+  bool _canEditFocusTaskAssociation(FocusSessionItem session) =>
+      repository.selectedAccountId == '__local__' ||
+      repository.selectedAccountId.startsWith('__local__:') ||
+      isLocalFocusSession(session);
+
   int get activeFocusElapsedSeconds {
     final session = activeFocusSession;
     if (session == null) return 0;
@@ -270,7 +321,7 @@ class AppController extends ChangeNotifier {
       usageAccessGranted && overlayPermissionGranted;
 
   String whitelistName(String? projectId) {
-    return projectById(projectId)?.name ?? '收集箱';
+    return projectById(projectId)?.name ?? tr('收集箱');
   }
 
   Set<String> appWhitelistForProject(String? projectId) {
@@ -388,7 +439,10 @@ class AppController extends ChangeNotifier {
     return task;
   }
 
-  Future<void> updateTask(TaskItem task) async {
+  Future<void> updateTask(TaskItem task) =>
+      systemCalendar.protectLocalMutation(() => _updateTask(task));
+
+  Future<void> _updateTask(TaskItem task) async {
     await repository.saveTask(task);
     tasks = [
       for (final current in tasks)
@@ -438,6 +492,20 @@ class AppController extends ChangeNotifier {
     String? title,
     required DateTime startsAt,
     required Duration duration,
+  }) => systemCalendar.protectLocalMutation(
+    () => _scheduleTask(
+      taskId: taskId,
+      title: title,
+      startsAt: startsAt,
+      duration: duration,
+    ),
+  );
+
+  Future<PlanBlockItem> _scheduleTask({
+    String? taskId,
+    String? title,
+    required DateTime startsAt,
+    required Duration duration,
   }) async {
     final accountId = repository.selectedAccountId;
     _validatePlanBlock(taskId: taskId, title: title, duration: duration);
@@ -465,16 +533,34 @@ class AppController extends ChangeNotifier {
     String? title,
     required DateTime startsAt,
     required Duration duration,
+  }) => systemCalendar.protectLocalMutation(
+    () => _updatePlanBlock(
+      block: block,
+      taskId: taskId,
+      title: title,
+      startsAt: startsAt,
+      duration: duration,
+    ),
+  );
+
+  Future<PlanBlockItem> _updatePlanBlock({
+    required PlanBlockItem block,
+    String? taskId,
+    String? title,
+    required DateTime startsAt,
+    required Duration duration,
   }) async {
     final accountId = repository.selectedAccountId;
     if (!planBlocks.any((current) => current.id == block.id)) {
-      throw StateError('当前工作区中没有这个计划时段。');
+      throw StateError(tr('当前工作区中没有这个计划时段。'));
     }
     _validatePlanBlock(taskId: taskId, title: title, duration: duration);
     final updated = PlanBlockItem(
       id: block.id,
       taskId: taskId,
-      title: taskId == null ? title!.trim() : null,
+      title: taskId == null
+          ? title!.trim()
+          : (taskId == block.taskId ? block.title : null),
       startsAt: startsAt,
       endsAt: startsAt.add(duration),
       timeZone: block.timeZone,
@@ -492,7 +578,10 @@ class AppController extends ChangeNotifier {
     return updated;
   }
 
-  Future<void> deletePlanBlock(PlanBlockItem block) async {
+  Future<void> deletePlanBlock(PlanBlockItem block) =>
+      systemCalendar.protectLocalMutation(() => _deletePlanBlock(block));
+
+  Future<void> _deletePlanBlock(PlanBlockItem block) async {
     final accountId = repository.selectedAccountId;
     if (!planBlocks.any((current) => current.id == block.id)) return;
     await repository.deletePlanBlock(block.id);
@@ -508,13 +597,13 @@ class AppController extends ChangeNotifier {
     required Duration duration,
   }) {
     if (duration.inSeconds <= 0) {
-      throw ArgumentError('计划时长必须大于零。');
+      throw ArgumentError(tr('计划时长必须大于零。'));
     }
     if (taskId != null && taskById(taskId) == null) {
-      throw StateError('当前工作区中没有关联任务。');
+      throw StateError(tr('当前工作区中没有关联任务。'));
     }
     if (taskId == null && (title == null || title.trim().isEmpty)) {
-      throw ArgumentError('未关联任务的计划必须填写标题。');
+      throw ArgumentError(tr('未关联任务的计划必须填写标题。'));
     }
   }
 
@@ -531,7 +620,7 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> startFocus({
-    required TaskItem task,
+    TaskItem? task,
     required int durationSeconds,
     required FocusPolicyItem policy,
   }) => _serializeFocus(() async {
@@ -549,27 +638,28 @@ class AppController extends ChangeNotifier {
   });
 
   Future<void> _startFocus({
-    required TaskItem task,
+    TaskItem? task,
     required int durationSeconds,
     required FocusPolicyItem policy,
   }) async {
     if (!canStartFocus) return;
     if (durationSeconds <= 0 || durationSeconds > 24 * 60 * 60) {
-      throw ArgumentError('专注时长须大于零且不超过 24 小时。');
+      throw ArgumentError(tr('专注时长须大于零且不超过 24 小时。'));
     }
     final storedPolicy = policyById(policy.id);
-    if (storedPolicy == null || taskById(task.id)?.status != TaskStatus.open) {
-      throw StateError('任务或专注规则已变化，请重新选择。');
+    if (storedPolicy == null ||
+        (task != null && taskById(task.id)?.status != TaskStatus.open)) {
+      throw StateError(tr('任务或专注规则已变化，请重新选择。'));
     }
     policy = storedPolicy;
     if (policy.mode != FocusPolicyMode.normal && !guardPermissionsGranted) {
-      throw StateError('请先授予使用情况访问和显示在其他应用上层权限。');
+      throw StateError(tr('请先授予使用情况访问和显示在其他应用上层权限。'));
     }
     cancelEarlyFocusExit();
     final now = DateTime.now();
     final session = FocusSessionItem(
       id: repository.createId(),
-      taskId: task.id,
+      taskId: task?.id,
       focusPolicyId: policy.id,
       plannedDurationSeconds: durationSeconds,
       startedAt: now,
@@ -594,6 +684,50 @@ class AppController extends ChangeNotifier {
     notifyListeners();
     await _markPending();
     await _restoreNativeFocus();
+    await _openFocusDesktop(restore: false);
+  }
+
+  Future<void> associateFocusSessionTask({
+    required String sessionId,
+    required TaskItem task,
+  }) {
+    final accountId = repository.selectedAccountId;
+    return _serializeFocus(() async {
+      if (accountId != repository.selectedAccountId || isSwitchingSyncAccount) {
+        throw StateError(tr('工作区已切换，请重新选择专注记录和任务。'));
+      }
+      final session = focusSessions
+          .where((session) => session.id == sessionId)
+          .firstOrNull;
+      if (session == null) {
+        throw StateError(tr('专注记录已不存在，请刷新后重试。'));
+      }
+      if (session.isActive) {
+        throw StateError(tr('请先结束专注，再关联任务。'));
+      }
+      if (!_canEditFocusTaskAssociation(session)) {
+        throw StateError(tr('只能在发起专注的设备上关联任务。'));
+      }
+      if (taskById(task.id) == null) {
+        throw StateError(tr('任务已不存在，请重新选择。'));
+      }
+      if (session.taskId == task.id) return;
+      if (session.taskId != null) {
+        throw StateError(tr('该专注已关联任务，不能更换。'));
+      }
+      final updated = await repository.associateFocusSessionTask(
+        sessionId: session.id,
+        taskId: task.id,
+        accountId: accountId,
+      );
+      if (repository.selectedAccountId != accountId) return;
+      focusSessions = [
+        for (final value in focusSessions)
+          if (value.id == updated.id) updated else value,
+      ];
+      notifyListeners();
+      await _markPending();
+    });
   }
 
   Future<void> pauseFocus() => _serializeFocus(_pauseFocus);
@@ -603,7 +737,7 @@ class AppController extends ChangeNotifier {
     if (session == null || session.status != FocusSessionStatus.running) return;
     final policy = policyById(session.focusPolicyId);
     if (policy?.allowPause == false || policy?.mode == FocusPolicyMode.strict) {
-      throw StateError('当前专注规则不允许暂停。');
+      throw StateError(tr('当前专注规则不允许暂停。'));
     }
     final updated = session.copyWith(
       status: FocusSessionStatus.paused,
@@ -633,6 +767,7 @@ class AppController extends ChangeNotifier {
         now.add(Duration(seconds: activeFocusRemainingSeconds)),
       );
     } catch (_) {}
+    await openFocusDesktop();
   }
 
   Future<FocusSessionItem?> finishFocus({
@@ -678,22 +813,22 @@ class AppController extends ChangeNotifier {
     if (session == null) return null;
     if (status != FocusSessionStatus.completed &&
         status != FocusSessionStatus.abandoned) {
-      throw ArgumentError('只能完成专注或提前结束专注。');
+      throw ArgumentError(tr('只能完成专注或提前结束专注。'));
     }
     final policy = policyById(session.focusPolicyId);
     if (status == FocusSessionStatus.completed &&
         policy?.mode == FocusPolicyMode.strict &&
         activeFocusRemainingSeconds > 0) {
-      throw StateError('严格模式须达到目标时间后才能完成。紧急情况可选择提前结束。');
+      throw StateError(tr('严格模式须达到目标时间后才能完成。紧急情况可选择提前结束。'));
     }
     if (status == FocusSessionStatus.abandoned) {
       if (earlyExitRemainingSeconds > 0) {
-        throw StateError('请在结束确认中等待倒计时完成。');
+        throw StateError(tr('请在结束确认中等待倒计时完成。'));
       }
       if ((policy?.mode == FocusPolicyMode.strict ||
               policy?.earlyExitMode == 'reason') &&
           (reason?.trim().isEmpty ?? true)) {
-        throw StateError('当前专注规则提前结束须填写原因。');
+        throw StateError(tr('当前专注规则提前结束须填写原因。'));
       }
     }
     final actual = activeFocusElapsedSeconds;
@@ -727,7 +862,7 @@ class AppController extends ChangeNotifier {
       await focusPlatform.stopTimer();
       focusPlatformErrorMessage = null;
     } catch (_) {
-      focusPlatformErrorMessage = '专注已保存，但系统计时服务未停止。请在设置中重试。';
+      focusPlatformErrorMessage = tr('专注已保存，但系统计时服务未停止。请在设置中重试。');
     }
     notifyListeners();
     try {
@@ -804,7 +939,7 @@ class AppController extends ChangeNotifier {
         if (state.isActive) await focusPlatform.stopTimer();
         focusPlatformErrorMessage = null;
       } catch (error) {
-        focusPlatformErrorMessage = '系统计时服务状态未更新，可在设置中重试。';
+        focusPlatformErrorMessage = tr('系统计时服务状态未更新，可在设置中重试。');
         debugPrint('Reconciling the local focus service failed: $error');
       }
       return;
@@ -832,12 +967,14 @@ class AppController extends ChangeNotifier {
       }
       await focusPlatform.startTimer(
         sessionId: session.id,
-        title: task?.title ?? '自由专注',
+        title: focusSessionTitle(session),
+        titleKey: session.taskId == null ? 'free_focus' : null,
         endsAt: DateTime.now().add(
           Duration(seconds: activeFocusRemainingSeconds),
         ),
         mode: policy.mode,
         paused: session.status == FocusSessionStatus.paused,
+        focusDesktopEnabled: focusDesktopEnabled,
         appExitCount: session.appExitCount,
         interruptionCount: session.interruptionCount,
         allowedPackageNames: {
@@ -845,11 +982,12 @@ class AppController extends ChangeNotifier {
           ...appWhitelistForProject(task?.projectId),
         }.toList(growable: false),
         taskTypeName: whitelistName(task?.projectId),
+        taskTypeKey: projectById(task?.projectId) == null ? 'inbox' : null,
         maxAppExits: policy.maxAppExits,
       );
       focusPlatformErrorMessage = null;
     } catch (error) {
-      focusPlatformErrorMessage = '系统计时通知未更新，可在设置中重试；应用内计时仍可使用。';
+      focusPlatformErrorMessage = tr('系统计时通知未更新，可在设置中重试；应用内计时仍可使用。');
       debugPrint('Restoring the local focus service failed: $error');
     }
   }
@@ -864,12 +1002,81 @@ class AppController extends ChangeNotifier {
       );
       await focusPlatform.startTimer(
         sessionId: runtime.sessionId,
-        title: '私密任务',
-        taskTypeName: '私密任务',
+        title: tr('私密任务'),
+        titleKey: 'private_task',
+        taskTypeName: tr('私密任务'),
+        taskTypeKey: 'private_task',
         endsAt: runtime.endsAt,
         mode: FocusPolicyMode.normal,
+        focusDesktopEnabled: focusDesktopEnabled,
+        allowedPackageNames: await _privateFocusDesktopPackages(),
       );
     }
+  }
+
+  Future<List<String>> _privateFocusDesktopPackages() async {
+    final accountId = privateVault.activeFocusAccountId;
+    if (accountId == null) return const [];
+    final settings = _decodeAppWhitelists(
+      await repository.store.readSetting(
+        _appWhitelistsSettingKey,
+        accountId: accountId,
+      ),
+    );
+    return (settings[inboxWhitelistKey] ?? const <String>{}).toList(
+      growable: false,
+    );
+  }
+
+  /// Device-local preference; a native launch failure never rolls back focus.
+  Future<void> setFocusDesktopEnabled(bool value) async {
+    await repository.writeGlobalSetting('focus_desktop_enabled', '$value');
+    focusDesktopEnabled = value;
+    focusDesktopErrorMessage = null;
+    notifyListeners();
+    try {
+      await focusPlatform.configureFocusDesktop(enabled: value);
+      await _restoreNativeFocus();
+    } catch (error) {
+      focusDesktopErrorMessage = tr('专注桌面设置未应用到系统，请重试。');
+      debugPrint('Configuring focus desktop failed: $error');
+    }
+    if (!_disposed) notifyListeners();
+  }
+
+  Future<void> openFocusDesktop() => _openFocusDesktop();
+
+  Future<void> _openFocusDesktop({bool restore = true}) async {
+    if (!focusDesktopSupported || !focusDesktopEnabled) return;
+    final session = activeFocusSession;
+    final privateRuntime = privateVault.activeFocusRuntime;
+    if (session == null && privateRuntime == null) return;
+    final sessionId = session?.id ?? privateRuntime!.sessionId;
+    try {
+      if (restore) await _restoreNativeFocus();
+      // Do not open a desktop after a workspace switch or a completed session.
+      if (!focusDesktopEnabled ||
+          (activeFocusSession?.id ??
+                  privateVault.activeFocusRuntime?.sessionId) !=
+              sessionId) {
+        return;
+      }
+      final task = taskById(session?.taskId);
+      final policy = policyById(session?.focusPolicyId);
+      final opened = await focusPlatform.openFocusDesktop(
+        allowedPackageNames: session == null
+            ? await _privateFocusDesktopPackages()
+            : {
+                ...?policy?.allowedAppIds,
+                ...appWhitelistForProject(task?.projectId),
+              }.toList(growable: false),
+      );
+      focusDesktopErrorMessage = opened ? null : tr('专注已开始，但专注桌面未打开。可重试打开。');
+    } catch (error) {
+      focusDesktopErrorMessage = tr('专注已开始，但专注桌面未打开。可重试打开。');
+      debugPrint('Opening focus desktop failed: $error');
+    }
+    if (!_disposed) notifyListeners();
   }
 
   void _startTicker() {
@@ -916,6 +1123,22 @@ class AppController extends ChangeNotifier {
     await repository.writeGlobalSetting('theme_preference', preference.name);
     themePreference = preference;
     notifyListeners();
+  }
+
+  Future<void> setLanguagePreference(LanguagePreference preference) async {
+    await repository.writeGlobalSetting('language_preference', preference.name);
+    languagePreference = preference;
+    notifyListeners();
+    await refreshNativeLanguage();
+  }
+
+  Future<void> refreshNativeLanguage() async {
+    try {
+      await languagePlatform.configure(languagePreference.name);
+    } catch (_) {
+      // A platform-channel failure must not prevent local workspace use.
+      // Retrying on resume also repairs a failed native preference write.
+    }
   }
 
   Future<void> setDynamicColor(bool value) async {
@@ -1074,7 +1297,7 @@ class AppController extends ChangeNotifier {
         taskReminderErrorMessage = null;
       } catch (_) {
         if (_disposed || generation != _taskReminderGeneration) return;
-        taskReminderErrorMessage = '任务提醒更新失败，可重试；本地任务仍可使用。';
+        taskReminderErrorMessage = tr('任务提醒更新失败，可重试；本地任务仍可使用。');
       }
       notifyListeners();
     });
@@ -1163,6 +1386,11 @@ class AppController extends ChangeNotifier {
     );
     _appWhitelists = updated;
     notifyListeners();
+    if (focusDesktopEnabled &&
+        (activeFocusSession != null ||
+            privateVault.activeFocusRuntime != null)) {
+      await _restoreNativeFocus();
+    }
   }
 
   Future<void> _markPending() async {
@@ -1191,6 +1419,20 @@ class AppController extends ChangeNotifier {
   }
 
   Future<void> connectSyncAccount({
+    bool offline = false,
+    String? userId,
+    String? deviceId,
+    String? uploadSourceWorkspace,
+  }) => systemCalendar.protectLocalMutation(
+    () => _connectSyncAccount(
+      offline: offline,
+      userId: userId,
+      deviceId: deviceId,
+      uploadSourceWorkspace: uploadSourceWorkspace,
+    ),
+  );
+
+  Future<void> _connectSyncAccount({
     bool offline = false,
     String? userId,
     String? deviceId,
@@ -1239,7 +1481,7 @@ class AppController extends ChangeNotifier {
 
     final previousAccountId = _syncAccountId;
     if (activeFocusSession != null && repository.selectedAccountId != userId) {
-      syncErrorMessage = '请先结束当前专注，再切换同步工作区。';
+      syncErrorMessage = tr('请先结束当前专注，再切换同步工作区。');
       _syncPhase = SyncPhase.attention;
       notifyListeners();
       return;
@@ -1290,7 +1532,7 @@ class AppController extends ChangeNotifier {
       if (generation != _accountGeneration || _syncAccountId != userId) return;
       isSwitchingSyncAccount = false;
       accountConnectionError = error;
-      syncErrorMessage = '无法打开此账户的本地工作区。';
+      syncErrorMessage = tr('无法打开此账户的本地工作区。');
       _syncPhase = SyncPhase.attention;
       notifyListeners();
     }
@@ -1303,7 +1545,10 @@ class AppController extends ChangeNotifier {
     await connectSyncAccount(userId: userId, deviceId: deviceId);
   }
 
-  Future<void> syncNow({bool automatic = false}) async {
+  Future<void> syncNow({bool automatic = false}) =>
+      systemCalendar.protectLocalMutation(() => _syncNow(automatic: automatic));
+
+  Future<void> _syncNow({bool automatic = false}) async {
     if (automatic && _automaticSyncPaused) return;
     final resumeAutomaticSync = !automatic && _automaticSyncPaused;
     if (!automatic) {
@@ -1375,8 +1620,8 @@ class AppController extends ChangeNotifier {
         return;
       }
       syncErrorMessage = error is FormatException
-          ? '服务器返回了无法识别的同步数据。'
-          : '同步未完成，请稍后重试。';
+          ? tr('服务器返回了无法识别的同步数据。')
+          : tr('同步未完成，请稍后重试。');
       _syncPhase = SyncPhase.attention;
       _pauseAutomaticSync();
       notifyListeners();
@@ -1427,7 +1672,10 @@ class AppController extends ChangeNotifier {
     return false;
   }
 
-  Future<void> disconnectSyncAccount() async {
+  Future<void> disconnectSyncAccount() =>
+      systemCalendar.protectLocalMutation(_disconnectSyncAccount);
+
+  Future<void> _disconnectSyncAccount() async {
     ++_accountGeneration;
     _syncTimer?.cancel();
     _syncDebounce?.cancel();
@@ -1445,9 +1693,12 @@ class AppController extends ChangeNotifier {
     repository.pauseSync();
   }
 
-  Future<void> openOfflineWorkspace(String id) async {
+  Future<void> openOfflineWorkspace(String id) =>
+      systemCalendar.protectLocalMutation(() => _openOfflineWorkspace(id));
+
+  Future<void> _openOfflineWorkspace(String id) async {
     if (activeFocusSession != null) {
-      throw StateError('请先结束当前专注，再切换工作区。');
+      throw StateError(tr('请先结束当前专注，再切换工作区。'));
     }
     await disconnectSyncAccount();
     await _applyWorkspaceSnapshot(await repository.openOfflineWorkspace(id));
@@ -1478,11 +1729,34 @@ class AppController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void _onSystemCalendarDataChanged() {
+    systemCalendar.workspaceDataChanged((
+      repository.selectedAccountId,
+      tasks,
+      planBlocks,
+      isReady,
+      initializationError,
+      isSwitchingSyncAccount,
+      _syncPhase,
+    ));
+  }
+
+  Future<void> _refreshAfterCalendarSync(String accountId) async {
+    if (_disposed || repository.selectedAccountId != accountId) return;
+    final snapshot = await repository.load();
+    if (_disposed || repository.selectedAccountId != accountId) return;
+    await _applyWorkspaceSnapshot(snapshot);
+    if (_disposed || repository.selectedAccountId != accountId) return;
+    notifyListeners();
+    await _markPending();
+    await refreshTaskReminders();
+  }
+
   Future<void> refreshAfterPrivateTransfer() async {
     final accountId = repository.selectedAccountId;
     final snapshot = await repository.load();
     if (accountId != repository.selectedAccountId) {
-      throw StateError('工作区已切换，请重新打开私密任务箱。');
+      throw StateError(tr('工作区已切换，请重新打开私密任务箱。'));
     }
     await _applyWorkspaceSnapshot(snapshot);
     notifyListeners();
@@ -1602,6 +1876,8 @@ class AppController extends ChangeNotifier {
 
   @override
   void dispose() {
+    removeListener(_onSystemCalendarDataChanged);
+    systemCalendar.dispose();
     privateVault.removeListener(notifyListeners);
     privateVault.dispose();
     cancelEarlyFocusExit();

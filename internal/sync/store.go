@@ -154,6 +154,20 @@ func (s *PostgresStore) applyUpsert(
 	if err := validateReferences(ctx, tx, userID, operation.EntityType, merged.body); err != nil {
 		return OperationResult{}, err
 	}
+	if operation.EntityType == "focus_session" && found {
+		if status, _ := stringValue(existingBody, "status"); isTerminalFocusStatus(status) {
+			var taskExists bool
+			if err := tx.QueryRow(ctx,
+				"SELECT EXISTS (SELECT 1 FROM tasks WHERE user_id = $1 AND id = $2 AND deleted_at IS NULL)",
+				userID, merged.body["task_id"],
+			).Scan(&taskExists); err != nil {
+				return OperationResult{}, err
+			}
+			if !taskExists {
+				return OperationResult{}, fieldError("task_id", "must reference an undeleted task in this account")
+			}
+		}
+	}
 	if operation.EntityType == "focus_session" {
 		if _, err := tx.Exec(ctx, "SELECT pg_advisory_xact_lock(hashtextextended($1, 1))", userID); err != nil {
 			return OperationResult{}, fmt.Errorf("lock focus sessions: %w", err)

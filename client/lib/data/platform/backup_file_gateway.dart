@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
@@ -30,7 +32,7 @@ class BackupFileGateway {
 
   static void _checkSize(String content) {
     if (content.length > maxBytes || utf8.encode(content).length > maxBytes) {
-      throw const FormatException('备份超过 50 MiB 限制。');
+      throw FormatException(tr('备份超过 50 MiB 限制。'));
     }
   }
 }

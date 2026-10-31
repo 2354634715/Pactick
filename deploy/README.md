@@ -1,5 +1,7 @@
 # 自部署资产
 
+[English](README.en.md)
+
 部署前按 [自部署手册](../docs/SELF_HOSTING.md) 准备主机。在仓库根目录运行以下命令安装服务端；`--local-only` 仅配置回环 API，HTTPS 代理需由管理员另行配置。
 
 这些资产提供 Linux 命令行部署；`deploy/desktop/compose.yaml` 供独立的[本机服务器管理界面](../docs/SERVER_MANAGEMENT.md)使用。管理器与管理员工具区分 Windows/Linux 的 amd64、386 构建目标，386 仅使用本机进程模式。管理员可通过标准输入提供账户 JSON，保持公开注册关闭。目标交叉编译不构成对应平台的运行验收，也不安装 Windows 服务。

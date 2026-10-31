@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:pactick/core/models/domain_models.dart';
@@ -166,15 +167,62 @@ void main() {
       AppScope(
         controller: app,
         child: MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          supportedLocales: const [Locale('zh', 'CN')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
           home: FocusPage(onOpenSettings: () {}, onFocusEnded: () {}),
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('先添加一个任务'), findsOneWidget);
+    expect(find.text('自由专注（暂不关联任务）'), findsOneWidget);
     expect(find.text('已取消的任务'), findsNothing);
     await tester.pumpWidget(const SizedBox.shrink());
     app.dispose();
+  });
+
+  test('taskless strict focus keeps permissions, exit rules and association timing', () async {
+    final platform = _Platform();
+    final app = _app(MemoryDocumentStore(), platform);
+    addTearDown(app.dispose);
+    await app.initialize();
+    final policy = app.focusPolicies.firstWhere(
+      (policy) => policy.mode == FocusPolicyMode.strict,
+    );
+    app.overlayPermissionGranted = false;
+    await expectLater(
+      app.startFocus(durationSeconds: 900, policy: policy),
+      throwsStateError,
+    );
+    expect(app.activeFocusSession, isNull);
+    app.overlayPermissionGranted = true;
+    await app.startFocus(durationSeconds: 900, policy: policy);
+    expect(app.activeFocusSession!.taskId, isNull);
+    await expectLater(app.pauseFocus(), throwsStateError);
+    await expectLater(app.finishFocus(), throwsStateError);
+    app.beginEarlyFocusExit();
+    expect(app.earlyExitRemainingSeconds, inInclusiveRange(29, 30));
+    app.cancelEarlyFocusExit();
+    app.focusSessions = [
+      FocusSessionItem.fromDocument(app.activeFocusSession!.id, {
+        ...app.activeFocusSession!.toBody(),
+        'started_at': DateTime.now()
+            .subtract(const Duration(minutes: 16))
+            .toUtc()
+            .toIso8601String(),
+      }),
+    ];
+    final ended = (await app.finishFocus())!;
+    final task = await app.createTask(title: 'After strict free focus');
+    await app.associateFocusSessionTask(sessionId: ended.id, task: task);
+    expect(
+      app.focusSessions.single.actualDurationSeconds,
+      ended.actualDurationSeconds,
+    );
+    expect(app.focusSessions.single.taskId, task.id);
+    expect(app.taskById(task.id)!.status, TaskStatus.open);
+    expect(platform.events, ['completed']);
   });
 
   testWidgets(
@@ -194,6 +242,10 @@ void main() {
         AppScope(
           controller: app,
           child: MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
             home: FocusPage(onOpenSettings: () {}, onFocusEnded: () {}),
           ),
         ),

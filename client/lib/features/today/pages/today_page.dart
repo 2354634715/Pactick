@@ -1,3 +1,5 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../../app/theme/app_tokens.dart';
@@ -92,7 +94,7 @@ class _TodayPageState extends State<TodayPage> {
     final completed = all.where((task) => task.isCompleted).length;
 
     return FeaturePageScaffold(
-      title: '今日',
+      title: context.tr('今日'),
       subtitle: formatFullDate(_selectedDate),
       scrollable: false,
       actions: [
@@ -106,7 +108,7 @@ class _TodayPageState extends State<TodayPage> {
           ),
         ),
         IconButton(
-          tooltip: '设置',
+          tooltip: context.tr('设置'),
           onPressed: widget.onOpenSettings,
           icon: const Icon(Icons.settings_outlined),
         ),
@@ -119,7 +121,7 @@ class _TodayPageState extends State<TodayPage> {
           suggestedDueAt: _selectedDate,
         ),
         icon: const Icon(Icons.add),
-        label: const Text('新建任务'),
+        label: Text(context.tr('新建任务')),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -143,8 +145,8 @@ class _TodayPageState extends State<TodayPage> {
                 SliverToBoxAdapter(child: _empty(controller))
               else ...[
                 if (planned.isNotEmpty) ...[
-                  const SliverToBoxAdapter(
-                    child: SectionHeader(title: '当天有排期'),
+                  SliverToBoxAdapter(
+                    child: SectionHeader(title: context.tr('当天有排期')),
                   ),
                   SliverList.builder(
                     itemCount: planned.length,
@@ -157,10 +159,10 @@ class _TodayPageState extends State<TodayPage> {
                   ),
                 ],
                 if (manual.isNotEmpty) ...[
-                  const SliverToBoxAdapter(
+                  SliverToBoxAdapter(
                     child: SectionHeader(
-                      title: '当天无排期',
-                      subtitle: '可用更多菜单上移、下移，或拖动排序',
+                      title: context.tr('当天无排期'),
+                      subtitle: context.tr('可用更多菜单上移、下移，或拖动排序'),
                     ),
                   ),
                   SliverReorderableList(
@@ -177,8 +179,11 @@ class _TodayPageState extends State<TodayPage> {
                 ],
               ],
               if (!sidePlans && standalone.isNotEmpty) ...[
-                const SliverToBoxAdapter(
-                  child: SectionHeader(title: '其他计划时段', subtitle: '这些计划没有关联任务'),
+                SliverToBoxAdapter(
+                  child: SectionHeader(
+                    title: context.tr('其他计划时段'),
+                    subtitle: context.tr('这些计划没有关联任务'),
+                  ),
                 ),
                 SliverList.builder(
                   itemCount: standalone.length,
@@ -202,9 +207,9 @@ class _TodayPageState extends State<TodayPage> {
                   key: const PageStorageKey('today-standalone-plans'),
                   controller: _plansController,
                   children: [
-                    const SectionHeader(
-                      title: '其他计划时段',
-                      subtitle: '这些计划没有关联任务',
+                    SectionHeader(
+                      title: context.tr('其他计划时段'),
+                      subtitle: context.tr('这些计划没有关联任务'),
                     ),
                     for (final block in standalone) _planRow(block),
                   ],
@@ -233,14 +238,17 @@ class _TodayPageState extends State<TodayPage> {
           runSpacing: AppSpacing.sm,
           children: [
             _SummaryStat(
-              label: '计划时长',
+              label: context.tr('计划时长'),
               value: formatDuration(plannedSeconds, compact: true),
             ),
             _SummaryStat(
-              label: '已记录实际专注',
+              label: context.tr('已记录实际专注'),
               value: formatDuration(actualSeconds, compact: true),
             ),
-            _SummaryStat(label: '已完成任务', value: '$completed / $total'),
+            _SummaryStat(
+              label: context.tr('已完成任务'),
+              value: '$completed / $total',
+            ),
           ],
         ),
         const SizedBox(height: AppSpacing.xl),
@@ -248,25 +256,25 @@ class _TodayPageState extends State<TodayPage> {
           children: [
             Expanded(
               child: Text(
-                '今日安排',
+                context.tr('今日安排'),
                 style: Theme.of(context).textTheme.titleLarge,
               ),
             ),
             IconButton(
-              tooltip: '当天筛选说明',
+              tooltip: context.tr('当天筛选说明'),
               onPressed: () => showDialog<void>(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('当天任务与筛选'),
-                  content: const Text(
-                    '这里显示当天截止或有待执行排期的任务。'
-                    '“当天有排期”按当前已保存的当天计划判断，包括已完成或取消的计划；'
-                    '未关联任务的计划单独显示。无当天排期的任务可调整次序，不改变截止日期。',
+                  title: Text(context.tr('当天任务与筛选')),
+                  content: Text(
+                    context.tr(
+                      '这里显示当天截止或有待执行排期的任务。“当天有排期”按当前已保存的当天计划判断，包括已完成或取消的计划；未关联任务的计划单独显示。无当天排期的任务可调整次序，不改变截止日期。',
+                    ),
                   ),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('关闭'),
+                      child: Text(context.tr('关闭')),
                     ),
                   ],
                 ),
@@ -283,7 +291,7 @@ class _TodayPageState extends State<TodayPage> {
             for (final done in [false, true])
               ChoiceChip(
                 selected: _showProcessed == done,
-                label: Text(done ? '已完成' : '待办'),
+                label: Text(done ? context.tr('已完成') : context.tr('待办')),
                 onSelected: (_) => setState(() => _showProcessed = done),
               ),
           ],
@@ -297,16 +305,17 @@ class _TodayPageState extends State<TodayPage> {
               FilterChip(
                 selected: _filter == filter,
                 label: Text(switch (filter) {
-                  _TodayFilter.all => '全部',
-                  _TodayFilter.planned => '当天有排期',
-                  _TodayFilter.manual => '当天无排期',
+                  _TodayFilter.all => context.tr('全部'),
+                  _TodayFilter.planned => context.tr('当天有排期'),
+                  _TodayFilter.manual => context.tr('当天无排期'),
                 }),
                 onSelected: (_) => setState(() => _filter = filter),
               ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
-        if (_sorting) const LinearProgressIndicator(semanticsLabel: '正在保存任务顺序'),
+        if (_sorting)
+          LinearProgressIndicator(semanticsLabel: context.tr('正在保存任务顺序')),
       ],
     );
   }
@@ -322,7 +331,7 @@ class _TodayPageState extends State<TodayPage> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             IconButton(
-              tooltip: '前一天',
+              tooltip: context.tr('前一天'),
               onPressed: () => setState(
                 () => _selectedDate = _selectedDate.subtract(
                   const Duration(days: 1),
@@ -346,7 +355,7 @@ class _TodayPageState extends State<TodayPage> {
               label: Text(formatFullDate(_selectedDate)),
             ),
             IconButton(
-              tooltip: '后一天',
+              tooltip: context.tr('后一天'),
               onPressed: () => setState(
                 () =>
                     _selectedDate = _selectedDate.add(const Duration(days: 1)),
@@ -356,7 +365,7 @@ class _TodayPageState extends State<TodayPage> {
             if (!_sameDay(_selectedDate, today))
               TextButton(
                 onPressed: () => setState(() => _selectedDate = today),
-                child: const Text('回到今天'),
+                child: Text(context.tr('回到今天')),
               ),
           ],
         ),
@@ -410,11 +419,13 @@ class _TodayPageState extends State<TodayPage> {
   Widget _empty(AppController controller) {
     final filtered = _filter != _TodayFilter.all || _showProcessed;
     return StatePane.empty(
-      title: controller.tasks.isEmpty ? '尚无任务' : '当前日期和筛选下没有任务',
+      title: controller.tasks.isEmpty
+          ? context.tr('尚无任务')
+          : context.tr('当前日期和筛选下没有任务'),
       message: controller.tasks.isEmpty
-          ? '使用“新建任务”记录任务；也可在日历中直接创建计划时段。'
-          : '可切换日期或筛选，在日历中查看和安排时间。',
-      actionLabel: filtered ? '查看当天全部待办' : '查看日历',
+          ? context.tr('使用“新建任务”记录任务；也可在日历中直接创建计划时段。')
+          : context.tr('可切换日期或筛选，在日历中查看和安排时间。'),
+      actionLabel: filtered ? context.tr('查看当天全部待办') : context.tr('查看日历'),
       onAction: filtered
           ? () => setState(() {
               _filter = _TodayFilter.all;
@@ -461,18 +472,21 @@ class _TodayPageState extends State<TodayPage> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_busyTasks.contains(task.id))
-                const SizedBox.square(
+                SizedBox.square(
                   dimension: 18,
                   child: CircularProgressIndicator(
                     strokeWidth: 2,
-                    semanticsLabel: '正在保存任务',
+                    semanticsLabel: context.tr('正在保存任务'),
                   ),
                 )
               else
                 PopupMenuButton<_TodayAction>(
                   key: ValueKey('today-more-${task.id}'),
                   enabled: !busy,
-                  tooltip: '${task.title}的更多操作',
+                  tooltip: context.tr(
+                    '{arg0}的更多操作',
+                    args: {'arg0': task.title},
+                  ),
                   icon: const Icon(Icons.more_horiz),
                   onSelected: (action) {
                     switch (action) {
@@ -494,29 +508,29 @@ class _TodayPageState extends State<TodayPage> {
                     }
                   },
                   itemBuilder: (context) => [
-                    const PopupMenuItem(
+                    PopupMenuItem(
                       value: _TodayAction.edit,
-                      child: Text('编辑任务'),
+                      child: Text(context.tr('编辑任务')),
                     ),
                     if (!task.isCompleted)
                       PopupMenuItem(
                         value: _TodayAction.focus,
                         child: Text(
                           controller.activeFocusSession == null
-                              ? '开始专注'
-                              : '返回当前专注',
+                              ? context.tr('开始专注')
+                              : context.tr('返回当前专注'),
                         ),
                       ),
                     if (manual.isNotEmpty) ...[
                       PopupMenuItem(
                         value: _TodayAction.up,
                         enabled: index > 0,
-                        child: const Text('上移'),
+                        child: Text(context.tr('上移')),
                       ),
                       PopupMenuItem(
                         value: _TodayAction.down,
                         enabled: index < manual.length - 1,
-                        child: const Text('下移'),
+                        child: Text(context.tr('下移')),
                       ),
                     ],
                   ],
@@ -525,9 +539,9 @@ class _TodayPageState extends State<TodayPage> {
                 ReorderableDragStartListener(
                   index: index,
                   child: Semantics(
-                    label: '拖动排序，也可在更多菜单选择上移或下移',
-                    child: const Tooltip(
-                      message: '拖动排序；更多菜单也可上移、下移',
+                    label: context.tr('拖动排序，也可在更多菜单选择上移或下移'),
+                    child: Tooltip(
+                      message: context.tr('拖动排序；更多菜单也可上移、下移'),
                       child: SizedBox.square(
                         dimension: AppSizes.minTouchTarget,
                         child: Icon(Icons.drag_handle),
@@ -545,7 +559,12 @@ class _TodayPageState extends State<TodayPage> {
               alignment: AlignmentDirectional.centerStart,
               child: TextButton(
                 onPressed: widget.onOpenCalendar,
-                child: Text('另 $additionalPlans 个时段 · 查看日历'),
+                child: Text(
+                  context.tr(
+                    '另 {arg0} 个时段 · 查看日历',
+                    args: {'arg0': additionalPlans},
+                  ),
+                ),
               ),
             ),
           ),
@@ -558,15 +577,15 @@ class _TodayPageState extends State<TodayPage> {
         ? formatClock(block.endsAt)
         : '${formatMonthDay(block.endsAt)} ${formatClock(block.endsAt)}';
     final status = switch (block.status) {
-      PlanBlockStatus.scheduled => '计划',
-      PlanBlockStatus.completed => '已完成计划',
-      PlanBlockStatus.cancelled => '已取消计划',
+      PlanBlockStatus.scheduled => context.tr('计划'),
+      PlanBlockStatus.completed => context.tr('已完成计划'),
+      PlanBlockStatus.cancelled => context.tr('已取消计划'),
     };
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.schedule_outlined),
       title: Text(
-        block.title ?? '未命名计划',
+        block.title ?? context.tr('未命名计划'),
         maxLines: 2,
         overflow: TextOverflow.ellipsis,
       ),
@@ -575,21 +594,30 @@ class _TodayPageState extends State<TodayPage> {
       onTap: () => showDialog<void>(
         context: context,
         builder: (context) => AlertDialog(
-          title: Text(block.title ?? '未命名计划'),
+          title: Text(block.title ?? context.tr('未命名计划')),
           content: Text(
-            '$status\n${formatFullDate(block.startsAt)} ${formatClock(block.startsAt)}\n至 ${formatFullDate(block.endsAt)} ${formatClock(block.endsAt)}',
+            context.tr(
+              '{arg0}\n{arg1} {arg2}\n至 {arg3} {arg4}',
+              args: {
+                'arg0': status,
+                'arg1': formatFullDate(block.startsAt),
+                'arg2': formatClock(block.startsAt),
+                'arg3': formatFullDate(block.endsAt),
+                'arg4': formatClock(block.endsAt),
+              },
+            ),
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('关闭'),
+              child: Text(context.tr('关闭')),
             ),
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
                 widget.onOpenCalendar();
               },
-              child: const Text('查看日历'),
+              child: Text(context.tr('查看日历')),
             ),
           ],
         ),
@@ -620,14 +648,14 @@ class _TodayPageState extends State<TodayPage> {
         currentTasks.any(
           (task) => controller.firstPlanForTask(task.id, date) != null,
         )) {
-      _message('列表已变化，请在当前列表重新排序。');
+      _message(context.tr('列表已变化，请在当前列表重新排序。'));
       return;
     }
     setState(() => _sorting = true);
     try {
       await controller.reorderTasks(currentTasks, oldIndex, newIndex);
       if (controller.repository.selectedAccountId == accountId) {
-        _message('任务顺序已保存');
+        _message(tr('任务顺序已保存'));
       }
     } catch (error) {
       _error(
@@ -635,7 +663,7 @@ class _TodayPageState extends State<TodayPage> {
         retry: () {
           if (controller.repository.selectedAccountId != accountId ||
               !_sameDay(_selectedDate, date)) {
-            _message('工作区或日期已变化，请在当前列表重新排序。');
+            _message(context.tr('工作区或日期已变化，请在当前列表重新排序。'));
             return;
           }
           final current = controller
@@ -678,9 +706,11 @@ class _TodayPageState extends State<TodayPage> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(applied.isCompleted ? '任务已完成' : '任务已恢复待办'),
+          content: Text(
+            applied.isCompleted ? context.tr('任务已完成') : context.tr('任务已恢复待办'),
+          ),
           action: SnackBarAction(
-            label: '撤销',
+            label: context.tr('撤销'),
             onPressed: () =>
                 _undoTask(controller, previous, applied, accountId),
           ),
@@ -693,7 +723,7 @@ class _TodayPageState extends State<TodayPage> {
           if (controller.repository.selectedAccountId == accountId) {
             _toggleTask(controller, id);
           } else {
-            _message('工作区已变化，请在当前工作区重新操作。');
+            _message(context.tr('工作区已变化，请在当前工作区重新操作。'));
           }
         },
       );
@@ -714,7 +744,7 @@ class _TodayPageState extends State<TodayPage> {
         current == null ||
         current.status != applied.status ||
         current.completedAt != applied.completedAt) {
-      _message('任务状态或工作区已变化，无法撤销这次操作。');
+      _message(context.tr('任务状态或工作区已变化，无法撤销这次操作。'));
       return;
     }
     if (_busyTasks.contains(current.id)) return;
@@ -728,7 +758,7 @@ class _TodayPageState extends State<TodayPage> {
         ),
       );
       if (controller.repository.selectedAccountId == accountId) {
-        _message('已撤销任务状态更改');
+        _message(tr('已撤销任务状态更改'));
       }
     } catch (error) {
       _error(
@@ -767,7 +797,7 @@ class _TodayPageState extends State<TodayPage> {
           if (controller.repository.selectedAccountId == accountId) {
             _startFocus(controller, id);
           } else {
-            _message('工作区已变化，请在当前工作区重新操作。');
+            _message(context.tr('工作区已变化，请在当前工作区重新操作。'));
           }
         },
       );
@@ -788,7 +818,7 @@ class _TodayPageState extends State<TodayPage> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(persistenceErrorMessage(error)),
-        action: SnackBarAction(label: '重试', onPressed: retry),
+        action: SnackBarAction(label: context.tr('重试'), onPressed: retry),
       ),
     );
   }

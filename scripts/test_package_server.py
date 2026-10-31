@@ -13,7 +13,9 @@ class ServerPackageTests(unittest.TestCase):
     def fixture(self, root):
         names = (
             "Dockerfile.prebuilt", ".dockerignore", "compose.production.yaml", "go.mod", "go.sum",
-            "LICENSE", "THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.json",
+            "LICENSE", "THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.en.md", "THIRD_PARTY_NOTICES.json",
+            "CONTRIBUTING.en.md", "SECURITY.en.md", "CHANGELOG.en.md",
+            "docs/SERVER_MANAGER.en.md", "docs/SELF_HOSTING.en.md", "docs/BUILDING.en.md",
             "deploy/desktop/compose.yaml", "deploy/desktop/run-server.ps1",
             "docs/SERVER_MANAGER.md", "docs/SELF_HOSTING.md", "docs/BUILDING.md",
             *(f"cmd/{program}/main.go" for program in ("server", "migrate", "healthcheck", "admin", "manager")),
@@ -43,6 +45,10 @@ class ServerPackageTests(unittest.TestCase):
             bundle_source(source, bundle)
             self.assertTrue((bundle / "internal/database/migrations/001_init.sql").is_file())
             self.assertTrue((bundle / "launch-manager.cmd").is_file())
+            for name in ("THIRD_PARTY_NOTICES.en.md", "CONTRIBUTING.en.md", "SECURITY.en.md",
+                         "CHANGELOG.en.md", "docs/SERVER_MANAGER.en.md", "docs/SELF_HOSTING.en.md",
+                         "docs/BUILDING.en.md"):
+                self.assertEqual((bundle / name).read_bytes(), (source / name).read_bytes())
             self.assertFalse((bundle / "client").exists())
             self.assertFalse((bundle / "deploy/desktop/api.env").exists())
             packaged = (bundle / "deploy/desktop/compose.yaml").read_text()

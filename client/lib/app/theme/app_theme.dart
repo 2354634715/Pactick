@@ -69,8 +69,8 @@ abstract final class AppTheme {
       onTertiary: const Color(0xFFFFFCF7),
       tertiaryContainer: const Color(0xFFF2E3D4),
       onTertiaryContainer: const Color(0xFF3D2D23),
-      surface: const Color(0xFFF6F1E7),
-      onSurface: const Color(0xFF1C1B18),
+      surface: const Color(0xFFFCFCFA),
+      onSurface: const Color(0xFF322E29),
       onSurfaceVariant: const Color(0xFF59554E),
       surfaceContainerLowest: const Color(0xFFFFFCF7),
       surfaceContainerLow: const Color(0xFFF3EDE3),
@@ -103,37 +103,40 @@ abstract final class AppTheme {
       displayLarge: baseTextTheme.displayLarge?.copyWith(
         fontSize: 64,
         height: 76 / 64,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0,
       ),
       displayMedium: baseTextTheme.displayMedium?.copyWith(
         fontSize: 48,
         height: 56 / 48,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0,
       ),
       displaySmall: baseTextTheme.displaySmall?.copyWith(
         fontSize: 36,
         height: 44 / 36,
-        fontWeight: FontWeight.w500,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0,
       ),
       headlineLarge: baseTextTheme.headlineLarge?.copyWith(
+        fontFamily: AppTypography.displayFamily,
         fontSize: 28,
         height: 36 / 28,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0,
       ),
       headlineMedium: baseTextTheme.headlineMedium?.copyWith(
+        fontFamily: AppTypography.displayFamily,
         fontSize: 24,
         height: 32 / 24,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0,
       ),
       headlineSmall: baseTextTheme.headlineSmall?.copyWith(
+        fontFamily: AppTypography.displayFamily,
         fontSize: 22,
         height: 28 / 22,
-        fontWeight: FontWeight.w600,
+        fontWeight: FontWeight.w400,
         letterSpacing: 0,
       ),
       titleLarge: baseTextTheme.titleLarge?.copyWith(
@@ -242,11 +245,15 @@ abstract final class AppTheme {
         ),
       ),
       navigationBarTheme: NavigationBarThemeData(
-        height: 76,
+        height: 80,
         elevation: 0,
-        backgroundColor: scheme.surfaceContainerLowest,
+        backgroundColor: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
         indicatorColor: scheme.primaryContainer,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.medium),
+        ),
+        labelPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           return textTheme.labelMedium?.copyWith(
@@ -260,15 +267,18 @@ abstract final class AppTheme {
         }),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: scheme.surfaceContainerLowest,
+        backgroundColor: scheme.surfaceContainerLow,
         indicatorColor: scheme.primaryContainer,
         useIndicator: true,
         minWidth: 80,
         minExtendedWidth: 220,
       ),
       navigationDrawerTheme: NavigationDrawerThemeData(
-        backgroundColor: scheme.surfaceContainerLowest,
+        backgroundColor: scheme.surfaceContainerLow,
         indicatorColor: scheme.primaryContainer,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadii.card),
+        ),
         elevation: 0,
       ),
       iconButtonTheme: IconButtonThemeData(

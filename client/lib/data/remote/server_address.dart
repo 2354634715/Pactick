@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:flutter/foundation.dart';
 
 /// The API is hosted at an origin, never below an arbitrary URL path.
@@ -22,7 +24,7 @@ String normalizeServerAddress(String value, {bool? allowDevelopmentHttp}) {
                 '::1',
                 '10.0.2.2',
               ].contains(uri.host)))) {
-    throw const FormatException('请输入 HTTPS 服务器地址，不含路径、账号或查询参数。');
+    throw FormatException(tr('请输入 HTTPS 服务器地址，不含路径、账号或查询参数。'));
   }
   return Uri(
     scheme: uri.scheme.toLowerCase(),

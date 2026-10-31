@@ -329,9 +329,12 @@ class _FocusGateway extends FocusPlatformGateway {
     required DateTime endsAt,
     required FocusPolicyMode mode,
     List<String> allowedPackageNames = const [],
-    String taskTypeName = '收集箱',
+    String? taskTypeName,
+    String? titleKey,
+    String? taskTypeKey,
     int? maxAppExits,
     bool paused = false,
+    bool focusDesktopEnabled = false,
     int appExitCount = 0,
     int interruptionCount = 0,
   }) async {

@@ -1,7 +1,7 @@
 name: pactick
 description: A local-first planning and focus client.
 publish_to: none
-version: 0.3.0-preview.2+7
+version: 0.3.0-preview.3+8
 
 environment:
   sdk: ^3.13.2
@@ -30,6 +30,11 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  fonts:
+    - family: PactickDisplay
+      fonts:
+        - asset: assets/fonts/NotoSerifSC.ttf
+          weight: 400
   assets:
     - assets/branding/pactick_icon.png
     - assets/licenses/supplemental.json

@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 
 enum AppDestination {
@@ -7,9 +9,10 @@ enum AppDestination {
   focus('专注', Icons.center_focus_strong_outlined, Icons.center_focus_strong),
   statistics('统计', Icons.insights_outlined, Icons.insights);
 
-  const AppDestination(this.label, this.icon, this.selectedIcon);
+  const AppDestination(this._label, this.icon, this.selectedIcon);
 
-  final String label;
+  final String _label;
+  String get label => tr(_label);
   final IconData icon;
   final IconData selectedIcon;
 }

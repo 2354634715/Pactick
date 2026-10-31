@@ -888,7 +888,11 @@ components:
         patch:
           type: object
           additionalProperties: true
-          description: 仅包含 changed_fields 指定的字段；值为 null 表示清除可选字段
+          description: >-
+            仅包含 changed_fields 指定的字段；值为 null 表示清除可选字段。
+            focus_session 可在未关联任务时创建；会话结束后仅允许发起设备
+            将原先为空的 task_id 设置为同账户未删除的任务，其他终态字段不可修改，
+            已有关联不得更换或清除。
         client_changed_at:
           type: string
           format: date-time

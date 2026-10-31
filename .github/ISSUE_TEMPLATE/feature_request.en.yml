@@ -1,0 +1,15 @@
+name: Feature suggestion (English)
+description: Describe the use case and the problem to solve.
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem to solve
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: Suggested behavior and existing alternatives
+    validations:
+      required: true

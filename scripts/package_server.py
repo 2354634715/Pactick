@@ -26,6 +26,8 @@ ROOT_FILES = {
     "SECURITY.md", "CHANGELOG.md", "THIRD_PARTY_NOTICES.md", "THIRD_PARTY_NOTICES.json",
     "deployment_test.go",
 }
+# Keep root-document translations inside the existing server archive.
+ROOT_FILES |= {name[:-3] + ".en.md" for name in ROOT_FILES if name.endswith(".md")}
 SOURCE_TREES = ("cmd/", "internal/", "api/", "deploy/", "docs/", "scripts/", "third_party/")
 LAUNCHERS = ("launch-manager.cmd", "launch-manager.sh", "run-server.cmd", "run-server.sh")
 

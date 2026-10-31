@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -83,6 +84,10 @@ void main() {
       );
       await tester.pumpWidget(
         MaterialApp(
+          locale: const Locale('zh', 'CN'),
+          supportedLocales: const [Locale('zh', 'CN')],
+          localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
           home: Scaffold(
             body: PlanBlockEditor(
               controller: controller,
@@ -114,6 +119,10 @@ void main() {
         await controller.updateTask(task.copyWith(status: status));
         await tester.pumpWidget(
           MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
             home: Scaffold(
               body: SingleChildScrollView(
                 child: TaskDetailsPanel(
@@ -163,6 +172,10 @@ void main() {
         );
         await tester.pumpWidget(
           MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
             home: Builder(
               builder: (context) => Scaffold(
                 body: TextButton(
@@ -216,7 +229,12 @@ void main() {
       await tester.pumpWidget(
         AppScope(
           controller: controller,
-          child: MaterialApp(home: CalendarPage(onOpenSettings: () {})),
+          child: MaterialApp(
+            locale: const Locale('zh', 'CN'),
+            supportedLocales: const [Locale('zh', 'CN')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            home: CalendarPage(onOpenSettings: () {}),
+          ),
         ),
       );
       await tester.pumpAndSettle();
@@ -359,6 +377,10 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('zh', 'CN')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
         home: Builder(
           builder: (context) => Scaffold(
             body: TextButton(

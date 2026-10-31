@@ -28,6 +28,10 @@ AppBar buildPageAppBar(
       overflow: TextOverflow.ellipsis,
     ),
     actions: actions,
+    bottom: PreferredSize(
+      preferredSize: const Size.fromHeight(1),
+      child: Divider(color: Theme.of(context).colorScheme.outlineVariant),
+    ),
   );
 }
 

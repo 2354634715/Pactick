@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:io';
 
 import 'package:flutter/services.dart';
@@ -52,6 +54,25 @@ class FocusPlatformGateway {
 
   static const _channel = MethodChannel('pactick/focus');
 
+  bool get supportsFocusDesktop => Platform.isAndroid;
+
+  Future<void> configureFocusDesktop({required bool enabled}) async {
+    if (!supportsFocusDesktop) return;
+    await _channel.invokeMethod<void>('configureFocusDesktop', {
+      'enabled': enabled,
+    });
+  }
+
+  Future<bool> openFocusDesktop({
+    List<String> allowedPackageNames = const [],
+  }) async {
+    if (!supportsFocusDesktop) return false;
+    return await _channel.invokeMethod<bool>('openFocusDesktop', {
+          'allowedPackageNames': allowedPackageNames,
+        }) ??
+        false;
+  }
+
   Future<void> configureFeedback({
     required bool enabled,
     required String notificationMode,
@@ -82,12 +103,15 @@ class FocusPlatformGateway {
   Future<void> startTimer({
     String? sessionId,
     required String title,
+    String? titleKey,
     required DateTime endsAt,
     required FocusPolicyMode mode,
     List<String> allowedPackageNames = const [],
-    String taskTypeName = '收集箱',
+    String? taskTypeName,
+    String? taskTypeKey,
     int? maxAppExits,
     bool paused = false,
+    bool focusDesktopEnabled = false,
     int appExitCount = 0,
     int interruptionCount = 0,
   }) async {
@@ -95,12 +119,15 @@ class FocusPlatformGateway {
     await _channel.invokeMethod<void>('startTimer', {
       'sessionId': sessionId,
       'title': title,
+      'titleKey': titleKey,
       'endsAtEpochMillis': endsAt.millisecondsSinceEpoch,
       'mode': mode.name,
       'allowedPackageNames': allowedPackageNames,
-      'taskTypeName': taskTypeName,
+      'taskTypeName': taskTypeName ?? tr('收集箱'),
+      'taskTypeKey': taskTypeKey ?? (taskTypeName == null ? 'inbox' : null),
       'maxAppExits': maxAppExits,
       'paused': paused,
+      'focusDesktopEnabled': focusDesktopEnabled,
       'appExitCount': appExitCount,
       'interruptionCount': interruptionCount,
     });

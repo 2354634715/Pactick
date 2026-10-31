@@ -1,5 +1,7 @@
 # 发布源码与 Android 候选包
 
+[English](RELEASING.en.md)
+
 官方仓库为 [2354634715/Pactick](https://github.com/2354634715/Pactick)，发行制品通过该仓库的 [Releases](https://github.com/2354634715/Pactick/releases) 分发，安全报告入口见 [SECURITY.md](../SECURITY.md)。已发布的 `v0.3.0-preview.1` 包含 Android APK 和 Windows/Linux x86-64 服务端包。后续版本的实际平台与附件以对应 Release 为准，不自动沿用上一版的制品范围。预览分发暂不构成公网自部署推荐。
 
 源码预览、APK 下载和自部署推荐按文末各自的完成条件推进。公开源码时须列明真实数据库、APK、真机和部署的未验证事项；源码公开不代表这些验收已经完成。

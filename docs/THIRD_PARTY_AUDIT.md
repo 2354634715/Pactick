@@ -1,5 +1,7 @@
 # 第三方许可审阅与发行通知核查
 
+[English](THIRD_PARTY_AUDIT.en.md)
+
 2026-10-17 依赖变更：新增纯 Dart 包 `cryptography 2.9.0`，已采集原包 Apache-2.0 许可、记录哈希，并在本轮 debug APK 的 `NOTICES.Z` 中核对完整正文及包名。该包未声明 Flutter 原生插件或新增 AAR/JAR，原生补充许可资产保持原样；增量审阅记录保存在 `third_party/metadata/distribution-notices.json`。此核对不构成完整法律审阅或正式签名 APK 验收。
 
 核查日期：2026-10-02。当前源码版本为 `0.2.0-preview.1+4`。本轮分发范围为公开源码预览和 Android 预览 APK，不分发完整 SDK、构建工具分发包、依赖缓存、设计预览、测试截图或服务器容器镜像。

@@ -1,3 +1,5 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -80,13 +82,13 @@ class _LoginPageState extends State<LoginPage> {
       child: Scaffold(
         appBar: buildPageAppBar(
           context,
-          title: '连接同步账户',
+          title: context.tr('连接同步账户'),
           low:
               MediaQuery.sizeOf(context).height -
                   MediaQuery.viewInsetsOf(context).bottom <
               AppSizes.lowHeight,
           leading: IconButton(
-            tooltip: '返回',
+            tooltip: context.tr('返回'),
             onPressed: _busy ? null : () => _guard.currentState?.requestClose(),
             icon: const Icon(Icons.arrow_back),
           ),
@@ -97,13 +99,15 @@ class _LoginPageState extends State<LoginPage> {
             child: ListView(
               padding: const EdgeInsets.all(AppSpacing.lg),
               children: [
-                const Text(
-                  '登录只用于可选同步。无账户或网络时，本地任务、计划与专注仍可使用。未选择上传时打开服务器与账户独立的工作区，当前工作区保留。',
+                Text(
+                  context.tr(
+                    '登录只用于可选同步。无账户或网络时，本地任务、计划与专注仍可使用。未选择上传时打开服务器与账户独立的工作区，当前工作区保留。',
+                  ),
                 ),
                 if (blocked)
-                  const Padding(
+                  Padding(
                     padding: EdgeInsets.only(top: AppSpacing.md),
-                    child: Text('请先结束本机专注，再连接或切换同步账户。'),
+                    child: Text(context.tr('请先结束本机专注，再连接或切换同步账户。')),
                   ),
                 const SizedBox(height: AppSpacing.lg),
                 Form(
@@ -117,14 +121,14 @@ class _LoginPageState extends State<LoginPage> {
                         key: const Key('server_address'),
                         enabled: !_busy,
                         keyboardType: TextInputType.url,
-                        decoration: const InputDecoration(
-                          labelText: '服务器 HTTPS 地址',
+                        decoration: InputDecoration(
+                          labelText: context.tr('服务器 HTTPS 地址'),
                           hintText: 'https://sync.example.com',
                         ),
                         validator: (value) {
                           try {
                             if (normalizeServerAddress(value ?? '').isEmpty) {
-                              return '请输入服务器地址';
+                              return context.tr('请输入服务器地址');
                             }
                           } on FormatException catch (e) {
                             return e.message;
@@ -139,9 +143,12 @@ class _LoginPageState extends State<LoginPage> {
                         key: const Key('login_email'),
                         enabled: !_busy,
                         keyboardType: TextInputType.emailAddress,
-                        decoration: const InputDecoration(labelText: '邮箱'),
-                        validator: (v) =>
-                            v == null || !v.contains('@') ? '请输入有效邮箱' : null,
+                        decoration: InputDecoration(
+                          labelText: context.tr('邮箱'),
+                        ),
+                        validator: (v) => v == null || !v.contains('@')
+                            ? context.tr('请输入有效邮箱')
+                            : null,
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextFormField(
@@ -150,9 +157,11 @@ class _LoginPageState extends State<LoginPage> {
                         key: const Key('login_password'),
                         enabled: !_busy,
                         obscureText: true,
-                        decoration: const InputDecoration(labelText: '密码'),
+                        decoration: InputDecoration(
+                          labelText: context.tr('密码'),
+                        ),
                         validator: (v) =>
-                            v == null || v.isEmpty ? '请输入密码' : null,
+                            v == null || v.isEmpty ? context.tr('请输入密码') : null,
                       ),
                       if (_register) ...[
                         const SizedBox(height: AppSpacing.md),
@@ -160,13 +169,18 @@ class _LoginPageState extends State<LoginPage> {
                           controller: _name,
                           focusNode: _nameFocus,
                           enabled: !_busy,
-                          decoration: const InputDecoration(labelText: '显示名称'),
-                          validator: (v) =>
-                              v == null || v.trim().isEmpty ? '请输入显示名称' : null,
+                          decoration: InputDecoration(
+                            labelText: context.tr('显示名称'),
+                          ),
+                          validator: (v) => v == null || v.trim().isEmpty
+                              ? context.tr('请输入显示名称')
+                              : null,
                         ),
-                        const Padding(
+                        Padding(
                           padding: EdgeInsets.only(top: AppSpacing.sm),
-                          child: Text('注册前需联系服务器管理员临时开启注册；注册完成后应关闭注册。'),
+                          child: Text(
+                            context.tr('注册前需联系服务器管理员临时开启注册；注册完成后应关闭注册。'),
+                          ),
                         ),
                       ],
                       CheckboxListTile(
@@ -174,9 +188,18 @@ class _LoginPageState extends State<LoginPage> {
                         onChanged: _busy || session.isBusy || blocked
                             ? null
                             : (v) => setState(() => _upload = v!),
-                        title: const Text('复制当前本地数据并上传'),
+                        title: Text(context.tr('复制当前本地数据并上传')),
                         subtitle: Text(
-                          '来源：${app.repository.selectedAccountId}\n目标：${_server.text} · ${_email.text.isEmpty ? '所填账户' : _email.text}\n勾选后复制并上传当前工作区全部内容，原工作区保留。目标工作区已存在时拒绝复制，不合并或覆盖。默认不选。',
+                          context.tr(
+                            '来源：{arg0}\n目标：{arg1} · {arg2}\n勾选后复制并上传当前工作区全部内容，原工作区保留。目标工作区已存在时拒绝复制，不合并或覆盖。默认不选。',
+                            args: {
+                              'arg0': app.repository.selectedAccountId,
+                              'arg1': _server.text,
+                              'arg2': _email.text.isEmpty
+                                  ? tr('所填账户')
+                                  : _email.text,
+                            },
+                          ),
                         ),
                       ),
                       if (_error ?? session.formError case final error?)
@@ -201,10 +224,10 @@ class _LoginPageState extends State<LoginPage> {
                             : _submit,
                         child: Text(
                           _busy
-                              ? '正在连接…'
+                              ? context.tr('正在连接…')
                               : _register
-                              ? '注册并连接'
-                              : '登录',
+                              ? context.tr('注册并连接')
+                              : context.tr('登录'),
                         ),
                       ),
                       TextButton(
@@ -214,7 +237,9 @@ class _LoginPageState extends State<LoginPage> {
                                 _register = !_register;
                                 _error = null;
                               }),
-                        child: Text(_register ? '返回登录' : '注册账户'),
+                        child: Text(
+                          _register ? context.tr('返回登录') : context.tr('注册账户'),
+                        ),
                       ),
                     ],
                   ),
@@ -250,7 +275,7 @@ class _LoginPageState extends State<LoginPage> {
     final app = AppScope.read(context);
     final session = SessionScope.read(context);
     if (app.activeFocusSession != null) {
-      setState(() => _error = '请先结束当前专注，再连接同步账户。');
+      setState(() => _error = context.tr('请先结束当前专注，再连接同步账户。'));
       return;
     }
     setState(() {
@@ -273,7 +298,9 @@ class _LoginPageState extends State<LoginPage> {
       session.uploadSourceWorkspace = null;
       if (success && mounted) Navigator.pop(context);
     } catch (e) {
-      if (mounted) setState(() => _error = '连接未完成：$e');
+      if (mounted) {
+        setState(() => _error = context.tr('连接未完成：{arg0}', args: {'arg0': e}));
+      }
     } finally {
       session.uploadSourceWorkspace = null;
       if (mounted) setState(() => _busy = false);

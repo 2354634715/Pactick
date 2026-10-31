@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 
 import 'package:path/path.dart' as path;
@@ -5,6 +7,7 @@ import 'package:sqflite/sqflite.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../core/models/default_focus_policies.dart';
+import '../../core/calendar/system_calendar_privacy.dart';
 import '../../core/sync/sync_entity_contract.dart';
 import '../../core/sync/sync_models.dart';
 import 'workspace_archive.dart';
@@ -210,7 +213,7 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
       whereArgs: [accountId],
     );
     if ((rows.isEmpty ? null : rows.single['envelope']) != expected) {
-      throw StateError('私密任务箱已发生变化，请重新解锁后重试。');
+      throw StateError(tr('私密任务箱已发生变化，请重新解锁后重试。'));
     }
     await _ensureAccountRow(tx, accountId);
     await tx.insert('private_vaults', {
@@ -277,7 +280,7 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
         where: 'account_id = ?',
         whereArgs: [accountId],
       );
-      if (rows.isEmpty) throw StateError('私密任务箱尚未设置密码。');
+      if (rows.isEmpty) throw StateError(tr('私密任务箱尚未设置密码。'));
       final old = _privateVaultState(rows.single);
       final attempts = old.failedAttempts + 1;
       final retryAfter = DateTime.now().toUtc().add(
@@ -322,7 +325,7 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
         where: 'account_id = ?',
         whereArgs: [accountId],
       );
-      if (rows.isNotEmpty) throw StateError('恢复目标工作区已存在。');
+      if (rows.isNotEmpty) throw StateError(tr('恢复目标工作区已存在。'));
       await _replacePrivateVault(tx, accountId, envelope, null);
     });
   }
@@ -333,7 +336,7 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
     String taskId,
   ) async {
     if (accountId != DocumentStore.localAccountId) {
-      throw StateError('仅原始本地工作区中从未尝试同步的任务可以转入私密箱。');
+      throw StateError(tr('仅原始本地工作区中从未尝试同步的任务可以转入私密箱。'));
     }
     final rows = await tx.query(
       'documents',
@@ -341,6 +344,21 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
       whereArgs: [accountId],
     );
     final bundle = collectPrivateTransfer(rows.map(_documentFromRow), taskId);
+    final calendarRows = await tx.query(
+      'app_settings',
+      columns: ['setting_value'],
+      where: 'account_id = ? AND setting_key = ?',
+      whereArgs: [accountId, calendarExposureSettingKey],
+      limit: 1,
+    );
+    final exposed = _privateCalendarExposure(
+      calendarRows.isEmpty
+          ? null
+          : calendarRows.single['setting_value']! as String,
+    );
+    if (bundle.removedKeys.any(exposed.contains)) {
+      throw StateError(tr('任务或关联计划已参与系统日历同步，不能直接转入私密箱。'));
+    }
     for (final key in bundle.removedKeys) {
       final split = key.split('\u0000');
       final attempts = await tx.query(
@@ -352,7 +370,7 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
         limit: 1,
       );
       if (attempts.isNotEmpty) {
-        throw StateError('任务或关联记录已尝试同步，不能直接转入私密箱。');
+        throw StateError(tr('任务或关联记录已尝试同步，不能直接转入私密箱。'));
       }
     }
     return bundle;
@@ -382,7 +400,7 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
     await db.transaction((tx) async {
       final candidate = await _privateImportCandidate(tx, accountId, taskId);
       if (candidate.snapshot != expectedSnapshot) {
-        throw StateError('任务或关联记录已变化，请重试。');
+        throw StateError(tr('任务或关联记录已变化，请重试。'));
       }
       await _replacePrivateVault(tx, accountId, envelope, expectedEnvelope);
       for (final key in candidate.removedKeys) {
@@ -422,7 +440,7 @@ class LocalDatabase implements DocumentStore, PrivateVaultStorage {
           )) {
             continue;
           }
-          throw StateError('普通工作区含有相同标识的记录，移出操作已取消。');
+          throw StateError(tr('普通工作区含有相同标识的记录，移出操作已取消。'));
         }
         await _putDocument(
           tx,
@@ -1544,7 +1562,7 @@ class MemoryDocumentStore implements DocumentStore, PrivateVaultStorage {
 
   void _checkPrivateEnvelope(String accountId, String? expectedEnvelope) {
     if (_privateVaults[accountId]?.envelope != expectedEnvelope) {
-      throw StateError('私密任务箱已发生变化，请重新解锁后重试。');
+      throw StateError(tr('私密任务箱已发生变化，请重新解锁后重试。'));
     }
   }
 
@@ -1595,7 +1613,7 @@ class MemoryDocumentStore implements DocumentStore, PrivateVaultStorage {
     String accountId,
   ) async {
     final old = _privateVaults[accountId];
-    if (old == null) throw StateError('私密任务箱尚未设置密码。');
+    if (old == null) throw StateError(tr('私密任务箱尚未设置密码。'));
     final attempts = old.failedAttempts + 1;
     return _privateVaults[accountId] = PrivateVaultStoredState(
       envelope: old.envelope,
@@ -1618,7 +1636,7 @@ class MemoryDocumentStore implements DocumentStore, PrivateVaultStorage {
   Future<void> restorePrivateVault(String accountId, String envelope) async {
     _validateNewWorkspaceId(accountId);
     PrivateVaultEnvelope.decode(envelope);
-    if (_accounts.containsKey(accountId)) throw StateError('恢复目标工作区已存在。');
+    if (_accounts.containsKey(accountId)) throw StateError(tr('恢复目标工作区已存在。'));
     _accounts[accountId] = _MemoryAccount();
     _privateVaults[accountId] = PrivateVaultStoredState(envelope: envelope);
   }
@@ -1628,10 +1646,16 @@ class MemoryDocumentStore implements DocumentStore, PrivateVaultStorage {
     String taskId,
   ) {
     if (accountId != DocumentStore.localAccountId) {
-      throw StateError('仅原始本地工作区中从未尝试同步的任务可以转入私密箱。');
+      throw StateError(tr('仅原始本地工作区中从未尝试同步的任务可以转入私密箱。'));
     }
     final account = _account(accountId);
     final bundle = collectPrivateTransfer(account.documents.values, taskId);
+    final exposed = _privateCalendarExposure(
+      account.settings[calendarExposureSettingKey],
+    );
+    if (bundle.removedKeys.any(exposed.contains)) {
+      throw StateError(tr('任务或关联计划已参与系统日历同步，不能直接转入私密箱。'));
+    }
     if (account.pending.any(
       (pending) =>
           bundle.removedKeys.contains(
@@ -1641,7 +1665,7 @@ class MemoryDocumentStore implements DocumentStore, PrivateVaultStorage {
               pending.lastAttemptAt != null ||
               pending.rejectedAt != null),
     )) {
-      throw StateError('任务或关联记录已尝试同步，不能直接转入私密箱。');
+      throw StateError(tr('任务或关联记录已尝试同步，不能直接转入私密箱。'));
     }
     return bundle;
   }
@@ -1669,7 +1693,7 @@ class MemoryDocumentStore implements DocumentStore, PrivateVaultStorage {
     _checkPrivateEnvelope(accountId, expectedEnvelope);
     final candidate = _memoryPrivateImportCandidate(accountId, taskId);
     if (candidate.snapshot != expectedSnapshot) {
-      throw StateError('任务或关联记录已变化，请重试。');
+      throw StateError(tr('任务或关联记录已变化，请重试。'));
     }
     final account = _account(accountId);
     account.documents.removeWhere(
@@ -1704,7 +1728,7 @@ class MemoryDocumentStore implements DocumentStore, PrivateVaultStorage {
       final existing = account.documents[document.key];
       if (existing != null) {
         if (_samePrivateSharedDocument(document, existing)) continue;
-        throw StateError('普通工作区含有相同标识的记录，移出操作已取消。');
+        throw StateError(tr('普通工作区含有相同标识的记录，移出操作已取消。'));
       }
       toWrite.add(document);
     }
@@ -2426,7 +2450,7 @@ PrivateTransferBundle collectPrivateTransfer(
     for (final doc in stored) '${doc.entityType}\u0000${doc.id}': doc,
   };
   final root = all['task\u0000$taskId'];
-  if (root == null || root.deleted) throw StateError('任务不存在。');
+  if (root == null || root.deleted) throw StateError(tr('任务不存在。'));
   ArchiveDocument archive(StoredDocument doc) => ArchiveDocument(
     entityType: doc.entityType,
     id: doc.id,
@@ -2442,7 +2466,7 @@ PrivateTransferBundle collectPrivateTransfer(
       if (!removed.contains(entry.key) &&
           archive(entry.value).referenceKeys.any(removed.contains)) {
         if (entry.value.entityType == 'task') {
-          throw StateError('此任务被其他任务或重复规则引用，暂不支持直接转入。');
+          throw StateError(tr('此任务被其他任务或重复规则引用，暂不支持直接转入。'));
         }
         removed.add(entry.key);
         changed = true;
@@ -2452,11 +2476,11 @@ PrivateTransferBundle collectPrivateTransfer(
   for (final key in removed) {
     final doc = all[key]!;
     if (doc.version != 0 || doc.cursor != 0) {
-      throw StateError('任务或关联记录存在同步历史，不能直接转入私密箱。');
+      throw StateError(tr('任务或关联记录存在同步历史，不能直接转入私密箱。'));
     }
     if (doc.entityType == 'focus_session' &&
         {'running', 'paused'}.contains(doc.body['status'])) {
-      throw StateError('任务仍在专注中，请先结束专注。');
+      throw StateError(tr('任务仍在专注中，请先结束专注。'));
     }
   }
   final included = <String>{...removed};
@@ -2468,14 +2492,14 @@ PrivateTransferBundle collectPrivateTransfer(
         if (included.contains(ref)) continue;
         final dependency = all[ref];
         if (dependency == null || dependency.deleted) {
-          throw StateError('关联记录缺失，转入已取消。');
+          throw StateError(tr('关联记录缺失，转入已取消。'));
         }
         if (!{
           'project',
           'tag',
           'focus_policy',
         }.contains(dependency.entityType)) {
-          throw StateError('任务关联了其他任务的记录，暂不支持直接转入。');
+          throw StateError(tr('任务关联了其他任务的记录，暂不支持直接转入。'));
         }
         included.add(ref);
         changed = true;
@@ -2552,7 +2576,7 @@ List<SyncOperation> _freshWorkspaceOperations(
   void visit(ArchiveDocument document) {
     if (visited.contains(document.key)) return;
     if (!visiting.add(document.key)) {
-      throw const FormatException('数据引用形成循环，无法上传到新服务器。');
+      throw FormatException(tr('数据引用形成循环，无法上传到新服务器。'));
     }
     // A task and its recurrence rule refer to each other. Create the task
     // first, then the rule, and attach the rule with a separate later patch.
@@ -2725,4 +2749,12 @@ int _queuePriority(SyncOperation operation) {
     return 35;
   }
   return SyncEntityContract.dependencyPriority(operation);
+}
+
+Set<String> _privateCalendarExposure(String? encoded) {
+  try {
+    return decodeSystemCalendarExposure(encoded);
+  } on FormatException {
+    throw StateError(tr('系统日历同步记录无法读取，暂不能转入私密箱。'));
+  }
 }

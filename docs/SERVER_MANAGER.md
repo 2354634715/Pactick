@@ -1,5 +1,7 @@
 # 服务端发行包与命令行入口
 
+[English](SERVER_MANAGER.en.md)
+
 当前管理界面的构建、配置、备份、隔离恢复和故障处理见[本机服务器管理界面](SERVER_MANAGEMENT.md)。本文保留已发布服务端包的启动脚本及账户管理命令，适用于包含这些文件的发行包；某个版本是否提供服务端包，以对应 Release 的附件清单为准。
 
 `v0.3.0-preview.1` 已提供 Windows/Linux x86-64 服务端包。包根目录的 `launch-manager.cmd` 或 `launch-manager.sh` 启动本机管理器；`--data-dir` 可指定独立数据目录。不要只复制管理器可执行文件，配置、部署文件和工具目录必须一起保留。

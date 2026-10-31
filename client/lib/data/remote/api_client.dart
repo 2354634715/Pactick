@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
@@ -55,7 +57,7 @@ class ApiClient implements SyncApi {
 
   Uri _resolve(String route) {
     if (!isConfigured) {
-      throw const ApiException('server_not_configured', '请先配置同步服务器');
+      throw ApiException('server_not_configured', tr('请先配置同步服务器'));
     }
     return baseUri.resolve(route);
   }
@@ -133,15 +135,15 @@ class ApiClient implements SyncApi {
           .timeout(requestTimeout);
       return _decode(response);
     } on TimeoutException catch (error) {
-      throw ApiNetworkException('连接服务器超时', error);
+      throw ApiNetworkException(tr('连接服务器超时'), error);
     } on http.ClientException catch (error) {
-      throw ApiNetworkException('无法连接服务器', error);
+      throw ApiNetworkException(tr('无法连接服务器'), error);
     } on HandshakeException catch (error) {
-      throw ApiNetworkException('无法建立安全连接', error);
+      throw ApiNetworkException(tr('无法建立安全连接'), error);
     } on SocketException catch (error) {
-      throw ApiNetworkException('无法连接服务器', error);
+      throw ApiNetworkException(tr('无法连接服务器'), error);
     } on HttpException catch (error) {
-      throw ApiNetworkException('服务器连接异常', error);
+      throw ApiNetworkException(tr('服务器连接异常'), error);
     }
   }
 
@@ -160,15 +162,15 @@ class ApiClient implements SyncApi {
           .timeout(requestTimeout);
       return _decode(response);
     } on TimeoutException catch (error) {
-      throw ApiNetworkException('连接服务器超时', error);
+      throw ApiNetworkException(tr('连接服务器超时'), error);
     } on http.ClientException catch (error) {
-      throw ApiNetworkException('无法连接服务器', error);
+      throw ApiNetworkException(tr('无法连接服务器'), error);
     } on HandshakeException catch (error) {
-      throw ApiNetworkException('无法建立安全连接', error);
+      throw ApiNetworkException(tr('无法建立安全连接'), error);
     } on SocketException catch (error) {
-      throw ApiNetworkException('无法连接服务器', error);
+      throw ApiNetworkException(tr('无法连接服务器'), error);
     } on HttpException catch (error) {
-      throw ApiNetworkException('服务器连接异常', error);
+      throw ApiNetworkException(tr('服务器连接异常'), error);
     }
   }
 
@@ -187,15 +189,15 @@ class ApiClient implements SyncApi {
           .timeout(requestTimeout);
       return _decode(response);
     } on TimeoutException catch (error) {
-      throw ApiNetworkException('连接服务器超时', error);
+      throw ApiNetworkException(tr('连接服务器超时'), error);
     } on http.ClientException catch (error) {
-      throw ApiNetworkException('无法连接服务器', error);
+      throw ApiNetworkException(tr('无法连接服务器'), error);
     } on HandshakeException catch (error) {
-      throw ApiNetworkException('无法建立安全连接', error);
+      throw ApiNetworkException(tr('无法建立安全连接'), error);
     } on SocketException catch (error) {
-      throw ApiNetworkException('无法连接服务器', error);
+      throw ApiNetworkException(tr('无法连接服务器'), error);
     } on HttpException catch (error) {
-      throw ApiNetworkException('服务器连接异常', error);
+      throw ApiNetworkException(tr('服务器连接异常'), error);
     }
   }
 
@@ -218,18 +220,18 @@ class ApiClient implements SyncApi {
       decoded = value.map((key, value) => MapEntry(key.toString(), value));
     } on FormatException {
       if (response.statusCode == 429) {
-        throw const ApiException('rate_limited', '请求过于频繁', statusCode: 429);
+        throw ApiException('rate_limited', tr('请求过于频繁'), statusCode: 429);
       }
       if (response.statusCode >= 500) {
         throw ApiException(
           'server_unavailable',
-          '服务器暂时不可用',
+          tr('服务器暂时不可用'),
           statusCode: response.statusCode,
         );
       }
       throw ApiException(
         'invalid_response',
-        '服务器返回了无法识别的响应',
+        tr('服务器返回了无法识别的响应'),
         statusCode: response.statusCode,
       );
     }
@@ -241,23 +243,23 @@ class ApiClient implements SyncApi {
       final values = error.map((key, value) => MapEntry(key.toString(), value));
       throw ApiException(
         values['code'] as String? ?? 'request_failed',
-        values['message'] as String? ?? '请求失败',
+        values['message'] as String? ?? tr('请求失败'),
         statusCode: response.statusCode,
       );
     }
     if (response.statusCode == 429) {
-      throw const ApiException('rate_limited', '请求过于频繁', statusCode: 429);
+      throw ApiException('rate_limited', tr('请求过于频繁'), statusCode: 429);
     }
     if (response.statusCode >= 500) {
       throw ApiException(
         'server_unavailable',
-        '服务器暂时不可用',
+        tr('服务器暂时不可用'),
         statusCode: response.statusCode,
       );
     }
     throw ApiException(
       'request_failed',
-      '请求失败（${response.statusCode}）',
+      tr('请求失败（{arg0}）', args: {'arg0': response.statusCode}),
       statusCode: response.statusCode,
     );
   }

@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:async';
 
 import 'package:flutter/foundation.dart';
@@ -51,7 +53,7 @@ class SessionController extends ChangeNotifier {
   bool get hasServer => repository.apiClient.isConfigured;
 
   Future<void> configureServer(String address) async {
-    if (isBusy) throw StateError('请等待当前登录操作完成');
+    if (isBusy) throw StateError(tr('请等待当前登录操作完成'));
     final normalized = normalizeServerAddress(address);
     _refreshTimer?.cancel();
     phase = SessionPhase.signingOut;
@@ -66,7 +68,7 @@ class SessionController extends ChangeNotifier {
   }
 
   Future<void> useLocalWorkspace() async {
-    if (isBusy) throw StateError('请等待当前登录操作完成');
+    if (isBusy) throw StateError(tr('请等待当前登录操作完成'));
     _refreshTimer?.cancel();
     phase = SessionPhase.signingOut;
     if (_activeRefresh != null) await _activeRefresh;
@@ -76,7 +78,7 @@ class SessionController extends ChangeNotifier {
       await repository.clearSession();
     } catch (_) {
       repository.apiClient.accessToken = null;
-      notice = '无法确认本机登录信息已清除；同步已停止，本机数据仍可使用。';
+      notice = tr('无法确认本机登录信息已清除；同步已停止，本机数据仍可使用。');
     }
     session = null;
     phase = SessionPhase.signedOut;
@@ -91,10 +93,10 @@ class SessionController extends ChangeNotifier {
     required String userId,
   }) async {
     if (isBusy || !await ensureFreshSession()) {
-      throw StateError('请重新登录后操作');
+      throw StateError(tr('请重新登录后操作'));
     }
     if (serverUri != server || user?.id != userId) {
-      throw StateError('当前服务器或账户已变化，请重新确认删除对象。');
+      throw StateError(tr('当前服务器或账户已变化，请重新确认删除对象。'));
     }
     _refreshTimer?.cancel();
     phase = SessionPhase.signingOut;
@@ -109,7 +111,7 @@ class SessionController extends ChangeNotifier {
         await repository.clearSession();
       } catch (_) {
         repository.apiClient.accessToken = null;
-        notice = '服务器账户已删除，但无法确认本机登录信息已清除。';
+        notice = tr('服务器账户已删除，但无法确认本机登录信息已清除。');
       }
       session = null;
       phase = SessionPhase.signedOut;
@@ -125,9 +127,9 @@ class SessionController extends ChangeNotifier {
 
   String get serverLabel {
     final uri = serverUri;
-    if (!hasServer) return '仅本地使用';
+    if (!hasServer) return tr('仅本地使用');
     if (uri.host == '10.0.2.2' || uri.host == 'localhost') {
-      return '本地开发服务';
+      return tr('本地开发服务');
     }
     return uri.host.isEmpty ? uri.toString() : uri.host;
   }
@@ -152,7 +154,7 @@ class SessionController extends ChangeNotifier {
       }
       if (!_now().toUtc().isBefore(restored.tokens.refreshExpiresAt)) {
         await repository.clearSession();
-        notice = '登录已过期，请重新登录。';
+        notice = tr('登录已过期，请重新登录。');
         phase = SessionPhase.signedOut;
         await onAuthenticationChanged?.call(false, false);
         return;
@@ -172,7 +174,7 @@ class SessionController extends ChangeNotifier {
       session = null;
       repository.apiClient.accessToken = null;
       initializationError = error;
-      formError = '无法读取本机登录信息，请重试。';
+      formError = tr('无法读取本机登录信息，请重试。');
       phase = SessionPhase.signedOut;
     } finally {
       _notify();
@@ -223,15 +225,15 @@ class SessionController extends ChangeNotifier {
     } on ApiNetworkException {
       phase = SessionPhase.signedOut;
       connectionUnavailable = true;
-      formError = '无法连接服务器，请检查网络后重试。';
+      formError = tr('无法连接服务器，请检查网络后重试。');
     } on FormatException catch (error, stackTrace) {
       debugPrint('Invalid login response: $error\n$stackTrace');
       phase = SessionPhase.signedOut;
-      formError = '服务器返回了无法识别的登录信息。';
+      formError = tr('服务器返回了无法识别的登录信息。');
     } catch (error, stackTrace) {
       debugPrint('Sign in failed: $error\n$stackTrace');
       phase = SessionPhase.signedOut;
-      formError = '登录未完成，请稍后重试。';
+      formError = tr('登录未完成，请稍后重试。');
     }
     _refreshTimer?.cancel();
     session = null;
@@ -293,10 +295,10 @@ class SessionController extends ChangeNotifier {
     phase = SessionPhase.signedOut;
     connectionUnavailable = false;
     notice = !localCleared
-        ? '无法确认本机登录信息已清除。在系统设置中清除应用数据会删除本机数据，请先备份。'
+        ? tr('无法确认本机登录信息已清除。在系统设置中清除应用数据会删除本机数据，请先备份。')
         : serverRevoked
-        ? '已退出登录，本机任务数据保留。'
-        : '本机登录信息已清除，但无法确认服务器已撤销此次登录。';
+        ? tr('已退出登录，本机任务数据保留。')
+        : tr('本机登录信息已清除，但无法确认服务器已撤销此次登录。');
     await onAuthenticationChanged?.call(false, false);
     _notify();
   }
@@ -313,23 +315,23 @@ class SessionController extends ChangeNotifier {
         await repository.clearSession();
         session = null;
         phase = SessionPhase.signedOut;
-        notice = '登录已失效，请重新登录。';
+        notice = tr('登录已失效，请重新登录。');
         await onAuthenticationChanged?.call(false, false);
         return;
       }
       connectionUnavailable = true;
-      notice = '服务器暂时不可用，已进入离线工作区。';
+      notice = tr('服务器暂时不可用，已进入离线工作区。');
       _scheduleRetry();
       await onAuthenticationChanged?.call(true, true);
     } on ApiNetworkException {
       connectionUnavailable = true;
-      notice = '当前离线，使用本机保存的登录信息。';
+      notice = tr('当前离线，使用本机保存的登录信息。');
       _scheduleRetry();
       await onAuthenticationChanged?.call(true, true);
     } catch (error, stackTrace) {
       debugPrint('Restored session refresh failed: $error\n$stackTrace');
       connectionUnavailable = true;
-      notice = '当前离线，使用本机保存的登录信息。';
+      notice = tr('当前离线，使用本机保存的登录信息。');
       _scheduleRetry();
       await onAuthenticationChanged?.call(true, true);
     }
@@ -351,7 +353,7 @@ class SessionController extends ChangeNotifier {
         await repository.clearSession();
         session = null;
         phase = SessionPhase.signedOut;
-        formError = '登录已失效，请重新登录。';
+        formError = tr('登录已失效，请重新登录。');
         await onAuthenticationChanged?.call(false, false);
       } else {
         connectionUnavailable = true;
@@ -387,19 +389,19 @@ class SessionController extends ChangeNotifier {
 
   String _messageForApiError(ApiException error) {
     return switch (error.code) {
-      'invalid_credentials' => '邮箱或密码不正确。',
-      'registration_disabled' => '服务器尚未开放注册，请联系服务器管理员。',
-      'email_exists' || 'email_taken' => '该邮箱已注册，请直接登录。',
-      'device_conflict' => '此设备已关联到另一个账户，请先撤销旧设备会话。',
-      'validation_error' => '登录信息格式不正确，请检查后重试。',
-      'rate_limited' => '登录尝试过于频繁，请稍后再试。',
+      'invalid_credentials' => tr('邮箱或密码不正确。'),
+      'registration_disabled' => tr('服务器尚未开放注册，请联系服务器管理员。'),
+      'email_exists' || 'email_taken' => tr('该邮箱已注册，请直接登录。'),
+      'device_conflict' => tr('此设备已关联到另一个账户，请先撤销旧设备会话。'),
+      'validation_error' => tr('登录信息格式不正确，请检查后重试。'),
+      'rate_limited' => tr('登录尝试过于频繁，请稍后再试。'),
       'invalid_response' ||
       'device_mismatch' ||
-      'session_mismatch' => '服务器返回了无法识别的登录信息。',
+      'session_mismatch' => tr('服务器返回了无法识别的登录信息。'),
       'authentication_unavailable' ||
       'internal_error' ||
-      'server_unavailable' => '登录服务暂时不可用，请稍后重试。',
-      _ => '登录失败，请稍后重试。',
+      'server_unavailable' => tr('登录服务暂时不可用，请稍后重试。'),
+      _ => tr('登录失败，请稍后重试。'),
     };
   }
 

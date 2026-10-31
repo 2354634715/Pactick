@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -59,27 +61,27 @@ class ClientUpdateService {
     try {
       return ClientUpdateInfo.fromJson(response);
     } on FormatException catch (error) {
-      throw ClientUpdateException('服务器返回了无法识别的更新信息', error);
+      throw ClientUpdateException(tr('服务器返回了无法识别的更新信息'), error);
     }
   }
 
   Future<void> openDownload(ClientUpdateInfo update) async {
     final uri = update.downloadUri;
     if (uri == null) {
-      throw const ClientUpdateException('服务器没有提供下载地址');
+      throw ClientUpdateException(tr('服务器没有提供下载地址'));
     }
     if (!isSafeDownloadUri(uri)) {
-      throw const ClientUpdateException('下载地址不安全，已阻止打开');
+      throw ClientUpdateException(tr('下载地址不安全，已阻止打开'));
     }
     try {
       final launched = await _externalUrlLauncher(uri);
       if (!launched) {
-        throw const ClientUpdateException('无法打开系统浏览器');
+        throw ClientUpdateException(tr('无法打开系统浏览器'));
       }
     } on ClientUpdateException {
       rethrow;
     } catch (error) {
-      throw ClientUpdateException('无法打开系统浏览器', error);
+      throw ClientUpdateException(tr('无法打开系统浏览器'), error);
     }
   }
 
@@ -102,7 +104,7 @@ class ClientUpdateService {
     if (packageInfo.version.trim().isEmpty ||
         buildNumber == null ||
         buildNumber < 1) {
-      throw const ClientUpdateException('无法读取当前应用版本');
+      throw ClientUpdateException(tr('无法读取当前应用版本'));
     }
     return InstalledClientVersion(
       appName: packageInfo.appName,

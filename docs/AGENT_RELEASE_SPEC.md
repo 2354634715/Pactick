@@ -1,5 +1,7 @@
 # Agent Release 规范
 
+[English](AGENT_RELEASE_SPEC.en.md)
+
 起草日期：2026-10-17。更新日期：2026-10-23。适用对象：为 Pactick 准备、核验、上传或发布 GitHub Release 的 Agent。
 
 本规范是 Agent 执行 Release 任务必须遵守的项目规则，规定执行顺序、交付物和完成条件。本文不记录某个版本已经通过的验收，也不授予推送或发布权限。具体构建、签名和验收操作分别见[构建指南](BUILDING.md)、[Android 签名指南](ANDROID_SIGNING.md)、[发行流程](RELEASING.md)和[发布验收计划](RELEASE_AND_PROMOTION_PLAN.md)。

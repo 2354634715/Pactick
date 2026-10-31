@@ -1,5 +1,7 @@
 # 反馈与贡献规则
 
+[English](CONTRIBUTING.en.md)
+
 本项目接受通过 GitHub Issues 提交缺陷报告、功能建议和文档问题。目前不接受外部代码、文档或测试修改，项目仓库的修改和发布由维护者负责。
 
 ## 提交 Issue

@@ -9,6 +9,10 @@ class TaskReminderReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         try {
             when (intent.action) {
+                Intent.ACTION_LOCALE_CHANGED -> {
+                    TaskReminderManager.refreshLocalization(context)
+                    FocusTimerService.refreshLanguage()
+                }
                 Intent.ACTION_BOOT_COMPLETED,
                 Intent.ACTION_MY_PACKAGE_REPLACED,
                 Intent.ACTION_TIME_CHANGED,

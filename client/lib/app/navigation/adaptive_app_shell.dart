@@ -1,3 +1,6 @@
+import '../../core/localization/app_localizations.dart';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -27,6 +30,8 @@ class _AdaptiveAppShellState extends State<AdaptiveAppShell> {
 
   @override
   Widget build(BuildContext context) {
+    // Enum labels use the active catalog; rebuild on system locale changes too.
+    Localizations.localeOf(context);
     final controller = AppScope.watchData(context);
     if (_taskReminderOpenSequence != controller.taskReminderOpenSequence) {
       _taskReminderOpenSequence = controller.taskReminderOpenSequence;
@@ -50,20 +55,45 @@ class _AdaptiveAppShellState extends State<AdaptiveAppShell> {
             final compact = constraints.maxWidth < 600;
             final drawer = constraints.maxWidth >= 1200;
             final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+            final bottomDestinations =
+                !kIsWeb && defaultTargetPlatform == TargetPlatform.android
+                ? const [
+                    AppDestination.focus,
+                    AppDestination.today,
+                    AppDestination.tasks,
+                    AppDestination.calendar,
+                    AppDestination.statistics,
+                  ]
+                : AppDestination.values;
             return Scaffold(
               bottomNavigationBar: compact && !keyboardOpen
-                  ? NavigationBar(
-                      selectedIndex: _selectedIndex,
-                      onDestinationSelected: _select,
-                      destinations: [
-                        for (final destination in AppDestination.values)
-                          NavigationDestination(
-                            icon: Icon(destination.icon),
-                            selectedIcon: Icon(destination.selectedIcon),
-                            label: destination.label,
-                            tooltip: destination.label,
+                  ? DecoratedBox(
+                      decoration: BoxDecoration(
+                        border: Border(
+                          top: BorderSide(
+                            color: Theme.of(context).colorScheme.outlineVariant,
                           ),
-                      ],
+                        ),
+                      ),
+                      child: NavigationBar(
+                        height: MediaQuery.textScalerOf(context).scale(14) > 18
+                            ? 104
+                            : 80,
+                        selectedIndex: bottomDestinations.indexOf(
+                          AppDestination.values[_selectedIndex],
+                        ),
+                        onDestinationSelected: (index) =>
+                            _select(bottomDestinations[index].index),
+                        destinations: [
+                          for (final destination in bottomDestinations)
+                            NavigationDestination(
+                              icon: Icon(destination.icon),
+                              selectedIcon: Icon(destination.selectedIcon),
+                              label: destination.label,
+                              tooltip: destination.label,
+                            ),
+                        ],
+                      ),
                     )
                   : null,
               body: AppKeyboardScope(
@@ -98,15 +128,15 @@ class _AdaptiveAppShellState extends State<AdaptiveAppShell> {
                                             label: Text(destination.label),
                                           ),
                                         const Divider(),
-                                        const NavigationDrawerDestination(
+                                        NavigationDrawerDestination(
                                           icon: Icon(Icons.settings_outlined),
-                                          label: Text('设置'),
+                                          label: Text(context.tr('设置')),
                                         ),
-                                        const Padding(
+                                        Padding(
                                           padding: EdgeInsets.all(
                                             AppSpacing.lg,
                                           ),
-                                          child: Text('本机自动保存'),
+                                          child: Text(context.tr('本机自动保存')),
                                         ),
                                       ],
                                     )
@@ -121,7 +151,7 @@ class _AdaptiveAppShellState extends State<AdaptiveAppShell> {
                                           ? null
                                           : const AppMark(size: 40),
                                       trailing: IconButton(
-                                        tooltip: '设置',
+                                        tooltip: context.tr('设置'),
                                         onPressed: _openSettings,
                                         icon: const Icon(
                                           Icons.settings_outlined,
@@ -259,9 +289,12 @@ class _BrandHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Pactick', style: Theme.of(context).textTheme.titleMedium),
                 Text(
-                  '任务、日历与专注',
+                  'Pactick',
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                Text(
+                  context.tr('任务、日历与专注'),
                   style: Theme.of(context).textTheme.labelMedium
                       ?.copyWith(color: scheme.onSurfaceVariant),
                 ),

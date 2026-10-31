@@ -1,3 +1,5 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -416,6 +418,10 @@ void main() {
     await app.initialize();
     await tester.pumpWidget(
       MaterialApp(
+        locale: const Locale('zh', 'CN'),
+        supportedLocales: const [Locale('zh', 'CN')],
+        localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
         home: Scaffold(
           body: AnimatedBuilder(
             animation: app,
@@ -465,11 +471,14 @@ void main() {
           await tester.pumpAndSettle();
           expect(find.byType(SettingsPage), findsNothing);
         }
+        final navigation = tester.widget<NavigationBar>(
+          find.byType(NavigationBar),
+        );
         expect(
-          tester
-              .widget<NavigationBar>(find.byType(NavigationBar))
-              .selectedIndex,
-          1,
+          (navigation.destinations[navigation.selectedIndex]
+                  as NavigationDestination)
+              .label,
+          '任务',
         );
         expect(app.taskReminderOpenSequence, 1);
         expect(tester.takeException(), isNull);

@@ -1,3 +1,5 @@
+import 'core/localization/app_localizations.dart';
+
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -91,7 +93,7 @@ Future<void> _initialize(
         return;
       }
     } catch (_) {
-      sessionController.notice = '无法读取同步配置。你仍可使用本地工作区，并在设置中重新配置服务器。';
+      sessionController.notice = tr('无法读取同步配置。你仍可使用本地工作区，并在设置中重新配置服务器。');
     }
   }
   await sessionController.initialize();

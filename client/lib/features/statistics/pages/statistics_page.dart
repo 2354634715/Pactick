@@ -1,3 +1,5 @@
+import '../../../core/localization/app_localizations.dart';
+
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
@@ -36,7 +38,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
     final completed = stats.fold(0, (sum, item) => sum + item.completedTasks);
     final empty = planned == 0 && actual == 0 && completed == 0;
     return FeaturePageScaffold(
-      title: '统计',
+      title: context.tr('统计'),
       maxWidth: AppSizes.compactContentMax,
       actions: [
         SyncStatusButton(
@@ -49,7 +51,7 @@ class _StatisticsPageState extends State<StatisticsPage> {
           ),
         ),
         IconButton(
-          tooltip: '设置',
+          tooltip: context.tr('设置'),
           onPressed: widget.onOpenSettings,
           icon: const Icon(Icons.settings_outlined),
         ),
@@ -62,9 +64,9 @@ class _StatisticsPageState extends State<StatisticsPage> {
             child: SingleChildScrollView(
               scrollDirection: Axis.horizontal,
               child: SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 7, label: Text('近 7 天')),
-                  ButtonSegment(value: 28, label: Text('近 4 周')),
+                segments: [
+                  ButtonSegment(value: 7, label: Text(context.tr('近 7 天'))),
+                  ButtonSegment(value: 28, label: Text(context.tr('近 4 周'))),
                 ],
                 selected: {_rangeDays},
                 onSelectionChanged: (selection) =>
@@ -74,7 +76,13 @@ class _StatisticsPageState extends State<StatisticsPage> {
           ),
           const SizedBox(height: AppSpacing.sm),
           Text(
-            '${_fullDate(stats.first.date)} 至 ${_fullDate(stats.last.date)} · 当前工作区',
+            context.tr(
+              '{arg0} 至 {arg1} · 当前工作区',
+              args: {
+                'arg0': _fullDate(stats.first.date),
+                'arg1': _fullDate(stats.last.date),
+              },
+            ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -88,23 +96,40 @@ class _StatisticsPageState extends State<StatisticsPage> {
           if (empty) ...[
             const SizedBox(height: AppSpacing.lg),
             StatePane.empty(
-              title: '还没有统计记录',
-              message: '本期没有计划时长、已记录专注或完成任务。添加计划或记录专注后，这里显示对应日期的数据。',
+              title: context.tr('还没有统计记录'),
+              message: context.tr(
+                '本期没有计划时长、已记录专注或完成任务。添加计划或记录专注后，这里显示对应日期的数据。',
+              ),
             ),
           ] else ...[
-            const SectionHeader(title: '每日计划与实际', subtitle: '使用相同长度基准，单位为分钟'),
+            SectionHeader(
+              title: context.tr('每日计划与实际'),
+              subtitle: context.tr('使用相同长度基准，单位为分钟'),
+            ),
             _DailyComparison(stats: stats),
-            const SectionHeader(title: '本期对比'),
+            SectionHeader(title: context.tr('本期对比')),
             Text(
               planned == 0
-                  ? '本期没有计划时段，不计算实际与计划的比例。已记录实际专注 ${_minutes(actual)} 分钟，完成 $completed 项任务。'
-                  : '已记录实际专注比计划${actual >= planned ? '多' : '少'} ${_minutes((actual - planned).abs())} 分钟；实际 / 计划 ${(actual / planned * 100).round()}%。此比例不表示任务完成率。',
+                  ? context.tr(
+                      '本期没有计划时段，不计算实际与计划的比例。已记录实际专注 {arg0} 分钟，完成 {arg1} 项任务。',
+                      args: {'arg0': _minutes(actual), 'arg1': completed},
+                    )
+                  : context.tr(
+                      '已记录实际专注比计划{arg0} {arg1} 分钟；实际 / 计划 {arg2}%。此比例不表示任务完成率。',
+                      args: {
+                        'arg0': actual >= planned ? tr('多') : tr('少'),
+                        'arg1': _minutes((actual - planned).abs()),
+                        'arg2': (actual / planned * 100).round(),
+                      },
+                    ),
               style: Theme.of(context).textTheme.bodyMedium,
             ),
           ],
           const SizedBox(height: AppSpacing.xl),
           Text(
-            '计划与专注按开始日期归属；实际取已保存的专注时长，进行中计时的即时经过时间不计入此值。完成任务按完成日期统计。跨日记录不按日拆分，取消或中断状态仍按现有记录计入。',
+            context.tr(
+              '计划与专注按开始日期归属；实际取已保存的专注时长，进行中计时的即时经过时间不计入此值。完成任务按完成日期统计。跨日记录不按日拆分，取消或中断状态仍按现有记录计入。',
+            ),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -134,27 +159,33 @@ class _MetricSummary extends StatelessWidget {
             MediaQuery.textScalerOf(context).scale(16) <= 24;
         final metrics = [
           _Metric(
-            label: '计划时长',
+            label: context.tr('计划时长'),
             value: _minutes(planned),
-            unit: '分钟',
-            source: '日历计划时段',
-            semanticsValue: '${_minutes(planned)} 分钟',
+            unit: context.tr('分钟'),
+            source: context.tr('日历计划时段'),
+            semanticsValue: context.tr(
+              '{arg0} 分钟',
+              args: {'arg0': _minutes(planned)},
+            ),
             inline: !wide,
           ),
           _Metric(
-            label: '已记录实际专注',
+            label: context.tr('已记录实际专注'),
             value: _minutes(actual),
-            unit: '分钟',
-            source: '已保存专注时长',
-            semanticsValue: '${_minutes(actual)} 分钟',
+            unit: context.tr('分钟'),
+            source: context.tr('已保存专注时长'),
+            semanticsValue: context.tr(
+              '{arg0} 分钟',
+              args: {'arg0': _minutes(actual)},
+            ),
             inline: !wide,
           ),
           _Metric(
-            label: '完成任务',
+            label: context.tr('完成任务'),
             value: '$completed',
-            unit: '项',
-            source: '按完成日期',
-            semanticsValue: '$completed 项',
+            unit: context.tr('项'),
+            source: context.tr('按完成日期'),
+            semanticsValue: context.tr('{arg0} 项', args: {'arg0': completed}),
             inline: !wide,
           ),
         ];
@@ -282,8 +313,15 @@ class _DailyComparison extends StatelessWidget {
           Semantics(
             container: true,
             excludeSemantics: true,
-            label:
-                '${_fullDate(item.date)}，计划 ${_minutes(item.plannedDurationSeconds)} 分钟，已记录实际专注 ${_minutes(item.actualDurationSeconds)} 分钟，完成 ${item.completedTasks} 项任务',
+            label: context.tr(
+              '{arg0}，计划 {arg1} 分钟，已记录实际专注 {arg2} 分钟，完成 {arg3} 项任务',
+              args: {
+                'arg0': _fullDate(item.date),
+                'arg1': _minutes(item.plannedDurationSeconds),
+                'arg2': _minutes(item.actualDurationSeconds),
+                'arg3': item.completedTasks,
+              },
+            ),
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
               child: Column(
@@ -299,21 +337,24 @@ class _DailyComparison extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       Text(
-                        '完成 ${item.completedTasks} 项',
+                        context.tr(
+                          '完成 {arg0} 项',
+                          args: {'arg0': item.completedTasks},
+                        ),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   _ComparisonBar(
-                    label: '计划',
+                    label: context.tr('计划'),
                     seconds: item.plannedDurationSeconds,
                     maximum: maximum,
                     outlined: true,
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   _ComparisonBar(
-                    label: '实际',
+                    label: context.tr('实际'),
                     seconds: item.actualDurationSeconds,
                     maximum: maximum,
                   ),
@@ -358,9 +399,9 @@ class _ComparisonBar extends StatelessWidget {
             Text(
               seconds == 0
                   ? outlined
-                        ? '0 分钟 · 无计划'
-                        : '0 分钟 · 无记录'
-                  : '${_minutes(seconds)} 分钟',
+                        ? context.tr('0 分钟 · 无计划')
+                        : context.tr('0 分钟 · 无记录')
+                  : context.tr('{arg0} 分钟', args: {'arg0': _minutes(seconds)}),
               style: theme.textTheme.bodySmall?.copyWith(
                 fontFeatures: const [FontFeature.tabularFigures()],
               ),

@@ -8,6 +8,7 @@ import android.app.PendingIntent
 import android.app.Service
 import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
+import android.content.res.Configuration
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -20,6 +21,7 @@ import android.os.IBinder
 import android.os.Looper
 import android.os.PowerManager
 import android.provider.Settings
+import android.util.Log
 import android.view.Gravity
 import android.view.View
 import android.view.WindowManager
@@ -40,12 +42,16 @@ class FocusTimerService : Service() {
     private var monitorFuture: ScheduledFuture<*>? = null
 
     @Volatile private var title: String = ""
+    @Volatile private var titleKey: String? = null
     @Volatile private var mode: String = "normal"
     @Volatile private var endsAtEpochMillis: Long = 0
     @Volatile private var pausedRemainingMillis: Long = 0
     @Volatile private var paused = false
     @Volatile private var allowedPackageNames: Set<String> = emptySet()
-    @Volatile private var taskTypeName: String = "收集箱"
+    @Volatile private var focusDesktopEnabled = false
+    @Volatile private var timerActive = false
+    @Volatile private var taskTypeName: String = ""
+    @Volatile private var taskTypeKey: String? = null
     @Volatile private var maxAppExits: Int? = null
     @Volatile private var appExitCount = 0
     @Volatile private var interruptionCount = 0
@@ -65,8 +71,8 @@ class FocusTimerService : Service() {
         preferences.edit().putBoolean(KEY_TARGET_SIGNALLED, true).apply()
         FocusFeedback.play(this, "target")
         val notification = baseNotification()
-            .setContentTitle("目标时间已到")
-            .setContentText(title)
+            .setContentTitle(PactickStrings.text(this@FocusTimerService, R.string.focus_target_reached))
+            .setContentText(localizedLabel(titleKey, title))
             .setOngoing(true)
             .build()
         notificationManager.notify(NOTIFICATION_ID, notification)
@@ -76,6 +82,7 @@ class FocusTimerService : Service() {
         super.onCreate()
         createNotificationChannels()
         restoreState()
+        runningInstance = this
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -88,6 +95,7 @@ class FocusTimerService : Service() {
                 stopGuardMonitoring()
                 removeGuardReminderImmediately()
                 title = intent.getStringExtra(EXTRA_TITLE) ?: getString(R.string.app_name)
+                titleKey = intent.getStringExtra(EXTRA_TITLE_KEY)
                 mode = intent.getStringExtra(EXTRA_MODE) ?: "normal"
                 endsAtEpochMillis = intent.getLongExtra(
                     EXTRA_ENDS_AT,
@@ -97,7 +105,9 @@ class FocusTimerService : Service() {
                     .getStringArrayListExtra(EXTRA_ALLOWED_PACKAGES)
                     ?.toSet()
                     .orEmpty()
-                taskTypeName = intent.getStringExtra(EXTRA_TASK_TYPE_NAME) ?: "收集箱"
+                focusDesktopEnabled = intent.getBooleanExtra(EXTRA_DESKTOP_ENABLED, false)
+                taskTypeName = intent.getStringExtra(EXTRA_TASK_TYPE_NAME) ?: PactickStrings.text(this@FocusTimerService, R.string.inbox)
+                taskTypeKey = intent.getStringExtra(EXTRA_TASK_TYPE_KEY)
                 maxAppExits = if (intent.hasExtra(EXTRA_MAX_APP_EXITS)) {
                     intent.getIntExtra(EXTRA_MAX_APP_EXITS, 0)
                 } else {
@@ -116,6 +126,7 @@ class FocusTimerService : Service() {
                     intent.getIntExtra(EXTRA_INTERRUPTION_COUNT, 0),
                 )
                 sessionId = requestedSessionId
+                timerActive = true
                 lastForegroundPackage = packageName
                 persistState(active = true)
                 startAsForeground(if (paused) buildPausedNotification() else buildRunningNotification())
@@ -147,6 +158,7 @@ class FocusTimerService : Service() {
             ACTION_STOP -> stopTimer()
             null -> {
                 if (preferences.getBoolean(KEY_ACTIVE, false)) {
+                    timerActive = true
                     startAsForeground(
                         if (paused) buildPausedNotification() else buildRunningNotification(),
                     )
@@ -162,9 +174,45 @@ class FocusTimerService : Service() {
         return START_STICKY
     }
 
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+        refreshNotificationLanguage()
+    }
+
+    // Rebuild only the running service. A persisted active flag can outlive it.
+    private fun refreshNotificationLanguage() {
+        runCatching {
+            createNotificationChannels()
+            if (!preferences.getBoolean(KEY_ACTIVE, false)) return@runCatching
+            removeGuardReminderImmediately()
+            val notification = when {
+                paused -> buildPausedNotification()
+                targetSignalled -> baseNotification()
+                    .setContentTitle(PactickStrings.text(this@FocusTimerService, R.string.focus_target_reached))
+                    .setContentText(localizedLabel(titleKey, title)).setOngoing(true).build()
+                else -> buildRunningNotification()
+            }
+            notificationManager.notify(NOTIFICATION_ID, notification)
+        }.onFailure { Log.w("FocusTimerService", "Could not refresh notification language", it) }
+    }
+
+    // Keys identify app-generated labels. Missing/unknown keys keep legacy and
+    // user-provided text verbatim instead of guessing from a task/project name.
+    private fun localizedLabel(key: String?, fallback: String): String {
+        val resource = when (key) {
+            "private_task" -> R.string.private_task
+            "free_focus" -> R.string.free_focus
+            "inbox" -> R.string.inbox
+            else -> return fallback
+        }
+        return PactickStrings.text(this@FocusTimerService, resource)
+    }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        timerActive = false
+        if (runningInstance === this) runningInstance = null
         handler.removeCallbacks(targetReached)
         stopGuardMonitoring()
         removeGuardReminderImmediately()
@@ -185,12 +233,16 @@ class FocusTimerService : Service() {
     }
 
     private fun stopTimer() {
+        timerActive = false
         handler.removeCallbacks(targetReached)
         stopGuardMonitoring()
         removeGuardReminderImmediately()
         title = ""
+        titleKey = null
         taskTypeName = ""
+        taskTypeKey = null
         allowedPackageNames = emptySet()
+        focusDesktopEnabled = false
         persistState(active = false)
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         stopSelf()
@@ -212,11 +264,11 @@ class FocusTimerService : Service() {
 
     private fun buildRunningNotification(): Notification {
         return baseNotification()
-            .setContentTitle(title)
+            .setContentTitle(localizedLabel(titleKey, title))
             .setContentText(when (mode) {
-                "guard" -> "守护模式计时中"
-                "strict" -> "严格模式计时中"
-                else -> "专注计时中"
+                "guard" -> PactickStrings.text(this@FocusTimerService, R.string.focus_guard_running)
+                "strict" -> PactickStrings.text(this@FocusTimerService, R.string.focus_strict_running)
+                else -> PactickStrings.text(this@FocusTimerService, R.string.focus_running)
             })
             .setWhen(endsAtEpochMillis)
             .setUsesChronometer(true)
@@ -229,8 +281,8 @@ class FocusTimerService : Service() {
         val minutes = TimeUnit.MILLISECONDS.toMinutes(pausedRemainingMillis)
         val seconds = TimeUnit.MILLISECONDS.toSeconds(pausedRemainingMillis) % 60
         return baseNotification()
-            .setContentTitle("专注已暂停")
-            .setContentText("$title · 剩余 %02d:%02d".format(minutes, seconds))
+            .setContentTitle(PactickStrings.text(this@FocusTimerService, R.string.focus_paused))
+            .setContentText(PactickStrings.text(this@FocusTimerService, R.string.focus_paused_remaining, localizedLabel(titleKey, title), minutes, seconds))
             .setOngoing(true)
             .build()
     }
@@ -314,7 +366,7 @@ class FocusTimerService : Service() {
     }
 
     private fun isAllowed(candidate: String): Boolean {
-        return candidate == packageName || candidate in allowedPackageNames
+        return FocusDesktopApps.isAllowed(this, candidate, allowedPackageNames, focusDesktopEnabled)
     }
 
     private fun isDeviceInteractive(): Boolean {
@@ -331,7 +383,7 @@ class FocusTimerService : Service() {
     }
 
     private fun showGuardReminder(foregroundPackage: String, appLabel: String) {
-        val message = "$appLabel 不在「$taskTypeName」白名单内"
+        val message = PactickStrings.text(this@FocusTimerService, R.string.guard_app_blocked, appLabel, localizedLabel(taskTypeKey, taskTypeName))
         if (!Settings.canDrawOverlays(this)) {
             showGuardNotification(foregroundPackage, message)
             return
@@ -353,7 +405,7 @@ class FocusTimerService : Service() {
                 dp(22).toFloat(),
             )
             elevation = dp(8).toFloat()
-            contentDescription = "返回专注页。$message"
+            contentDescription = PactickStrings.text(this@FocusTimerService, R.string.return_focus_message, message)
             isClickable = true
             isFocusable = true
             setOnClickListener { returnToFocus() }
@@ -370,7 +422,7 @@ class FocusTimerService : Service() {
             setPadding(dp(12), 0, dp(8), 0)
         }
         copy.addView(TextView(this).apply {
-            text = "返回专注"
+            text = PactickStrings.text(this@FocusTimerService, R.string.return_focus)
             setTextColor(color(R.color.focus_guard_on_surface))
             textSize = 16f
             setTypeface(typeface, Typeface.BOLD)
@@ -389,7 +441,7 @@ class FocusTimerService : Service() {
         )
 
         val action = TextView(this).apply {
-            text = "返回"
+            text = PactickStrings.text(this@FocusTimerService, R.string.return_back)
             gravity = Gravity.CENTER
             setTextColor(color(R.color.focus_guard_on_action))
             textSize = 14f
@@ -401,7 +453,7 @@ class FocusTimerService : Service() {
                 color(R.color.focus_guard_action),
                 dp(24).toFloat(),
             )
-            contentDescription = "返回专注页"
+            contentDescription = PactickStrings.text(this@FocusTimerService, R.string.return_focus_page)
             setOnClickListener { returnToFocus() }
         }
         card.addView(action)
@@ -479,7 +531,7 @@ class FocusTimerService : Service() {
         lastNotifiedPackage = foregroundPackage
         val notification = NotificationCompat.Builder(this, GUARD_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_focus_notification)
-            .setContentTitle("返回专注")
+            .setContentTitle(PactickStrings.text(this@FocusTimerService, R.string.return_focus))
             .setContentText(message)
             .setContentIntent(openAppPendingIntent())
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -527,18 +579,18 @@ class FocusTimerService : Service() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val timerChannel = NotificationChannel(
             TIMER_CHANNEL_ID,
-            "专注计时",
+            PactickStrings.text(this@FocusTimerService, R.string.focus_timer_channel),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "显示正在进行的专注会话"
+            description = PactickStrings.text(this@FocusTimerService, R.string.focus_timer_channel_description)
             setShowBadge(false)
         }
         val guardChannel = NotificationChannel(
             GUARD_CHANNEL_ID,
-            "守护提醒",
+            PactickStrings.text(this@FocusTimerService, R.string.focus_guard_channel),
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "守护模式下，打开白名单外的应用时提醒"
+            description = PactickStrings.text(this@FocusTimerService, R.string.focus_guard_channel_description)
             setShowBadge(false)
         }
         notificationManager.createNotificationChannels(listOf(timerChannel, guardChannel))
@@ -549,11 +601,14 @@ class FocusTimerService : Service() {
             .putBoolean(KEY_ACTIVE, active)
             .putBoolean(KEY_PAUSED, paused)
             .putString(KEY_TITLE, title)
+            .putString(KEY_TITLE_KEY, titleKey)
             .putString(KEY_MODE, mode)
             .putLong(KEY_ENDS_AT, endsAtEpochMillis)
             .putLong(KEY_PAUSED_REMAINING, pausedRemainingMillis)
             .putStringSet(KEY_ALLOWED_PACKAGES, allowedPackageNames)
+            .putBoolean(KEY_DESKTOP_ENABLED, focusDesktopEnabled)
             .putString(KEY_TASK_TYPE_NAME, taskTypeName)
+            .putString(KEY_TASK_TYPE_KEY, taskTypeKey)
             .putInt(KEY_MAX_APP_EXITS, maxAppExits ?: -1)
             .putInt(KEY_APP_EXIT_COUNT, appExitCount)
             .putInt(KEY_INTERRUPTION_COUNT, interruptionCount)
@@ -571,6 +626,7 @@ class FocusTimerService : Service() {
 
     private fun restoreState() {
         title = preferences.getString(KEY_TITLE, getString(R.string.app_name)).orEmpty()
+        titleKey = preferences.getString(KEY_TITLE_KEY, null)
         mode = preferences.getString(KEY_MODE, "normal").orEmpty()
         endsAtEpochMillis = preferences.getLong(KEY_ENDS_AT, 0)
         pausedRemainingMillis = preferences.getLong(KEY_PAUSED_REMAINING, 0)
@@ -578,7 +634,9 @@ class FocusTimerService : Service() {
         allowedPackageNames = preferences.getStringSet(KEY_ALLOWED_PACKAGES, emptySet())
             ?.toSet()
             .orEmpty()
-        taskTypeName = preferences.getString(KEY_TASK_TYPE_NAME, "收集箱").orEmpty()
+        focusDesktopEnabled = preferences.getBoolean(KEY_DESKTOP_ENABLED, false)
+        taskTypeName = preferences.getString(KEY_TASK_TYPE_NAME, PactickStrings.text(this@FocusTimerService, R.string.inbox)).orEmpty()
+        taskTypeKey = preferences.getString(KEY_TASK_TYPE_KEY, null)
         maxAppExits = preferences.getInt(KEY_MAX_APP_EXITS, -1).takeIf { it >= 0 }
         appExitCount = preferences.getInt(KEY_APP_EXIT_COUNT, 0)
         interruptionCount = preferences.getInt(KEY_INTERRUPTION_COUNT, 0)
@@ -610,11 +668,22 @@ class FocusTimerService : Service() {
         const val ACTION_PAUSE = "com.example.pactick.action.PAUSE"
         const val ACTION_RESUME = "com.example.pactick.action.RESUME"
         const val ACTION_STOP = "com.example.pactick.action.STOP"
+        @Volatile private var runningInstance: FocusTimerService? = null
+
+        fun refreshLanguage() {
+            val service = runningInstance ?: return
+            service.handler.post {
+                if (runningInstance === service) service.refreshNotificationLanguage()
+            }
+        }
         private const val EXTRA_TITLE = "title"
+        private const val EXTRA_TITLE_KEY = "title_key"
         private const val EXTRA_ENDS_AT = "ends_at"
         private const val EXTRA_MODE = "mode"
         private const val EXTRA_ALLOWED_PACKAGES = "allowed_packages"
+        private const val EXTRA_DESKTOP_ENABLED = "focus_desktop_enabled"
         private const val EXTRA_TASK_TYPE_NAME = "task_type_name"
+        private const val EXTRA_TASK_TYPE_KEY = "task_type_key"
         private const val EXTRA_MAX_APP_EXITS = "max_app_exits"
         private const val EXTRA_SESSION_ID = "session_id"
         private const val EXTRA_PAUSED = "paused"
@@ -628,11 +697,14 @@ class FocusTimerService : Service() {
         private const val KEY_ACTIVE = "active"
         private const val KEY_PAUSED = "paused"
         private const val KEY_TITLE = "title"
+        private const val KEY_TITLE_KEY = "title_key"
         private const val KEY_MODE = "mode"
         private const val KEY_ENDS_AT = "ends_at"
         private const val KEY_PAUSED_REMAINING = "paused_remaining"
         private const val KEY_ALLOWED_PACKAGES = "allowed_packages"
+        private const val KEY_DESKTOP_ENABLED = "focus_desktop_enabled"
         private const val KEY_TASK_TYPE_NAME = "task_type_name"
+        private const val KEY_TASK_TYPE_KEY = "task_type_key"
         private const val KEY_MAX_APP_EXITS = "max_app_exits"
         private const val KEY_APP_EXIT_COUNT = "app_exit_count"
         private const val KEY_INTERRUPTION_COUNT = "interruption_count"
@@ -645,25 +717,31 @@ class FocusTimerService : Service() {
             context: Context,
             action: String,
             title: String? = null,
+            titleKey: String? = null,
             endsAtEpochMillis: Long? = null,
             mode: String? = null,
             allowedPackageNames: List<String>? = null,
             taskTypeName: String? = null,
+            taskTypeKey: String? = null,
             maxAppExits: Int? = null,
             sessionId: String? = null,
             paused: Boolean? = null,
             appExitCount: Int? = null,
             interruptionCount: Int? = null,
+            focusDesktopEnabled: Boolean? = null,
         ): Intent {
             return Intent(context, FocusTimerService::class.java).apply {
                 this.action = action
                 title?.let { putExtra(EXTRA_TITLE, it) }
+                titleKey?.let { putExtra(EXTRA_TITLE_KEY, it) }
                 endsAtEpochMillis?.let { putExtra(EXTRA_ENDS_AT, it) }
                 mode?.let { putExtra(EXTRA_MODE, it) }
                 allowedPackageNames?.let {
                     putStringArrayListExtra(EXTRA_ALLOWED_PACKAGES, ArrayList(it))
                 }
+                focusDesktopEnabled?.let { putExtra(EXTRA_DESKTOP_ENABLED, it) }
                 taskTypeName?.let { putExtra(EXTRA_TASK_TYPE_NAME, it) }
+                taskTypeKey?.let { putExtra(EXTRA_TASK_TYPE_KEY, it) }
                 maxAppExits?.let { putExtra(EXTRA_MAX_APP_EXITS, it) }
                 sessionId?.let { putExtra(EXTRA_SESSION_ID, it) }
                 paused?.let { putExtra(EXTRA_PAUSED, it) }
@@ -690,6 +768,26 @@ class FocusTimerService : Service() {
                 "sessionId" to preferences.getString(KEY_SESSION_ID, null),
                 "active" to preferences.getBoolean(KEY_ACTIVE, false),
             )
+        }
+
+        /** A live service is required: a persisted active flag can outlive it. */
+        fun desktopState(): FocusDesktopState? {
+            val service = runningInstance ?: return null
+            if (!service.timerActive || !service.focusDesktopEnabled) return null
+            return FocusDesktopState(
+                sessionId = service.sessionId,
+                allowedPackageNames = service.allowedPackageNames.toSet(),
+                paused = service.paused,
+                endsAtEpochMillis = service.endsAtEpochMillis,
+                pausedRemainingMillis = service.pausedRemainingMillis,
+            )
+        }
+
+        fun configureDesktop(enabled: Boolean) {
+            val service = runningInstance ?: return
+            service.focusDesktopEnabled = enabled
+            service.preferences.edit().putBoolean(KEY_DESKTOP_ENABLED, enabled).apply()
+            service.removeGuardReminderImmediately()
         }
     }
 }

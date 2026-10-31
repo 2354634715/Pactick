@@ -1,3 +1,4 @@
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -31,6 +32,10 @@ void main() {
           AppScope(
             controller: controller,
             child: MaterialApp(
+              locale: const Locale('zh', 'CN'),
+              supportedLocales: const [Locale('zh', 'CN')],
+              localizationsDelegates: GlobalMaterialLocalizations.delegates,
+
               theme: AppTheme.dark(),
               builder: (context, child) => MediaQuery(
                 data: MediaQuery.of(context)

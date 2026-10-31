@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import '../../core/localization/app_localizations.dart';
+
 import 'package:uuid/uuid.dart';
 
 import '../../core/models/domain_models.dart';
@@ -226,6 +228,57 @@ class WorkspaceRepository {
 
   Future<void> deletePlanBlock(String id) =>
       _store.deleteDocument('plan_block', id, accountId: _accountId);
+
+  Future<FocusSessionItem> associateFocusSessionTask({
+    required String sessionId,
+    required String taskId,
+    required String accountId,
+  }) async {
+    if (_accountId != accountId) {
+      throw StateError(tr('工作区已切换，请重新选择专注记录和任务。'));
+    }
+    final documents = await Future.wait([
+      _store.readDocuments('focus_session', accountId: accountId),
+      _store.readDocuments('task', accountId: accountId),
+    ]);
+    if (_accountId != accountId) {
+      throw StateError(tr('工作区已切换，请重新选择专注记录和任务。'));
+    }
+    final session = documents[0]
+        .where((document) => document.id == sessionId && !document.deleted)
+        .firstOrNull;
+    if (session == null) {
+      throw StateError(tr('专注记录已不存在，请刷新后重试。'));
+    }
+    if (!documents[1].any(
+      (document) => document.id == taskId && !document.deleted,
+    )) {
+      throw StateError(tr('任务已不存在，请重新选择。'));
+    }
+    if (!const [
+      'completed',
+      'abandoned',
+      'interrupted',
+    ].contains(session.body['status'])) {
+      throw StateError(tr('请先结束专注，再关联任务。'));
+    }
+    final currentTaskId = session.body['task_id'];
+    if (currentTaskId != null && currentTaskId != taskId) {
+      throw StateError(tr('该专注已关联任务，不能更换。'));
+    }
+    // Preserve server and backup fields that FocusSessionItem does not map,
+    // including pause_intervals. A terminal association changes only task_id.
+    final body = {...session.body, 'task_id': taskId};
+    if (currentTaskId == null) {
+      await _store.putDocument(
+        'focus_session',
+        sessionId,
+        body,
+        accountId: accountId,
+      );
+    }
+    return FocusSessionItem.fromDocument(sessionId, body);
+  }
 
   Future<void> deleteTask(String id) =>
       _store.deleteDocument('task', id, accountId: _accountId);

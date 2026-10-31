@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:uuid/uuid.dart';
 
 import '../../core/models/auth_models.dart';
@@ -9,7 +11,7 @@ class AuthRepository {
     required this.sessionStore,
     required this.apiClient,
     Uuid? uuid,
-    this.deviceName = 'Android 设备',
+    this._deviceName,
     this.platform = 'android',
     this.appVersion = '0.1.0',
   }) : _uuid = uuid ?? Uuid();
@@ -17,7 +19,11 @@ class AuthRepository {
   final SessionStore sessionStore;
   final ApiClient apiClient;
   final Uuid _uuid;
-  final String deviceName;
+  final String? _deviceName;
+
+  /// Resolve the default when registering a device, after locale restoration.
+  /// Explicit device names remain unchanged.
+  String get deviceName => _deviceName ?? tr('Android 设备');
   final String platform;
   final String appVersion;
 
@@ -46,7 +52,7 @@ class AuthRepository {
     String? displayName,
   }) async {
     if (!apiClient.isConfigured) {
-      throw const ApiException('server_not_configured', '请先配置同步服务器');
+      throw ApiException('server_not_configured', tr('请先配置同步服务器'));
     }
     await sessionStore.selectServer(serverUri.toString());
     await sessionStore.selectIdentity('email:${email.trim().toLowerCase()}');
@@ -66,7 +72,7 @@ class AuthRepository {
           );
     final session = AuthSession.fromJson(response);
     if (session.device.id != device.id) {
-      throw const ApiException('device_mismatch', '服务器返回了不匹配的设备会话');
+      throw ApiException('device_mismatch', tr('服务器返回了不匹配的设备会话'));
     }
     await _saveSession(session);
     return session;
@@ -77,7 +83,7 @@ class AuthRepository {
     final session = AuthSession.fromJson(response);
     if (session.user.id != current.user.id ||
         session.device.id != current.device.id) {
-      throw const ApiException('session_mismatch', '服务器返回了不匹配的刷新会话');
+      throw ApiException('session_mismatch', tr('服务器返回了不匹配的刷新会话'));
     }
     await _saveSession(session);
     return session;

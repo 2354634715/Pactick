@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_tokens.dart';
@@ -34,7 +36,12 @@ class _ActiveFocusDockState extends State<ActiveFocusDock> {
         await widget.controller.pauseFocus();
       }
     } catch (error) {
-      if (mounted) setState(() => _error = '专注状态未保存，请重试：$error');
+      if (mounted) {
+        setState(
+          () =>
+              _error = context.tr('专注状态未保存，请重试：{arg0}', args: {'arg0': error}),
+        );
+      }
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -45,7 +52,6 @@ class _ActiveFocusDockState extends State<ActiveFocusDock> {
     final controller = widget.controller;
     final session = controller.activeFocusSession;
     if (session == null) return const SizedBox.shrink();
-    final task = controller.taskById(session.taskId);
     final paused = session.status == FocusSessionStatus.paused;
     final scheme = Theme.of(context).colorScheme;
     return Material(
@@ -71,7 +77,7 @@ class _ActiveFocusDockState extends State<ActiveFocusDock> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              task?.title ?? '未命名任务',
+                              controller.focusSessionTitle(session),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context).textTheme.titleMedium,
@@ -82,7 +88,11 @@ class _ActiveFocusDockState extends State<ActiveFocusDock> {
                               children: [
                                 Semantics(
                                   liveRegion: true,
-                                  child: Text(paused ? '已暂停' : '专注中'),
+                                  child: Text(
+                                    paused
+                                        ? context.tr('已暂停')
+                                        : context.tr('专注中'),
+                                  ),
                                 ),
                                 FocusClock(
                                   controller: controller,
@@ -97,7 +107,7 @@ class _ActiveFocusDockState extends State<ActiveFocusDock> {
                   ),
                   if (canPauseActiveFocus(controller))
                     IconButton(
-                      tooltip: paused ? '继续专注' : '暂停专注',
+                      tooltip: paused ? context.tr('继续专注') : context.tr('暂停专注'),
                       onPressed: _busy ? null : _toggle,
                       icon: _busy
                           ? const SizedBox.square(
@@ -107,7 +117,7 @@ class _ActiveFocusDockState extends State<ActiveFocusDock> {
                           : Icon(paused ? Icons.play_arrow : Icons.pause),
                     ),
                   IconButton(
-                    tooltip: '打开专注页面',
+                    tooltip: context.tr('打开专注页面'),
                     onPressed: widget.onOpen,
                     icon: const Icon(Icons.open_in_full),
                   ),

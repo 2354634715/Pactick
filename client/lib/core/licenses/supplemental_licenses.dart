@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
@@ -9,15 +11,15 @@ bool _registered = false;
 Iterable<LicenseEntry> parseSupplementalLicenses(String contents) sync* {
   final document = jsonDecode(contents);
   if (document is! Map<String, dynamic> || document['schema_version'] != 1) {
-    throw const FormatException('不支持的补充许可格式');
+    throw FormatException(tr('不支持的补充许可格式'));
   }
   final entries = document['entries'];
   if (entries is! List || entries.isEmpty) {
-    throw const FormatException('补充许可清单为空');
+    throw FormatException(tr('补充许可清单为空'));
   }
   for (final entry in entries) {
     if (entry is! Map<String, dynamic>) {
-      throw const FormatException('补充许可条目无效');
+      throw FormatException(tr('补充许可条目无效'));
     }
     final packages = entry['packages'];
     final text = entry['text'];
@@ -26,7 +28,7 @@ Iterable<LicenseEntry> parseSupplementalLicenses(String contents) sync* {
         packages.any((name) => name is! String || name.trim().isEmpty) ||
         text is! String ||
         text.trim().isEmpty) {
-      throw const FormatException('补充许可缺少组件名称或正文');
+      throw FormatException(tr('补充许可缺少组件名称或正文'));
     }
     yield LicenseEntryWithLineBreaks(packages.cast<String>(), text);
   }

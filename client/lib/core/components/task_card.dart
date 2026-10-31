@@ -1,3 +1,5 @@
+import '../../core/localization/app_localizations.dart';
+
 import 'package:flutter/material.dart';
 
 import '../../app/theme/app_tokens.dart';
@@ -47,16 +49,35 @@ class TaskCard extends StatelessWidget {
         !task.isCompleted &&
         task.dueAt!.isBefore(DateTime(now.year, now.month, now.day));
     final metadata = <String>[
-      if (task.priority != TaskPriority.none) '${task.priority.label}优先级',
+      if (task.priority != TaskPriority.none)
+        context.tr('{arg0}优先级', args: {'arg0': task.priority.label}),
       if (project != null) project!.name,
       if (planBlock != null)
-        '计划 ${formatClock(planBlock!.startsAt)}–${formatClock(planBlock!.endsAt)}',
+        context.tr(
+          '计划 {arg0}–{arg1}',
+          args: {
+            'arg0': formatClock(planBlock!.startsAt),
+            'arg1': formatClock(planBlock!.endsAt),
+          },
+        ),
       if (task.dueAt != null)
-        '${overdue ? '已逾期 · ' : ''}截止 ${formatMonthDay(task.dueAt!.toLocal())}',
+        context.tr(
+          '{arg0}截止 {arg1}',
+          args: {
+            'arg0': overdue ? tr('已逾期 · ') : '',
+            'arg1': formatMonthDay(task.dueAt!.toLocal()),
+          },
+        ),
       if (task.estimatedDurationSeconds case final seconds?)
-        '预计 ${formatDuration(seconds, compact: true)}',
+        context.tr(
+          '预计 {arg0}',
+          args: {'arg0': formatDuration(seconds, compact: true)},
+        ),
       if (actualSeconds > 0)
-        '实际 ${formatDuration(actualSeconds, compact: true)}',
+        context.tr(
+          '实际 {arg0}',
+          args: {'arg0': formatDuration(actualSeconds, compact: true)},
+        ),
       for (final tag in task.tags) '#$tag',
     ];
     return Material(
@@ -71,7 +92,7 @@ class TaskCard extends StatelessWidget {
                 height: AppSizes.minTouchTarget,
                 child: Semantics(
                   label:
-                      '${task.title}，${task.isCompleted ? '标记为未完成' : '标记为已完成'}',
+                      '${task.title}，${task.isCompleted ? context.tr("标记为未完成") : context.tr("标记为已完成")}',
                   child: Checkbox(
                     value: task.isCompleted,
                     onChanged: enabled ? onToggle : null,
@@ -99,6 +120,7 @@ class TaskCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(
+                                  fontWeight: FontWeight.w400,
                                   decoration: task.isCompleted
                                       ? TextDecoration.lineThrough
                                       : null,
@@ -153,7 +175,7 @@ class TaskCard extends StatelessWidget {
                 children: [
                   if (!task.isCompleted && onStartFocus != null)
                     IconButton(
-                      tooltip: '开始专注',
+                      tooltip: context.tr('开始专注'),
                       onPressed: enabled ? onStartFocus : null,
                       icon: const Icon(Icons.play_arrow_rounded),
                     ),
